@@ -1,1 +1,0 @@
-# integra7-editor

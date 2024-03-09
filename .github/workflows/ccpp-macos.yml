@@ -1,0 +1,38 @@
+name: Mac Build
+
+on:
+  push:
+    branches: 
+        - main
+        - feature/* 
+        - bugfix/*
+        - develop
+        - bugfix/*
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: init
+      run: mkdir build    
+    - name: update submodules
+      run: git submodule update --init --recursive --remote
+    - name: configure
+      run: cmake -DCMAKE_BUILD_TYPE=Release ..
+      working-directory: build
+      env:
+        WM_DOWNLOAD_EXTERNALS: 1     
+    - name: build
+      run: cmake --build .
+      working-directory: build
+    - uses: actions/upload-artifact@v3
+      with:
+        name: werckmeister-VST-mac-vst2-${{ github.sha }}
+        path: build/WerckmeisterVST_artefacts/Release/VST
+    - uses: actions/upload-artifact@v3
+      with:
+        name: werckmeister-VST-mac-vst3-${{ github.sha }}
+        path: build/WerckmeisterVST_artefacts/Release/VST3 
