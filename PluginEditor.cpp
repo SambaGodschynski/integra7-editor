@@ -2,7 +2,6 @@
 #include "PluginEditor.h"
 #include <functional>
 #include <iostream>
-
 extern "C" {
     #include "preferences_normal_png.h"
     #include "logo_png.h"
@@ -21,6 +20,8 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     background.setBounds(0, 65, 800, 600);
     background.setImage(backgroundImage);
     addAndMakeVisible(background);
+
+    juce::Slider
 }
 
 PluginEditor::~PluginEditor()
