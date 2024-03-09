@@ -21,7 +21,18 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     background.setImage(backgroundImage);
     addAndMakeVisible(background);
 
-    juce::Slider
+    slider.setBounds(50, 65, 60, 300);
+    slider.setSliderStyle( juce::Slider::LinearVertical );
+    slider.setTextBoxStyle( juce::Slider::TextBoxAbove, false, 60, 20);
+    slider.setRange(0, 127, 1);
+    addAndMakeVisible(slider);
+
+
+    knob.setBounds(150, 65, 160, 80);
+    knob.setSliderStyle( juce::Slider::Rotary );
+    knob.setTextBoxStyle( juce::Slider::TextBoxAbove, false, 60, 20);
+    knob.setRange(0, 127, 1);
+    addAndMakeVisible(knob);
 }
 
 PluginEditor::~PluginEditor()

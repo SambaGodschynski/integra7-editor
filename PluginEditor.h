@@ -17,6 +17,8 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 private:
+    juce::Slider slider;
+    juce::Slider knob;
     juce::ImageComponent background;
     std::list<std::string> logCache;
     PluginProcessor& processorRef;
