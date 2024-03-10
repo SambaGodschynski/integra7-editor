@@ -8,5 +8,7 @@ class MixerChannelStrip : public juce::Component
 public:
     MixerChannelStrip();
 private:
-    juce::Slider slider;
+    juce::Slider volume;
+    juce::Slider pan;
+    juce::FlexBox flexBox;
 };

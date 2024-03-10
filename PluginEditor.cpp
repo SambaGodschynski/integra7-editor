@@ -28,15 +28,6 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     
     mainTabs.addTab("Mixer", juce::Colour(), &mixerPanel, false);
     mainTabs.addTab("Tone", juce::Colour(), &toneEditorPanel, false);
-
-
-
-    // knob.setBounds(150, 65, 160, 80);
-    // knob.setSliderStyle( juce::Slider::Rotary );
-    // knob.setTextBoxStyle( juce::Slider::TextBoxAbove, false, 60, 20);
-    // knob.setRange(0, 127, 1);
-    // addAndMakeVisible(knob);
-
 }
 
 PluginEditor::~PluginEditor()
