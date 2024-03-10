@@ -5,6 +5,8 @@
 #include <mutex>
 #include <list>
 #include <string>
+#include "components/MixerPanel.h"
+#include "components/ToneEditorPanel.h"
 
 //==============================================================================
 class PluginEditor  : public juce::AudioProcessorEditor
@@ -17,8 +19,9 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 private:
-    juce::Slider slider;
-    juce::Slider knob;
+    juce::TabbedComponent mainTabs;
+    MixerPanel mixerPanel;
+    ToneEditorPanel toneEditorPanel;
     juce::ImageComponent background;
     std::list<std::string> logCache;
     PluginProcessor& processorRef;

@@ -1,0 +1,12 @@
+#pragma once
+
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
+class MixerChannelStrip : public juce::Component
+{
+public:
+    MixerChannelStrip();
+private:
+    juce::Slider slider;
+};

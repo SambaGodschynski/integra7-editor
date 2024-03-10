@@ -10,29 +10,33 @@ extern "C" {
 #define LOCK(mutex) std::lock_guard<Mutex> guard(mutex)
 
 PluginEditor::PluginEditor (PluginProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p)
+    : AudioProcessorEditor (&p), processorRef (p), mainTabs(juce::TabbedButtonBar::TabsAtTop)
 {
-    int w = 800, h = 600;
+    int w = 1024, h = 768;
     setSize(w, h);
 
     //
     auto backgroundImage = juce::ImageCache::getFromMemory(logo_png_data, logo_png_size);
-    background.setBounds(0, 65, 800, 600);
-    background.setImage(backgroundImage);
     addAndMakeVisible(background);
+    background.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
+    background.setImage(backgroundImage);
 
-    slider.setBounds(50, 65, 60, 300);
-    slider.setSliderStyle( juce::Slider::LinearVertical );
-    slider.setTextBoxStyle( juce::Slider::TextBoxAbove, false, 60, 20);
-    slider.setRange(0, 127, 1);
-    addAndMakeVisible(slider);
+    toneEditorPanel.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
+    addAndMakeVisible(mainTabs);
+
+    mainTabs.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
+    
+    mainTabs.addTab("Mixer", juce::Colour(), &mixerPanel, false);
+    mainTabs.addTab("Tone", juce::Colour(), &toneEditorPanel, false);
 
 
-    knob.setBounds(150, 65, 160, 80);
-    knob.setSliderStyle( juce::Slider::Rotary );
-    knob.setTextBoxStyle( juce::Slider::TextBoxAbove, false, 60, 20);
-    knob.setRange(0, 127, 1);
-    addAndMakeVisible(knob);
+
+    // knob.setBounds(150, 65, 160, 80);
+    // knob.setSliderStyle( juce::Slider::Rotary );
+    // knob.setTextBoxStyle( juce::Slider::TextBoxAbove, false, 60, 20);
+    // knob.setRange(0, 127, 1);
+    // addAndMakeVisible(knob);
+
 }
 
 PluginEditor::~PluginEditor()

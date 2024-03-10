@@ -64,6 +64,9 @@ target_sources(Integra7Editor
     PRIVATE
         PluginEditor.cpp
         PluginProcessor.cpp
+        components/MixerPanel.cpp
+        components/MixerChannelStrip.cpp
+        components/ToneEditorPanel.cpp
 )
 
 target_compile_definitions(Integra7Editor
