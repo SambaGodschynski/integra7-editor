@@ -16,7 +16,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     setSize(w, h);
 
     //
-    auto backgroundImage = juce::ImageCache::getFromMemory(logo_png_data, logo_png_size);
+    auto backgroundImage = juce::ImageCache::getFromMemory(logo_png_data, (int)logo_png_size);
     addAndMakeVisible(background);
     background.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
     background.setImage(backgroundImage);
