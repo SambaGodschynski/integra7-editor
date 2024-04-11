@@ -67,6 +67,7 @@ target_sources(Integra7Editor
         components/MixerPanel.cpp
         components/MixerChannelStrip.cpp
         components/ToneEditorPanel.cpp
+        components/PatchSelector.cpp
 )
 
 target_compile_definitions(Integra7Editor
