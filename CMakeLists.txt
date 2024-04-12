@@ -68,6 +68,8 @@ target_sources(Integra7Editor
         components/MixerChannelStrip.cpp
         components/ToneEditorPanel.cpp
         components/PatchSelector.cpp
+        components/SearchableCombobox.cpp
+        components/Input.cpp
 )
 
 target_compile_definitions(Integra7Editor
