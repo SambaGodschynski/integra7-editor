@@ -40,6 +40,7 @@ find_package(Boost 1.70.0 COMPONENTS ${BOOST_PACKAGES} REQUIRED)
 
 add_subdirectory(ext/JUCE)  
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(.)
 
 juce_set_vst2_sdk_path(ext/vstsdk2.4)
 juce_add_plugin(Integra7Editor
