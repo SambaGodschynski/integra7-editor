@@ -10,6 +10,7 @@ class Input : public juce::Label
 public:
     Input();
     std::function<void(const juce::String*)> onTextChanging; 
+    virtual void focusGained(juce::Component::FocusChangeType cause) override;
 protected:
     virtual void textEditorTextChanged(juce::TextEditor&) override;
 };

@@ -14,3 +14,8 @@ void Input::textEditorTextChanged(juce::TextEditor& ed)
         onTextChanging(&txt);
     }
 }
+
+void Input::focusGained(juce::Component::FocusChangeType cause)
+{
+    int x = 0;
+}
