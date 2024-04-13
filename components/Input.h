@@ -9,8 +9,9 @@ class Input : public juce::Label
 {
 public:
     Input();
-    std::function<void(const juce::String*)> onTextChanging; 
-    virtual void focusGained(juce::Component::FocusChangeType cause) override;
+    std::function<void(const juce::String*)> onTextChanging;
+    std::function<void()> onClick;
+    virtual void mouseDown(const juce::MouseEvent& event) override;
 protected:
     virtual void textEditorTextChanged(juce::TextEditor&) override;
 };

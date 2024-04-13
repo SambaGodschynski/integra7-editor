@@ -15,7 +15,9 @@ void Input::textEditorTextChanged(juce::TextEditor& ed)
     }
 }
 
-void Input::focusGained(juce::Component::FocusChangeType cause)
+void Input::mouseDown(const juce::MouseEvent& event)
 {
-    int x = 0;
+    if (onClick) {
+        onClick();
+    }
 }
