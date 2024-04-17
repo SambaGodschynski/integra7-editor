@@ -1,6 +1,7 @@
 #include "PatchSelector.h"
 #include <iostream>
 #include <integra7/presets/SnAcousticPresets.h>
+#include <integra7/presets/SnaInstr.h>
 #include <cassert>
 
 namespace
