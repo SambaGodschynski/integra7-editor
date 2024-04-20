@@ -6,8 +6,8 @@
 
 namespace i7
 {
-    constexpr size_t NumSnAcousticPresets = 256;
-    Preset SnAcousticPresets[NumSnAcousticPresets] =
+    constexpr UInt NumSnAcousticPresets = 256;
+    constexpr Preset SnAcousticPresets[NumSnAcousticPresets] =
         {{0, 89, 64, 0, CATEG_APNO, "Full Grand 1"},
             {1, 89, 64, 1, CATEG_APNO, "Full Grand 2"},
             {2, 89, 64, 2, CATEG_APNO, "Full Grand 3"},

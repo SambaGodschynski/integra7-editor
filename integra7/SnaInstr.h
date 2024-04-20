@@ -6,8 +6,8 @@
 
 namespace i7
 {
-    constexpr size_t NumSnAcousticInstruments = 127;
-    SnaInstr SnaInstruments[NumSnAcousticInstruments] =
+    constexpr UInt NumSnAcousticInstruments = 127;
+    constexpr SnaInstr SnaInstruments[NumSnAcousticInstruments] =
     {
         {"INT", "Concert Grand", "Ac.Piano", 64, 0, { "String Resonance", "Key Off Resonance", "Hammer Noise", "Stereo Width", "Nuance", "Tone Character", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}}, 
         {"INT", "Grand Piano1", "Ac.Piano", 64, 1, { "String Resonance", "Key Off Resonance", "Hammer Noise", "Stereo Width", "Nuance", "Tone Character", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}}, 
