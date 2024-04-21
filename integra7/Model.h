@@ -341,6 +341,11 @@ namespace i7
 		Node(nibble(0x0006), "EQ High Gain", "NEFMEQ_EQ_HIGHGAIN", 15, 0, 30, INTEGER1x5 ),
 	};
 
+	constexpr Node FM[] = // Studio Set MIDI
+	{
+		Node(nibble(0x0000), "Phase Lock", "NEFM_PHASE_LOCK", 0, 0, 1, INTEGER1x1),
+	};
+
 	constexpr Node FP[] = // Studio Set Part
 	{
 		Node(nibble(0x0000), "Receive Channel", "NEFP_RX_CH", 0, 0, 15, INTEGER1x4 ),
@@ -732,6 +737,38 @@ namespace i7
 		Node(nibble(0x0119), "LFO Step16", "RFPT_LFO_STEP16", 64, 28, 100, INTEGER1x7 ),
 	};
 
+	constexpr Node PLGT4[] = // PCM Tone Controller
+	{
+		Node(nibble(0x0000), "Beam Switch", "RFPLGT4_BEAM_SW", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0001), "Beam Assign", "RFPLGT4_BEAM_ASGN", 2, 0, 109, INTEGER1x7),
+		Node(nibble(0x0002), "Beam Polarity", "RFPLGT4_BEAM_POL", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0003), "Beam Range Lower", "RFPLGT4_BEAM_RANGE_LO", 0, 0, 127, INTEGER1x7),
+		Node(nibble(0x0004), "Beam Range Upper", "RFPLGT4_BEAM_RANGE_UP", 127, 0, 127, INTEGER1x7),
+		Node(nibble(0x0005), "Knob 1 Assign", "RFPLGT4_KNOB1_ASGN", 0, 0, 102, INTEGER1x7),
+		Node(nibble(0x0006), "Knob 2 Assign", "RFPLGT4_KNOB2_ASGN", 0, 0, 102, INTEGER1x7),
+		Node(nibble(0x0007), "Knob 3 Assign", "RFPLGT4_KNOB3_ASGN", 0, 0, 102, INTEGER1x7),
+		Node(nibble(0x0008), "Knob 4 Assign", "RFPLGT4_KNOB4_ASGN", 0, 0, 102, INTEGER1x7),
+		Node(nibble(0x0009), "Switch 1 Assign", "RFPLGT4_SW1_ASGN", 0, 0, 105, INTEGER1x7),
+		Node(nibble(0x000A), "Switch 1 Assign Mode", "RFPLGT4_SW1_MODE", 1, 0, 1, INTEGER1x1),
+		Node(nibble(0x000B), "Switch 2 Assign", "RFPLGT4_SW2_ASGN", 0, 0, 105, INTEGER1x7),
+		Node(nibble(0x000C), "Switch 2 Assign Mode", "RFPLGT4_SW2_MODE", 1, 0, 1, INTEGER1x1),
+		Node(nibble(0x000D), "Switch 3 Assign", "RFPLGT4_SW3_ASGN", 0, 0, 105, INTEGER1x7),
+		Node(nibble(0x000E), "Switch 3 Assign Mode", "RFPLGT4_SW3_MODE", 1, 0, 1, INTEGER1x1),
+		Node(nibble(0x000F), "Switch 4 Assign", "RFPLGT4_SW4_ASGN", 0, 0, 105, INTEGER1x7),
+		Node(nibble(0x0010), "Switch 4 Assign Mode", "RFPLGT4_SW4_MODE", 1, 0, 1, INTEGER1x1),
+		Node(nibble(0x0011), "Arpeggio Switch", "RFPLGT4_ARP_SW", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0012), "Arpeggio Hold", "RFPLGT4_ARP_HOLD", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0013), "Arpeggio Style", "RFPLGT4_ARP_STYLE", 0, 0, 127, INTEGER1x7),
+		Node(nibble(0x0014), "Arpeggio Variation", "RFPLGT4_ARP_VARIAT", 0, 0, 127, INTEGER1x7),
+		Node(nibble(0x0015), "Arpeggio Motif", "RFPLGT4_ARP_MOTIF", 0, 0, 9, INTEGER1x7),
+		Node(nibble(0x0016), "Arpeggio Accent Rate", "RFPLGT4_ARP_ACCT_RATE", 100, 0, 100, INTEGER1x7),
+		Node(nibble(0x0017), "Arpeggio Shuffle Rate", "RFPLGT4_ARP_SHFL_RATE", 50, 0, 100, INTEGER1x7),
+		Node(nibble(0x0018), "Arpeggio Shuffle Resolution", "RFPLGT4_ARP_SHFL_RESO", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0019), "Arpeggio Keyboard Velocity", "RFPLGT4_ARP_VELO", 0, 0, 127, INTEGER1x7),
+		Node(nibble(0x001A), "Arpeggio Octave Range", "RFPLGT4_ARP_RANGE", 64, 61, 67, INTEGER1x3),
+		Node(nibble(0x001B), "Arpeggio Key Trigger", "RFPLGT4_ARP_KEY_TRIG", 0, 0, 1, INTEGER1x1),
+	};
+
 	constexpr Node PC2[] = // PCM Tone Common 2
 	{
 		Node(nibble(0x0000), "(reserve)", "RESERVE_DUMMY", 0, 0, 127, INTEGER1x7 ),
@@ -812,6 +849,12 @@ namespace i7
 		Node(nibble(0x0020), "Modify Parameter 32", "RFPTM_MOD_PRM32", 0, 0, 127, INTEGER1x7 ),
 	};
 
+	constexpr Node RC[] = // Rhythm Set Common
+	{
+		Node(nibble(0x0000), "Rhythm Name", "RFRC_NAME", 0, 32, 127, 12),
+		Node(nibble(0x000C), "Rhythm Level", "RFRC_LEVEL", 127, 0, 127, INTEGER1x7),
+	};
+
 	constexpr Node RF[] = // Rhythm Set Common MFX
 	{
 		Node(nibble(0x0000), "MFX Type", "RFRF_MFX_TYPE", 0, 0, 67, INTEGER1x7, "mfx"),
@@ -862,12 +905,6 @@ namespace i7
 		Node(nibble(0x0105), "MFX Parameter 30", "RFRF_MFX_PRM30", 32768, 12768, 52768, INTEGER4x4, "mfx", 33),
 		Node(nibble(0x0109), "MFX Parameter 31", "RFRF_MFX_PRM31", 32768, 12768, 52768, INTEGER4x4, "mfx", 34),
 		Node(nibble(0x010D), "MFX Parameter 32", "RFRF_MFX_PRM32", 32768, 12768, 52768, INTEGER4x4, "mfx", 35),
-	};
-
-	constexpr Node RC[] = // Rhythm Set Common
-	{
-		Node(nibble(0x0000), "Rhythm Name", "RFRC_NAME", 0, 32, 127, 12 ),
-		Node(nibble(0x000C), "Rhythm Level", "RFRC_LEVEL", 127, 0, 127, INTEGER1x7 ),
 	};
 
 	constexpr Node RCQ[] = // Rhythm Set Common Comp/EQ
@@ -1135,6 +1172,44 @@ namespace i7
 		Node(nibble(0x0017), "Pattern Keyboard Velocity", "RFRLGT4_PTN_VELO", 0, 0, 127, INTEGER1x7 ),
 		Node(nibble(0x0018), "Pattern Note Assign", "RFRLGT4_PTN_NOTE_ASGN", 60, 0, 127, INTEGER1x7 ),
 		Node(nibble(0x0019), "Pattern Key Trigger", "RFRLGT4_PTN_KEY_TRIG", 0, 0, 1, INTEGER1x1 ),
+	};
+
+	constexpr Node RC2[] = // Rhythm Set Common 2
+	{
+		Node(nibble(0x0000), "(reserve)", "RESERVE_DUMMY", 0, 0, 127, INTEGER1x7),
+		Node(nibble(0x0010), "Phrase Number", "RFRC2_PHRASE", 0, 0, 255, INTEGER2x4),
+		Node(nibble(0x0012), "Keyword Flag 1 ", "RFRC2_KEYWORD1", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0013), "Keyword Flag 2 ", "RFRC2_KEYWORD2", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0014), "Keyword Flag 3 ", "RFRC2_KEYWORD3", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0015), "Keyword Flag 4 ", "RFRC2_KEYWORD4", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0016), "Keyword Flag 5 ", "RFRC2_KEYWORD5", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0017), "Keyword Flag 6 ", "RFRC2_KEYWORD6", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0018), "Keyword Flag 7 ", "RFRC2_KEYWORD7", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0019), "Keyword Flag 8 ", "RFRC2_KEYWORD8", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x001A), "Keyword Flag 9 ", "RFRC2_KEYWORD9", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x001B), "Keyword Flag 10", "RFRC2_KEYWORD10", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x001C), "Keyword Flag 11", "RFRC2_KEYWORD11", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x001D), "Keyword Flag 12", "RFRC2_KEYWORD12", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x001E), "Keyword Flag 13", "RFRC2_KEYWORD13", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x001F), "Keyword Flag 14", "RFRC2_KEYWORD14", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0020), "Keyword Flag 15", "RFRC2_KEYWORD15", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0021), "Keyword Flag 16", "RFRC2_KEYWORD16", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0022), "Keyword Flag 17", "RFRC2_KEYWORD17", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0023), "Keyword Flag 18", "RFRC2_KEYWORD18", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0024), "Keyword Flag 19", "RFRC2_KEYWORD19", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0025), "Keyword Flag 20", "RFRC2_KEYWORD20", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0026), "Keyword Flag 21", "RFRC2_KEYWORD21", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0027), "Keyword Flag 22", "RFRC2_KEYWORD22", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0028), "Keyword Flag 23", "RFRC2_KEYWORD23", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0029), "Keyword Flag 24", "RFRC2_KEYWORD24", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x002A), "Keyword Flag 25", "RFRC2_KEYWORD25", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x002B), "Keyword Flag 26", "RFRC2_KEYWORD26", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x002C), "Keyword Flag 27", "RFRC2_KEYWORD27", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x002D), "Keyword Flag 28", "RFRC2_KEYWORD28", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x002E), "Keyword Flag 29", "RFRC2_KEYWORD29", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x002F), "Keyword Flag 30", "RFRC2_KEYWORD30", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0030), "Keyword Flag 31", "RFRC2_KEYWORD31", 0, 0, 1, INTEGER1x1),
+		Node(nibble(0x0031), "TFX Switch", "RFRC2_TFX_SW", 1, 0, 1, INTEGER1x1),
 	};
 
 	constexpr Node RTM[] = // Rhythm Set Tone Modify
@@ -1631,5 +1706,288 @@ namespace i7
 		Node(nibble(0x002400), "PCM Tone Partial (Partial 3)", "_PT3", &PT[0]),
 		Node(nibble(0x002600), "PCM Tone Partial (Partial 4)", "_PT4", &PT[0]),
 		Node(nibble(0x003000), "PCM Tone Common 2", "_PC2", &PC2[0]),
+	};
+
+	constexpr Node RHY[] = // Rhythm Set
+	{
+		Node(nibble(0x000000), "Rhythm Set Common", "_RC", &RC[0]),
+		Node(nibble(0x000200), "Rhythm Set Common MFX", "_RF", &RF[0]),
+		Node(nibble(0x000800), "Rhythm Set Common Comp/EQ", "_RCQ", &RCQ[0]),
+		Node(nibble(0x001000), "Rhythm Set Partial (Key # 21)", "_RT21", &RT[0]),
+		Node(nibble(0x001200), "Rhythm Set Partial (Key # 22)", "_RT22", &RT[0]),
+		Node(nibble(0x001400), "Rhythm Set Partial (Key # 23)", "_RT23", &RT[0]),
+		Node(nibble(0x001600), "Rhythm Set Partial (Key # 24)", "_RT24", &RT[0]),
+		Node(nibble(0x001800), "Rhythm Set Partial (Key # 25)", "_RT25", &RT[0]),
+		Node(nibble(0x001A00), "Rhythm Set Partial (Key # 26)", "_RT26", &RT[0]),
+		Node(nibble(0x001C00), "Rhythm Set Partial (Key # 27)", "_RT27", &RT[0]),
+		Node(nibble(0x001E00), "Rhythm Set Partial (Key # 28)", "_RT28", &RT[0]),
+		Node(nibble(0x002000), "Rhythm Set Partial (Key # 29)", "_RT29", &RT[0]),
+		Node(nibble(0x002200), "Rhythm Set Partial (Key # 30)", "_RT30", &RT[0]),
+		Node(nibble(0x002400), "Rhythm Set Partial (Key # 31)", "_RT31", &RT[0]),
+		Node(nibble(0x002600), "Rhythm Set Partial (Key # 32)", "_RT32", &RT[0]),
+		Node(nibble(0x002800), "Rhythm Set Partial (Key # 33)", "_RT33", &RT[0]),
+		Node(nibble(0x002A00), "Rhythm Set Partial (Key # 34)", "_RT34", &RT[0]),
+		Node(nibble(0x002C00), "Rhythm Set Partial (Key # 35)", "_RT35", &RT[0]),
+		Node(nibble(0x002E00), "Rhythm Set Partial (Key # 36)", "_RT36", &RT[0]),
+		Node(nibble(0x003000), "Rhythm Set Partial (Key # 37)", "_RT37", &RT[0]),
+		Node(nibble(0x003200), "Rhythm Set Partial (Key # 38)", "_RT38", &RT[0]),
+		Node(nibble(0x003400), "Rhythm Set Partial (Key # 39)", "_RT39", &RT[0]),
+		Node(nibble(0x003600), "Rhythm Set Partial (Key # 40)", "_RT40", &RT[0]),
+		Node(nibble(0x003800), "Rhythm Set Partial (Key # 41)", "_RT41", &RT[0]),
+		Node(nibble(0x003A00), "Rhythm Set Partial (Key # 42)", "_RT42", &RT[0]),
+		Node(nibble(0x003C00), "Rhythm Set Partial (Key # 43)", "_RT43", &RT[0]),
+		Node(nibble(0x003E00), "Rhythm Set Partial (Key # 44)", "_RT44", &RT[0]),
+		Node(nibble(0x004000), "Rhythm Set Partial (Key # 45)", "_RT45", &RT[0]),
+		Node(nibble(0x004200), "Rhythm Set Partial (Key # 46)", "_RT46", &RT[0]),
+		Node(nibble(0x004400), "Rhythm Set Partial (Key # 47)", "_RT47", &RT[0]),
+		Node(nibble(0x004600), "Rhythm Set Partial (Key # 48)", "_RT48", &RT[0]),
+		Node(nibble(0x004800), "Rhythm Set Partial (Key # 49)", "_RT49", &RT[0]),
+		Node(nibble(0x004A00), "Rhythm Set Partial (Key # 50)", "_RT50", &RT[0]),
+		Node(nibble(0x004C00), "Rhythm Set Partial (Key # 51)", "_RT51", &RT[0]),
+		Node(nibble(0x004E00), "Rhythm Set Partial (Key # 52)", "_RT52", &RT[0]),
+		Node(nibble(0x005000), "Rhythm Set Partial (Key # 53)", "_RT53", &RT[0]),
+		Node(nibble(0x005200), "Rhythm Set Partial (Key # 54)", "_RT54", &RT[0]),
+		Node(nibble(0x005400), "Rhythm Set Partial (Key # 55)", "_RT55", &RT[0]),
+		Node(nibble(0x005600), "Rhythm Set Partial (Key # 56)", "_RT56", &RT[0]),
+		Node(nibble(0x005800), "Rhythm Set Partial (Key # 57)", "_RT57", &RT[0]),
+		Node(nibble(0x005A00), "Rhythm Set Partial (Key # 58)", "_RT58", &RT[0]),
+		Node(nibble(0x005C00), "Rhythm Set Partial (Key # 59)", "_RT59", &RT[0]),
+		Node(nibble(0x005E00), "Rhythm Set Partial (Key # 60)", "_RT60", &RT[0]),
+		Node(nibble(0x006000), "Rhythm Set Partial (Key # 61)", "_RT61", &RT[0]),
+		Node(nibble(0x006200), "Rhythm Set Partial (Key # 62)", "_RT62", &RT[0]),
+		Node(nibble(0x006400), "Rhythm Set Partial (Key # 63)", "_RT63", &RT[0]),
+		Node(nibble(0x006600), "Rhythm Set Partial (Key # 64)", "_RT64", &RT[0]),
+		Node(nibble(0x006800), "Rhythm Set Partial (Key # 65)", "_RT65", &RT[0]),
+		Node(nibble(0x006A00), "Rhythm Set Partial (Key # 66)", "_RT66", &RT[0]),
+		Node(nibble(0x006C00), "Rhythm Set Partial (Key # 67)", "_RT67", &RT[0]),
+		Node(nibble(0x006E00), "Rhythm Set Partial (Key # 68)", "_RT68", &RT[0]),
+		Node(nibble(0x007000), "Rhythm Set Partial (Key # 69)", "_RT69", &RT[0]),
+		Node(nibble(0x007200), "Rhythm Set Partial (Key # 70)", "_RT70", &RT[0]),
+		Node(nibble(0x007400), "Rhythm Set Partial (Key # 71)", "_RT71", &RT[0]),
+		Node(nibble(0x007600), "Rhythm Set Partial (Key # 72)", "_RT72", &RT[0]),
+		Node(nibble(0x007800), "Rhythm Set Partial (Key # 73)", "_RT73", &RT[0]),
+		Node(nibble(0x007A00), "Rhythm Set Partial (Key # 74)", "_RT74", &RT[0]),
+		Node(nibble(0x007C00), "Rhythm Set Partial (Key # 75)", "_RT75", &RT[0]),
+		Node(nibble(0x007E00), "Rhythm Set Partial (Key # 76)", "_RT76", &RT[0]),
+		Node(nibble(0x010000), "Rhythm Set Partial (Key # 77)", "_RT77", &RT[0]),
+		Node(nibble(0x010200), "Rhythm Set Partial (Key # 78)", "_RT78", &RT[0]),
+		Node(nibble(0x010400), "Rhythm Set Partial (Key # 79)", "_RT79", &RT[0]),
+		Node(nibble(0x010600), "Rhythm Set Partial (Key # 80)", "_RT80", &RT[0]),
+		Node(nibble(0x010800), "Rhythm Set Partial (Key # 81)", "_RT81", &RT[0]),
+		Node(nibble(0x010A00), "Rhythm Set Partial (Key # 82)", "_RT82", &RT[0]),
+		Node(nibble(0x010C00), "Rhythm Set Partial (Key # 83)", "_RT83", &RT[0]),
+		Node(nibble(0x010E00), "Rhythm Set Partial (Key # 84)", "_RT84", &RT[0]),
+		Node(nibble(0x011000), "Rhythm Set Partial (Key # 85)", "_RT85", &RT[0]),
+		Node(nibble(0x011200), "Rhythm Set Partial (Key # 86)", "_RT86", &RT[0]),
+		Node(nibble(0x011400), "Rhythm Set Partial (Key # 87)", "_RT87", &RT[0]),
+		Node(nibble(0x011600), "Rhythm Set Partial (Key # 88)", "_RT88", &RT[0]),
+		Node(nibble(0x011800), "Rhythm Set Partial (Key # 89)", "_RT89", &RT[0]),
+		Node(nibble(0x011A00), "Rhythm Set Partial (Key # 90)", "_RT90", &RT[0]),
+		Node(nibble(0x011C00), "Rhythm Set Partial (Key # 91)", "_RT91", &RT[0]),
+		Node(nibble(0x011E00), "Rhythm Set Partial (Key # 92)", "_RT92", &RT[0]),
+		Node(nibble(0x012000), "Rhythm Set Partial (Key # 93)", "_RT93", &RT[0]),
+		Node(nibble(0x012200), "Rhythm Set Partial (Key # 94)", "_RT94", &RT[0]),
+		Node(nibble(0x012400), "Rhythm Set Partial (Key # 95)", "_RT95", &RT[0]),
+		Node(nibble(0x012600), "Rhythm Set Partial (Key # 96)", "_RT96", &RT[0]),
+		Node(nibble(0x012800), "Rhythm Set Partial (Key # 97)", "_RT97", &RT[0]),
+		Node(nibble(0x012A00), "Rhythm Set Partial (Key # 98)", "_RT98", &RT[0]),
+		Node(nibble(0x012C00), "Rhythm Set Partial (Key # 99)", "_RT99", &RT[0]),
+		Node(nibble(0x012E00), "Rhythm Set Partial (Key # 100)", "_RT100", &RT[0]),
+		Node(nibble(0x013000), "Rhythm Set Partial (Key # 101)", "_RT101", &RT[0]),
+		Node(nibble(0x013200), "Rhythm Set Partial (Key # 102)", "_RT102", &RT[0]),
+		Node(nibble(0x013400), "Rhythm Set Partial (Key # 103)", "_RT103", &RT[0]),
+		Node(nibble(0x013600), "Rhythm Set Partial (Key # 104)", "_RT104", &RT[0]),
+		Node(nibble(0x013800), "Rhythm Set Partial (Key # 105)", "_RT105", &RT[0]),
+		Node(nibble(0x013A00), "Rhythm Set Partial (Key # 106)", "_RT106", &RT[0]),
+		Node(nibble(0x013C00), "Rhythm Set Partial (Key # 107)", "_RT107", &RT[0]),
+		Node(nibble(0x013E00), "Rhythm Set Partial (Key # 108)", "_RT108", &RT[0]),
+		Node(nibble(0x020000), "Rhythm Set Common 2", "_RC2", &RC2[0]),
+	};
+
+	constexpr Node SHPAT[] = // Synth Tone
+	{
+		Node(nibble(0x000000), "Synth Tone Common", "_SHPC", &SHPC[0]),
+		Node(nibble(0x000200), "Synth Tone MFX", "_SHPF", &SHPF[0]),
+		Node(nibble(0x002000), "Synth Tone Partial (1)", "_SHPT1", &SHPT[0]),
+		Node(nibble(0x002100), "Synth Tone Partial (2)", "_SHPT2", &SHPT[0]),
+		Node(nibble(0x002200), "Synth Tone Partial (3)", "_SHPT3", &SHPT[0]),
+		Node(nibble(0x005000), "Synth Tone Modify", "_SHPTM", &SHPTM[0]),
+	};
+
+	constexpr Node SNTONE[] = // SuperNATURAL Tone
+	{
+		Node(nibble(0x000000), "SN Tone Common", "_SNTC", &SNTC[0]),
+		Node(nibble(0x000200), "SN Tone MFX", "_SNTF", &SNTF[0]),
+	};
+
+	constexpr Node KIT[] = // Drum Kit
+	{
+		Node(nibble(0x000000), "Drum Kit Common", "_KC", &KC[0]),
+		Node(nibble(0x000200), "Drum Kit MFX", "_KF", &KF[0]),
+		Node(nibble(0x000800), "Drum Kit Common Comp/EQ", "_KCQ", &KCQ[0]),
+		Node(nibble(0x001000), "Drum Kit Note (Key # 27)", "_KN27", &KN[0]),
+		Node(nibble(0x001100), "Drum Kit Note (Key # 28)", "_KN28", &KN[0]),
+		Node(nibble(0x001200), "Drum Kit Note (Key # 29)", "_KN29", &KN[0]),
+		Node(nibble(0x001300), "Drum Kit Note (Key # 30)", "_KN30", &KN[0]),
+		Node(nibble(0x001400), "Drum Kit Note (Key # 31)", "_KN31", &KN[0]),
+		Node(nibble(0x001500), "Drum Kit Note (Key # 32)", "_KN32", &KN[0]),
+		Node(nibble(0x001600), "Drum Kit Note (Key # 33)", "_KN33", &KN[0]),
+		Node(nibble(0x001700), "Drum Kit Note (Key # 34)", "_KN34", &KN[0]),
+		Node(nibble(0x001800), "Drum Kit Note (Key # 35)", "_KN35", &KN[0]),
+		Node(nibble(0x001900), "Drum Kit Note (Key # 36)", "_KN36", &KN[0]),
+		Node(nibble(0x001A00), "Drum Kit Note (Key # 37)", "_KN37", &KN[0]),
+		Node(nibble(0x001B00), "Drum Kit Note (Key # 38)", "_KN38", &KN[0]),
+		Node(nibble(0x001C00), "Drum Kit Note (Key # 39)", "_KN39", &KN[0]),
+		Node(nibble(0x001D00), "Drum Kit Note (Key # 40)", "_KN40", &KN[0]),
+		Node(nibble(0x001E00), "Drum Kit Note (Key # 41)", "_KN41", &KN[0]),
+		Node(nibble(0x001F00), "Drum Kit Note (Key # 42)", "_KN42", &KN[0]),
+		Node(nibble(0x002000), "Drum Kit Note (Key # 43)", "_KN43", &KN[0]),
+		Node(nibble(0x002100), "Drum Kit Note (Key # 44)", "_KN44", &KN[0]),
+		Node(nibble(0x002200), "Drum Kit Note (Key # 45)", "_KN45", &KN[0]),
+		Node(nibble(0x002300), "Drum Kit Note (Key # 46)", "_KN46", &KN[0]),
+		Node(nibble(0x002400), "Drum Kit Note (Key # 47)", "_KN47", &KN[0]),
+		Node(nibble(0x002500), "Drum Kit Note (Key # 48)", "_KN48", &KN[0]),
+		Node(nibble(0x002600), "Drum Kit Note (Key # 49)", "_KN49", &KN[0]),
+		Node(nibble(0x002700), "Drum Kit Note (Key # 50)", "_KN50", &KN[0]),
+		Node(nibble(0x002800), "Drum Kit Note (Key # 51)", "_KN51", &KN[0]),
+		Node(nibble(0x002900), "Drum Kit Note (Key # 52)", "_KN52", &KN[0]),
+		Node(nibble(0x002A00), "Drum Kit Note (Key # 53)", "_KN53", &KN[0]),
+		Node(nibble(0x002B00), "Drum Kit Note (Key # 54)", "_KN54", &KN[0]),
+		Node(nibble(0x002C00), "Drum Kit Note (Key # 55)", "_KN55", &KN[0]),
+		Node(nibble(0x002D00), "Drum Kit Note (Key # 56)", "_KN56", &KN[0]),
+		Node(nibble(0x002E00), "Drum Kit Note (Key # 57)", "_KN57", &KN[0]),
+		Node(nibble(0x002F00), "Drum Kit Note (Key # 58)", "_KN58", &KN[0]),
+		Node(nibble(0x003000), "Drum Kit Note (Key # 59)", "_KN59", &KN[0]),
+		Node(nibble(0x003100), "Drum Kit Note (Key # 60)", "_KN60", &KN[0]),
+		Node(nibble(0x003200), "Drum Kit Note (Key # 61)", "_KN61", &KN[0]),
+		Node(nibble(0x003300), "Drum Kit Note (Key # 62)", "_KN62", &KN[0]),
+		Node(nibble(0x003400), "Drum Kit Note (Key # 63)", "_KN63", &KN[0]),
+		Node(nibble(0x003500), "Drum Kit Note (Key # 64)", "_KN64", &KN[0]),
+		Node(nibble(0x003600), "Drum Kit Note (Key # 65)", "_KN65", &KN[0]),
+		Node(nibble(0x003700), "Drum Kit Note (Key # 66)", "_KN66", &KN[0]),
+		Node(nibble(0x003800), "Drum Kit Note (Key # 67)", "_KN67", &KN[0]),
+		Node(nibble(0x003900), "Drum Kit Note (Key # 68)", "_KN68", &KN[0]),
+		Node(nibble(0x003A00), "Drum Kit Note (Key # 69)", "_KN69", &KN[0]),
+		Node(nibble(0x003B00), "Drum Kit Note (Key # 70)", "_KN70", &KN[0]),
+		Node(nibble(0x003C00), "Drum Kit Note (Key # 71)", "_KN71", &KN[0]),
+		Node(nibble(0x003D00), "Drum Kit Note (Key # 72)", "_KN72", &KN[0]),
+		Node(nibble(0x003E00), "Drum Kit Note (Key # 73)", "_KN73", &KN[0]),
+		Node(nibble(0x003F00), "Drum Kit Note (Key # 74)", "_KN74", &KN[0]),
+		Node(nibble(0x004000), "Drum Kit Note (Key # 75)", "_KN75", &KN[0]),
+		Node(nibble(0x004100), "Drum Kit Note (Key # 76)", "_KN76", &KN[0]),
+		Node(nibble(0x004200), "Drum Kit Note (Key # 77)", "_KN77", &KN[0]),
+		Node(nibble(0x004300), "Drum Kit Note (Key # 78)", "_KN78", &KN[0]),
+		Node(nibble(0x004400), "Drum Kit Note (Key # 79)", "_KN79", &KN[0]),
+		Node(nibble(0x004500), "Drum Kit Note (Key # 80)", "_KN80", &KN[0]),
+		Node(nibble(0x004600), "Drum Kit Note (Key # 81)", "_KN81", &KN[0]),
+		Node(nibble(0x004700), "Drum Kit Note (Key # 82)", "_KN82", &KN[0]),
+		Node(nibble(0x004800), "Drum Kit Note (Key # 83)", "_KN83", &KN[0]),
+		Node(nibble(0x004900), "Drum Kit Note (Key # 84)", "_KN84", &KN[0]),
+		Node(nibble(0x004A00), "Drum Kit Note (Key # 85)", "_KN85", &KN[0]),
+		Node(nibble(0x004B00), "Drum Kit Note (Key # 86)", "_KN86", &KN[0]),
+		Node(nibble(0x004C00), "Drum Kit Note (Key # 87)", "_KN87", &KN[0]),
+		Node(nibble(0x004D00), "Drum Kit Note (Key # 88)", "_KN88", &KN[0]),
+	};
+
+	constexpr Node SETUP[] = // Setup
+	{
+		Node(nibble(0x000000), "Setup", "_STP", &STP[0]),
+	};
+
+	constexpr Node SYS[] = // System
+	{
+		Node(nibble(0x000000), "System Common", "_SC", &SC[0]),
+	};
+
+	constexpr Node PRF[] = // Studio Set
+	{
+		Node(nibble(0x000000), "Studio Set Common", "_FC", &FC[0]),
+		Node(nibble(0x000400), "Studio Set Common Chorus", "_FH", &FH[0]),
+		Node(nibble(0x000600), "Studio Set Common Reverb", "_FV", &FV[0]),
+		Node(nibble(0x000800), "Studio Set Common RSS", "_FRSS", &FRSS[0]),
+		Node(nibble(0x000900), "Studio Set Mastering EQ", "_FMEQ", &FMEQ[0]),
+		Node(nibble(0x001000), "Studio Set MIDI (Channel 1)", "_FM1", &FM[0]),
+		Node(nibble(0x001100), "Studio Set MIDI (Channel 2)", "_FM2", &FM[0]),
+		Node(nibble(0x001200), "Studio Set MIDI (Channel 3)", "_FM3", &FM[0]),
+		Node(nibble(0x001300), "Studio Set MIDI (Channel 4)", "_FM4", &FM[0]),
+		Node(nibble(0x001400), "Studio Set MIDI (Channel 5)", "_FM5", &FM[0]),
+		Node(nibble(0x001500), "Studio Set MIDI (Channel 6)", "_FM6", &FM[0]),
+		Node(nibble(0x001600), "Studio Set MIDI (Channel 7)", "_FM7", &FM[0]),
+		Node(nibble(0x001700), "Studio Set MIDI (Channel 8)", "_FM8", &FM[0]),
+		Node(nibble(0x001800), "Studio Set MIDI (Channel 9)", "_FM9", &FM[0]),
+		Node(nibble(0x001900), "Studio Set MIDI (Channel 10)", "_FM10", &FM[0]),
+		Node(nibble(0x001A00), "Studio Set MIDI (Channel 11)", "_FM11", &FM[0]),
+		Node(nibble(0x001B00), "Studio Set MIDI (Channel 12)", "_FM12", &FM[0]),
+		Node(nibble(0x001C00), "Studio Set MIDI (Channel 13)", "_FM13", &FM[0]),
+		Node(nibble(0x001D00), "Studio Set MIDI (Channel 14)", "_FM14", &FM[0]),
+		Node(nibble(0x001E00), "Studio Set MIDI (Channel 15)", "_FM15", &FM[0]),
+		Node(nibble(0x001F00), "Studio Set MIDI (Channel 16)", "_FM16", &FM[0]),
+		Node(nibble(0x002000), "Studio Set Part (Part 1)", "_FP1", &FP[0]),
+		Node(nibble(0x002100), "Studio Set Part (Part 2)", "_FP2", &FP[0]),
+		Node(nibble(0x002200), "Studio Set Part (Part 3)", "_FP3", &FP[0]),
+		Node(nibble(0x002300), "Studio Set Part (Part 4)", "_FP4", &FP[0]),
+		Node(nibble(0x002400), "Studio Set Part (Part 5)", "_FP5", &FP[0]),
+		Node(nibble(0x002500), "Studio Set Part (Part 6)", "_FP6", &FP[0]),
+		Node(nibble(0x002600), "Studio Set Part (Part 7)", "_FP7", &FP[0]),
+		Node(nibble(0x002700), "Studio Set Part (Part 8)", "_FP8", &FP[0]),
+		Node(nibble(0x002800), "Studio Set Part (Part 9)", "_FP9", &FP[0]),
+		Node(nibble(0x002900), "Studio Set Part (Part 10)", "_FP10", &FP[0]),
+		Node(nibble(0x002A00), "Studio Set Part (Part 11)", "_FP11", &FP[0]),
+		Node(nibble(0x002B00), "Studio Set Part (Part 12)", "_FP12", &FP[0]),
+		Node(nibble(0x002C00), "Studio Set Part (Part 13)", "_FP13", &FP[0]),
+		Node(nibble(0x002D00), "Studio Set Part (Part 14)", "_FP14", &FP[0]),
+		Node(nibble(0x002E00), "Studio Set Part (Part 15)", "_FP15", &FP[0]),
+		Node(nibble(0x002F00), "Studio Set Part (Part 16)", "_FP16", &FP[0]),
+		Node(nibble(0x005000), "Studio Set Part EQ (Part 1)", "_FPEQ1", &FPEQ[0]),
+		Node(nibble(0x005100), "Studio Set Part EQ (Part 2)", "_FPEQ2", &FPEQ[0]),
+		Node(nibble(0x005200), "Studio Set Part EQ (Part 3)", "_FPEQ3", &FPEQ[0]),
+		Node(nibble(0x005300), "Studio Set Part EQ (Part 4)", "_FPEQ4", &FPEQ[0]),
+		Node(nibble(0x005400), "Studio Set Part EQ (Part 5)", "_FPEQ5", &FPEQ[0]),
+		Node(nibble(0x005500), "Studio Set Part EQ (Part 6)", "_FPEQ6", &FPEQ[0]),
+		Node(nibble(0x005600), "Studio Set Part EQ (Part 7)", "_FPEQ7", &FPEQ[0]),
+		Node(nibble(0x005700), "Studio Set Part EQ (Part 8)", "_FPEQ8", &FPEQ[0]),
+		Node(nibble(0x005800), "Studio Set Part EQ (Part 9)", "_FPEQ9", &FPEQ[0]),
+		Node(nibble(0x005900), "Studio Set Part EQ (Part 10)", "_FPEQ10", &FPEQ[0]),
+		Node(nibble(0x005A00), "Studio Set Part EQ (Part 11)", "_FPEQ11", &FPEQ[0]),
+		Node(nibble(0x005B00), "Studio Set Part EQ (Part 12)", "_FPEQ12", &FPEQ[0]),
+		Node(nibble(0x005C00), "Studio Set Part EQ (Part 13)", "_FPEQ13", &FPEQ[0]),
+		Node(nibble(0x005D00), "Studio Set Part EQ (Part 14)", "_FPEQ14", &FPEQ[0]),
+		Node(nibble(0x005E00), "Studio Set Part EQ (Part 15)", "_FPEQ15", &FPEQ[0]),
+		Node(nibble(0x005F00), "Studio Set Part EQ (Part 16)", "_FPEQ16", &FPEQ[0]),
+	};
+
+	constexpr Node FPART[] = // Temporary Tone
+	{
+		Node(nibble(0x000000), "Temporary PCM Tone", "_PAT", &PAT[0]),
+		Node(nibble(0x010000), "Temporary Synth Tone", "_SHPAT", &SHPAT[0]),
+		Node(nibble(0x020000), "Temporary SuperNATURAL Tone", "_SNTONE", &SNTONE[0]),
+		Node(nibble(0x030000), "Temporary Drum Kit", "_KIT", &KIT[0]),
+		Node(nibble(0x100000), "Temporary Rhythm Set", "_RHY", &RHY[0]),
+	};
+
+	constexpr Node* EDITOR_NOP = nullptr ;
+
+	constexpr Node root[] =
+	{
+		Node(nibble(0x01000000), "Setup", "_SETUP", &SETUP[0]),
+		Node(nibble(0x02000000), "System", "_SYS", &SYS[0]),
+		Node(nibble(0x0F000000), "(for editor nop) ", "_EDITOR_NOP", EDITOR_NOP),
+		Node(nibble(0x18000000), "Temporary Studio Set", "_PRF", &PRF[0]),
+		Node(nibble(0x19000000), "Temporary Tone (Studio Mode Part 1)", "_FPART1", &FPART[0]),
+		Node(nibble(0x19200000), "Temporary Tone (Studio Mode Part 2)", "_FPART2", &FPART[0]),
+		Node(nibble(0x19400000), "Temporary Tone (Studio Mode Part 3)", "_FPART3", &FPART[0]),
+		Node(nibble(0x19600000), "Temporary Tone (Studio Mode Part 4)", "_FPART4", &FPART[0]),
+		Node(nibble(0x1A000000), "Temporary Tone (Studio Mode Part 5)", "_FPART5", &FPART[0]),
+		Node(nibble(0x1A200000), "Temporary Tone (Studio Mode Part 6)", "_FPART6", &FPART[0]),
+		Node(nibble(0x1A400000), "Temporary Tone (Studio Mode Part 7)", "_FPART7", &FPART[0]),
+		Node(nibble(0x1A600000), "Temporary Tone (Studio Mode Part 8)", "_FPART8", &FPART[0]),
+		Node(nibble(0x1B000000), "Temporary Tone (Studio Mode Part 9)", "_FPART9", &FPART[0]),
+		Node(nibble(0x1B200000), "Temporary Tone (Studio Mode Part 10)", "_FPART10", &FPART[0]),
+		Node(nibble(0x1B400000), "Temporary Tone (Studio Mode Part 11)", "_FPART11", &FPART[0]),
+		Node(nibble(0x1B600000), "Temporary Tone (Studio Mode Part 12)", "_FPART12", &FPART[0]),
+		Node(nibble(0x1C000000), "Temporary Tone (Studio Mode Part 13)", "_FPART13", &FPART[0]),
+		Node(nibble(0x1C200000), "Temporary Tone (Studio Mode Part 14)", "_FPART14", &FPART[0]),
+		Node(nibble(0x1C400000), "Temporary Tone (Studio Mode Part 15)", "_FPART15", &FPART[0]),
+		Node(nibble(0x1C600000), "Temporary Tone (Studio Mode Part 16)", "_FPART16", &FPART[0]),
 	};
 }
