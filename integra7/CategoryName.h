@@ -2,7 +2,7 @@
 
 // ext/integra7-editor-web/js/view/preset/category_name.js
 
-#include "Integra7.h"
+#include "Integra7Defs.h"
 
 namespace i7
 {

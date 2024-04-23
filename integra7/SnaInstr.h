@@ -2,7 +2,7 @@
 
 // js\view\preset\sna_inst.js
 
-#include "Integra7.h"
+#include "Integra7Defs.h"
 
 namespace i7
 {

@@ -61,6 +61,8 @@ juce_add_plugin(Integra7Editor
     PRODUCT_NAME "Integra 7 Editor"
 )                                               # The name of the final executable, which can differ from the target name
 
+SET(IntegraSources integra7/Model.cpp)
+
 target_sources(Integra7Editor
     PRIVATE
         PluginEditor.cpp
@@ -71,6 +73,7 @@ target_sources(Integra7Editor
         components/PatchSelector.cpp
         components/SearchableCombobox.cpp
         components/Input.cpp
+        ${IntegraSources}
 )
 
 target_compile_definitions(Integra7Editor
@@ -101,3 +104,5 @@ target_link_libraries(Integra7Editor
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+add_executable(scratch scratch.cpp ${IntegraSources})
