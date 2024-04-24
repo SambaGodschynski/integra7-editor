@@ -105,4 +105,4 @@ target_link_libraries(Integra7Editor
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
-add_executable(scratch scratch.cpp ${IntegraSources})
+add_executable(model_tests model_tests.cpp ${IntegraSources})
