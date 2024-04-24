@@ -4,14 +4,6 @@
 
 namespace i7 
 {
-	struct Node;
-	struct NodeSearchResult
-	{
-		const Node* node = nullptr;
-		UInt addr = 0;
-		UInt offset = 0;
-	};
-	extern NodeSearchResult getNode(const char* id);
 	constexpr UInt INTEGER_MASK = 0x10000;
 	constexpr UInt INTEGER1x1 = 0x10001; /* 00000001 */
 	constexpr UInt INTEGER1x2 = 0x10003; /* 00000011 */
@@ -1832,7 +1824,7 @@ namespace i7
 
 	constexpr Node KIT[] = // Drum Kit
 	{
-Node(nibble(0x0), 0, "Drum Kit Common", "_KC", &KC[0], sizeof(KC)/sizeof(KC[0])),
+		Node(nibble(0x0), 0, "Drum Kit Common", "_KC", &KC[0], sizeof(KC)/sizeof(KC[0])),
 		Node(nibble(0x200), 5, "Drum Kit MFX", "_KF", &KF[0], sizeof(KF)/sizeof(KF[0])),
 		Node(nibble(0x800), 53, "Drum Kit Common Comp/EQ", "_KCQ", &KCQ[0], sizeof(KCQ)/sizeof(KCQ[0])),
 		Node(nibble(0x1000), 137, "Drum Kit Note (Key # 27)", "_KN27", &KN[0], sizeof(KN)/sizeof(KN[0])),
@@ -2001,4 +1993,18 @@ Node(nibble(0x0), 0, "Drum Kit Common", "_KC", &KC[0], sizeof(KC)/sizeof(KC[0]))
 		Node(nibble(0x1C600000), 226183, "Temporary Tone (Studio Mode Part 16)", "_FPART16", &FPART[0], sizeof(FPART)/sizeof(FPART[0])),
 	};
 	constexpr UInt NumRootNodes = sizeof(root) / sizeof(root[0]);
+	
+	constexpr UInt NumDataValues = 226183 + 2052 + 12894 + sizeof(RC2) / sizeof(RC2[0]);
+	
+	extern UInt data[NumDataValues];
+
+	struct NodeInfo
+	{
+		const Node* node = nullptr;
+		UInt addr = 0;
+		UInt offset = 0;
+		UInt index = 0;
+	};
+	extern NodeInfo getNode(const char* id);
+	extern void put(const NodeInfo&, UInt value);
 }

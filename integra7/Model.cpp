@@ -4,9 +4,10 @@
 
 namespace i7
 {
-    NodeSearchResult getNode(const char* id)
+    UInt data[NumDataValues] = {0};
+    NodeInfo getNode(const char* id)
     {
-        NodeSearchResult result;
+        NodeInfo result;
         const Node* nodes = &root[0];
         const Node* node = nullptr;
         UInt numNodes = NumRootNodes;
@@ -26,6 +27,7 @@ namespace i7
                 {
                     result.addr += n->addr;
                     result.offset += n->offset;
+                    result.index = i;
                     node = n;
                     if (ss.eof()) 
                     {
@@ -44,5 +46,17 @@ namespace i7
             }
         }
         return result;
+    }
+    void put(const NodeInfo& nodeData, UInt v)
+    {
+        if (nodeData.node->bytes > INTEGER_MASK) {
+            v = std::max(nodeData.node->min, std::min(nodeData.node->max, v));
+        }
+        /*
+            } else if (v.length > o.leaf.bytes) { /// v is ASCII String
+                v = v.substring(0, o.leaf.bytes);
+            }
+        */
+        data[nodeData.offset + nodeData.index] = v;
     }
 }
