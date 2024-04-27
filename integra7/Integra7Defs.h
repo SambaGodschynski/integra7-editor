@@ -1,10 +1,11 @@
 #pragma once
 
-#include <stddef.h>
+#include <vector>
 
 namespace i7
 {
     typedef unsigned char Byte;
+    typedef std::vector<Byte> Bytes;
     typedef unsigned int UInt;
     typedef UInt CategoryId;
     struct Preset 
