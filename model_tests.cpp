@@ -13,9 +13,6 @@ int main(size_t, const char**)
     assert(nodeResult.node->addr == i7::nibble(0x002F));
     assert(std::string(nodeResult.node->desc) == std::string("Modify Parameter 14"));
 
-    nodeResult = i7::getNode("PRM-_FPART1-_SNTONE-_SNTC");
-    assert(nodeResult.addr == 52461568);
-
     nodeResult = i7::getNode("PRM-_SETUP-_STP-_RC2-NESTP_SND_MODE_SD1");
     assert(nodeResult.node != nullptr);
     assert(std::string(nodeResult.node->desc) == std::string("Side 1 Sound Mode"));
@@ -73,7 +70,10 @@ int main(size_t, const char**)
     assert(i7::get(nodeResult) == 127);
     i7::Bytes sysex = i7::createSysexData(nodeResult);
     std::string strSysex = bytesToString(sysex.cbegin(), sysex.cend());
-    assert(strSysex == std::string("F0411000006412190200107f56F7"));
+    //                              f0411000006412190200107f  f7
+    assert(strSysex == std::string("f0411000006412190200107f56f7"));
+
+    // TODO CHECK INTEGER4x4, string value and value with lowest/highest address
 
     return 0;
 

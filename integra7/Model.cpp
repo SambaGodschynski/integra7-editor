@@ -1,6 +1,7 @@
 #include "Model.h"
 #include <sstream>
 #include <iostream>
+#include "ModelIds.h"
 
 namespace i7
 {
@@ -40,18 +41,18 @@ namespace i7
                 // prm has no data representation
                 continue;
             }
-            UInt localAddr = 0;
+            UInt localOffset = 0;
             for (UInt i = 0; i < numNodes; ++i)
             {
                 const Node* n = &nodes[i];
                 if (partId == std::string(n->id))
                 {
-                    result.addr += n->addr;
+                    result.addr += getModelIdAddress(partId);
                     result.offset += n->offset;
                     node = n;
                     if (ss.eof()) 
                     {
-                        result.offset += localAddr;
+                        result.offset += localOffset;
                         result.node = node;
                         return result;
                     }
@@ -59,7 +60,7 @@ namespace i7
                     numNodes = node->numChildren;
                     break;
                 }
-                localAddr += getByteSize(n->valueByteSizeType);
+                localOffset += getByteSize(n->valueByteSizeType);
             }
             if (nodes == &root[0]) 
             {
@@ -108,7 +109,7 @@ namespace i7
         Byte* end = begin + byteSize - 1;
         for(; end >= begin; --end)
         {
-            UInt i = end - begin;
+            UInt i = (UInt)(end - begin);
             char c = *(end);
             if (c == 0x20 || c == 0)
             {
@@ -121,15 +122,16 @@ namespace i7
 
     Bytes createSysexData(const NodeInfo& nodeData)
     {
-        UInt addr = nodeData.addr;
+        UInt addr = nodeData.addr; //419561488
         UInt resultSize = getByteSize(nodeData.node->valueByteSizeType);
         Bytes result;
         result.reserve(SizeRolandDt1 + ADDR_SIZE + resultSize + SIZE_F7);
+        auto xx = result.data();
         result.insert(result.begin(), &ROLAND_DT1[0], &ROLAND_DT1[SizeRolandDt1]);
-        result.push_back((addr >> 12) & 0xf);
-        result.push_back((addr >> 8) & 0xf);
-        result.push_back((addr >> 4) & 0xf);
-        result.push_back((addr & 0xf));
+        result.push_back((addr >> 24) & 0xff);
+        result.push_back((addr >> 16) & 0xff);
+        result.push_back((addr >> 8) & 0xff);
+        result.push_back(addr);
         Byte* it = &data[nodeData.offset];
         Byte* end = it + resultSize;
         for (; it != end; ++it)
@@ -146,7 +148,6 @@ namespace i7
         result[DeviceIdOffset] = deviceId;
         return result;
     }
-
 
     //-------------------------------------------------------------------------
     namespace
@@ -205,7 +206,7 @@ namespace i7
         {
             Byte* it = outBytes;
             Byte* end = outBytes + getByteSize(valueByteSizeType);
-            UInt str_length = str.length();
+            UInt str_length = (UInt)str.length();
             UInt i = 0;
             for (; it != end; ++it) 
             {

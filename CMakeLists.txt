@@ -61,7 +61,7 @@ juce_add_plugin(Integra7Editor
     PRODUCT_NAME "Integra 7 Editor"
 )                                               # The name of the final executable, which can differ from the target name
 
-SET(IntegraSources integra7/Model.cpp)
+SET(IntegraSources integra7/Model.cpp integra7/ModelIds.cpp)
 
 target_sources(Integra7Editor
     PRIVATE

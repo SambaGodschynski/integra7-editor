@@ -1,4 +1,5 @@
 #include "Integra7Defs.h"
+#include "ModelIds.h"
 #include "CategoryName.h"
 #include "SnAcousticPresets.h"
 #include "SnaInstr.h"
