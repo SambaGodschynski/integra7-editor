@@ -9,10 +9,14 @@ namespace i7
     {
         void valueToBytes(UInt, ValueByteSizeType, Byte* outBytes);
         void valueToBytes(const std::string&, ValueByteSizeType, Byte* outBytes);
+        UInt bytesToValue(const Byte* bytes, ValueByteSizeType byteSizeType);
         UInt getByteSize(ValueByteSizeType);
+        template<class TIterator>
+        Byte chksum(TIterator begin, TIterator end);
         constexpr UInt ADDR_SIZE = 4;
         constexpr UInt DATA_SIZE = 4;
         constexpr UInt SIZE_F7 = 1;
+        constexpr UInt SIZE_CHKSM = 1;
         constexpr Byte ROLAND = 0x41;
         constexpr Byte DEV_ID = 0x10;
         constexpr UInt DeviceIdOffset = 2;
@@ -92,13 +96,7 @@ namespace i7
 
     UInt get(const NodeInfo& nodeInfo)
     {
-        static_assert(sizeof(UInt) == 4);
-        if (getByteSize(nodeInfo.node->valueByteSizeType) > 4) 
-        {
-            throw std::runtime_error("unexpected byte size");
-        }
-        UInt* pUint = (UInt*)(&data[nodeInfo.offset]);
-        return *pUint;
+        return bytesToValue(&data[nodeInfo.offset], nodeInfo.node->valueByteSizeType);
     }
     
     std::string getString(const NodeInfo& nodeInfo)
@@ -122,22 +120,22 @@ namespace i7
 
     Bytes createSysexData(const NodeInfo& nodeData)
     {
-        UInt addr = nodeData.addr; //419561488
+        UInt addr = nodeData.addr;
         UInt resultSize = getByteSize(nodeData.node->valueByteSizeType);
         Bytes result;
-        result.reserve(SizeRolandDt1 + ADDR_SIZE + resultSize + SIZE_F7);
-        auto xx = result.data();
+        result.reserve(SizeRolandDt1 + ADDR_SIZE + resultSize + SIZE_CHKSM + SIZE_F7);
         result.insert(result.begin(), &ROLAND_DT1[0], &ROLAND_DT1[SizeRolandDt1]);
         result.push_back((addr >> 24) & 0xff);
         result.push_back((addr >> 16) & 0xff);
         result.push_back((addr >> 8) & 0xff);
-        result.push_back(addr);
+        result.push_back(addr & 0xff);
         Byte* it = &data[nodeData.offset];
         Byte* end = it + resultSize;
         for (; it != end; ++it)
         {
             result.push_back(*it);
         }
+        result.push_back(chksum(result.begin() + SizeRolandDt1, result.end()));
         result.push_back(0xf7);
         return result;
     }
@@ -187,20 +185,49 @@ namespace i7
                 break;
 
             case INTEGER2x4:
-                outBytes[1] = ((v >> 4) & 0xf);
-                outBytes[0] = (v & 0xf);
+                outBytes[0] = ((v >> 4) & 0xf);
+                outBytes[1] = (v & 0xf);
                 break;
 
             case INTEGER4x4:
-                outBytes[3] = ((v >> 12) & 0xf);
-                outBytes[2] = ((v >> 8) & 0xf);
-                outBytes[1] = ((v >> 4) & 0xf);
-                outBytes[0] = (v & 0xf);
+                outBytes[0] = ((v >> 12) & 0xf);
+                outBytes[1] = ((v >> 8) & 0xf);
+                outBytes[2] = ((v >> 4) & 0xf);
+                outBytes[3] = (v & 0xf);
                 break;
 
             default: /* ASCII String */
                 throw std::runtime_error("unexpected byte size type");
             }
+        }
+        UInt bytesToValue(const Byte* bytes, ValueByteSizeType byteSizeType)
+        {
+            switch (byteSizeType)
+            {
+            case INTEGER1x1:
+            case INTEGER1x2:
+            case INTEGER1x3:
+            case INTEGER1x4:
+            case INTEGER1x5:
+            case INTEGER1x6:
+            case INTEGER1x7: return (UInt)bytes[0];
+
+            case INTEGER2x4: {
+                return (((UInt)bytes[0]) << 4)
+                     + (((UInt)bytes[1]));
+                break;
+            }
+
+            case INTEGER4x4:
+                return (((UInt)bytes[0]) << 12)
+                     + (((UInt)bytes[1]) << 8)
+                     + (((UInt)bytes[2]) << 4)
+                     + (((UInt)bytes[3]));
+
+            default: /* ASCII String */
+                throw std::runtime_error("unexpected byte size type");
+            }
+            return 0;
         }
         void valueToBytes(const std::string& str, ValueByteSizeType valueByteSizeType, Byte* outBytes)
         {
@@ -214,6 +241,18 @@ namespace i7
                 *it = c;
                 i++;
             }
+        }
+        template<class TIterator>
+        Byte chksum(TIterator begin, TIterator end) 
+        {
+            TIterator it = begin;
+            Byte sum = 0;
+            for (; it != end; ++it) {
+                sum += *it;
+            }
+            sum = 128 - (sum & 0x7f);
+            sum &= 0x7F;
+            return sum;
         }
     }
 }
