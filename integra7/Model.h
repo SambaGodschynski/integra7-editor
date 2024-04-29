@@ -26,26 +26,27 @@ namespace i7
 
     struct Node 
     {
-		constexpr Node(UInt addr, const char* desc, const char* id, UInt init, UInt min, UInt max, ValueByteSizeType valueByteSizeType)
-		: addr(nibble(addr)), desc(desc), id(id), init(init), min(min), max(max), valueByteSizeType(valueByteSizeType) {}
-		constexpr Node(UInt addr, const char* desc, const char* id, UInt init, UInt min, UInt max, ValueByteSizeType valueByteSizeType, const char* opt)
-			: addr(nibble(addr)), desc(desc), id(id), init(init), min(min), max(max), valueByteSizeType(valueByteSizeType), opt(opt) {}
-		constexpr Node(UInt addr, const char* desc, const char* id, UInt init, UInt min, UInt max, ValueByteSizeType valueByteSizeType, const char* opt, UInt pos)
-			: addr(nibble(addr)), desc(desc), id(id), init(init), min(min), max(max), valueByteSizeType(valueByteSizeType), opt(opt), pos(pos) {}
-		constexpr Node(UInt addr, UInt offset, const char* desc, const char* id, const Node *node, UInt numChildren)
-			: addr(nibble(addr)), offset(offset), desc(desc), id(id), node(node), numChildren(numChildren), valueByteSizeType(ZeroByteSize) {}
+		constexpr Node(UInt _addr, const char* _desc, const char* _id, UInt _init, UInt _min, UInt _max, ValueByteSizeType _valueByteSizeType)
+		: addr(nibble(_addr)), desc(_desc), id(_id), init(_init), min(_min), max(_max), valueByteSizeType(_valueByteSizeType) {}
+		constexpr Node(UInt _addr, const char* _desc, const char* _id, UInt _init, UInt _min, UInt _max, ValueByteSizeType _valueByteSizeType, const char* _opt)
+			: addr(nibble(_addr)), desc(_desc), id(_id), init(_init), min(_min), max(_max), valueByteSizeType(_valueByteSizeType), opt(_opt) {}
+		constexpr Node(UInt _addr, const char* _desc, const char* _id, UInt _init, UInt _min, UInt _max, ValueByteSizeType _valueByteSizeType, const char* _opt, UInt _pos)
+			: addr(nibble(_addr)), desc(_desc), id(_id), init(_init), min(_min), max(_max), valueByteSizeType(_valueByteSizeType), opt(_opt), pos(_pos) {}
+		constexpr Node(UInt _addr, UInt _offset, const char* _desc, const char* _id, const Node *_node, UInt _numChildren)
+			: addr(nibble(_addr)), offset(_offset), desc(_desc), id(_id), node(_node), numChildren(_numChildren), valueByteSizeType(ZeroByteSize) {}
 		UInt addr = 0;
 		UInt offset = 0;
-		UInt numChildren = 0;
         const char *desc = nullptr; 
         const char *id = nullptr; 
 		UInt init = 0;
         UInt min = 0;
         UInt max = 0;
+		const Node* node = nullptr;
+		UInt numChildren = 0;
 		ValueByteSizeType valueByteSizeType = UndefinedByteType;
 		const char* opt = nullptr;
 		UInt pos = 0;
-		const Node* node = nullptr;
+
     };
 	struct NodeInfo
 	{
@@ -1997,7 +1998,7 @@ namespace i7
 	{
 		Node(0x1000000, 0, "Setup", "_SETUP", &SETUP[0], sizeof(SETUP)/sizeof(SETUP[0])),
 		Node(0x2000000, 56, "System", "_SYS", &SYS[0], sizeof(SYS)/sizeof(SYS[0])),
-		Node(0xF000000, 97, "(for editor nop) ", "_EDITOR_NOP", &EDITOR_NOP[0], sizeof(EDITOR_NOP)/sizeof(EDITOR_NOP[0])),
+		Node(0xF000000, 97, "(for editor nop) ", "_EDITOR_NOP", &EDITOR_NOP[0], 0),
 		Node(0x18000000, 97, "Temporary Studio Set", "_PRF", &PRF[0], sizeof(PRF)/sizeof(PRF[0])),
 		Node(0x19000000, 1483, "Temporary Tone (Studio Mode Part 1)", "_FPART1", &FPART[0], sizeof(FPART)/sizeof(FPART[0])),
 		Node(0x19200000, 16463, "Temporary Tone (Studio Mode Part 2)", "_FPART2", &FPART[0], sizeof(FPART)/sizeof(FPART[0])),

@@ -2,10 +2,6 @@
 #include <vector>
 
 
-// window.parent.globals.parameter.snaInstPreset
-// js\view\scene_tone_sna.js
-// js\view\preset\sna_inst.js
-
 ToneEditorPanel::ToneEditorPanel() : juce::Component("tone editor panel")
 {
     patchSelector.setBounds(0, 0, 300, 0);

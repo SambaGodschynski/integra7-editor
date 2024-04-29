@@ -73,6 +73,9 @@ target_sources(Integra7Editor
         components/PatchSelector.cpp
         components/SearchableCombobox.cpp
         components/Input.cpp
+        components/I7Parameter.cpp
+        components/I7Slider.cpp
+        components/I7TextInput.cpp
         ${IntegraSources}
 )
 

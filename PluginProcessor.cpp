@@ -110,6 +110,11 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 #endif
 }
 
+void PluginProcessor::sendSysex(const unsigned char*, size_t numBytes)
+{
+	
+}
+
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 	juce::MidiBuffer&)
 {

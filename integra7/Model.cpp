@@ -108,7 +108,7 @@ namespace i7
         for(; end >= begin; --end)
         {
             UInt i = (UInt)(end - begin);
-            char c = *(end);
+            Byte c = *(end);
             if (c == 0x20 || c == 0)
             {
                 continue;
@@ -195,7 +195,11 @@ namespace i7
                 outBytes[2] = ((v >> 4) & 0xf);
                 outBytes[3] = (v & 0xf);
                 break;
-
+            case ZeroByteSize:
+            case INTEGER_MASK:
+            case ByteSize12:
+            case ByteSize16:
+            case UndefinedByteType:
             default: /* ASCII String */
                 throw std::runtime_error("unexpected byte size type");
             }
@@ -224,6 +228,11 @@ namespace i7
                      + (((UInt)bytes[2]) << 4)
                      + (((UInt)bytes[3]));
 
+            case ZeroByteSize:
+            case INTEGER_MASK:
+            case ByteSize12:
+            case ByteSize16:
+            case UndefinedByteType:
             default: /* ASCII String */
                 throw std::runtime_error("unexpected byte size type");
             }
@@ -237,7 +246,7 @@ namespace i7
             UInt i = 0;
             for (; it != end; ++it) 
             {
-                char c = i < str_length ? str.at(i) : 0x20;
+                Byte c = i < str_length ? (Byte)str.at(i) : 0x20;
                 *it = c;
                 i++;
             }
