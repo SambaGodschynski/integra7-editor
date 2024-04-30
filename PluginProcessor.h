@@ -6,9 +6,9 @@
 #include <thread>
 #include <list>
 #include <memory>
-#include <components/ISysexSender.h>
+#include <components/I7Host.h>
 
-class PluginProcessor : public juce::AudioProcessor, public ISysexSender
+class PluginProcessor : public juce::AudioProcessor, public I7Host
 {
 public:
 	typedef std::list<std::string> LogCache;

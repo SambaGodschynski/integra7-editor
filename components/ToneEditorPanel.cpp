@@ -2,7 +2,7 @@
 #include <vector>
 
 
-ToneEditorPanel::ToneEditorPanel(ISysexSender* _sysexSender) : 
+ToneEditorPanel::ToneEditorPanel(I7Host* _sysexSender) : 
     juce::Component("tone editor panel"),
     p1("PRM-_SYS-_SC-NESC_TUNE", _sysexSender),
     p2("PRM-_FPART1-_PAT-_PC-RFPC_NAME", _sysexSender)

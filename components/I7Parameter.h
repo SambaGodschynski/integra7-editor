@@ -2,7 +2,7 @@
 
 #include <integra7/Model.h>
 #include <stdexcept>
-#include "ISysexSender.h"
+#include "I7Host.h"
 
 namespace juce
 {
@@ -15,7 +15,7 @@ class I7Parameter : public TControlComponent
 public:
     typedef TControlComponent ControllerBase;
     typedef typename ControllerBase::ControlerValueType T;
-    I7Parameter(const char *modelId, ISysexSender* _sysexSender) :  sysexSender(_sysexSender) 
+    I7Parameter(const char *modelId, I7Host* _sysexSender) :  sysexSender(_sysexSender) 
     {
         model = i7::getNode(modelId);
         if (model.node == nullptr)
@@ -34,7 +34,7 @@ protected:
     virtual void i7onValueChanged(T v) override;
 private:
     i7::NodeInfo model;
-    ISysexSender *sysexSender;
+    I7Host *sysexSender;
 };
 
 template<class TControlComponent>

@@ -6,12 +6,12 @@
 #include "I7Parameter.h"
 #include "I7Slider.h"
 #include "I7TextInput.h"
-#include "ISysexSender.h"
+#include "I7Host.h"
 
 class ToneEditorPanel : public juce::Component
 {
 public:
-    ToneEditorPanel(ISysexSender*);
+    ToneEditorPanel(I7Host*);
 private:
     PatchSelector patchSelector;
     juce::Label testLabel;
