@@ -14,3 +14,8 @@ void I7Slider::i7setValue(ControlerValueType v)
 {
     setValue(v);
 }
+
+void I7Slider::valueChanged()
+{
+    i7onValueChanged((i7::UInt)getValue());
+}

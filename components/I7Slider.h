@@ -12,6 +12,7 @@ public:
     void i7setControlLimits(i7::UInt min, i7::UInt max);
     void i7setValue(ControlerValueType v);
     ControlerValueType i7GetDefaultValue(i7::UInt initValue) const { return initValue; }
+    virtual void valueChanged() override;
 protected:
     virtual void i7onValueChanged(ControlerValueType v) = 0;
 };
