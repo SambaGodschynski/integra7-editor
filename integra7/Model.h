@@ -54,13 +54,14 @@ namespace i7
 		UInt offset = 0;
 		UInt addr = 0;
 	};
+	struct ModelData;
 	extern NodeInfo getNode(const char* id);
-	extern void put(const NodeInfo&, UInt value);
-	extern void put(const NodeInfo&, const std::string& str);
-	extern UInt get(const NodeInfo&);
-	extern std::string getString(const NodeInfo&);
-	extern Bytes createSysexData(const NodeInfo&);
-	extern Bytes createSysexData(const NodeInfo&, Byte deviceId);
+	extern void put(ModelData*, const NodeInfo&, UInt value);
+	extern void put(ModelData*, const NodeInfo&, const std::string& str);
+	extern UInt get(const ModelData*, const NodeInfo&);
+	extern std::string getString(const ModelData*, const NodeInfo&);
+	extern Bytes createSysexData(const ModelData*, const NodeInfo&);
+	extern Bytes createSysexData(const ModelData*, const NodeInfo&, Byte deviceId);
 
 	constexpr Node STP[] = // Setup
 	{
@@ -2018,6 +2019,9 @@ namespace i7
 		Node(0x1C600000, 226183, "Temporary Tone (Studio Mode Part 16)", "_FPART16", &FPART[0], sizeof(FPART)/sizeof(FPART[0])),
 	};
 	constexpr UInt NumRootNodes = sizeof(root) / sizeof(root[0]);
-	constexpr UInt NumDataValues = (226183 + 2052 + 12894 + 35) * sizeof(Byte);
-	extern Byte data[NumDataValues];
+	constexpr UInt ModelByteSize = (226183 + 2052 + 12894 + 35) * sizeof(Byte);
+	struct ModelData 
+	{
+		i7::Byte data[i7::ModelByteSize] = {0};
+	};
 }
