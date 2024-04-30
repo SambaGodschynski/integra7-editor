@@ -8,36 +8,38 @@ namespace juce
 {
     class Component;
 }
-extern ISysexSender* getSysexSender(const juce::Component*); 
 
 template<class TControlComponent>
 class I7Parameter : public TControlComponent
 {
 public:
-    typedef TControlComponent ControlerBase;
-    typedef typename ControlerBase::ControlerValueType T;
-    void setModel(const i7::NodeInfo& n) { model = n; }
-    const i7::NodeInfo& getModel() const { return model; }
-    void setSysexSender(ISysexSender *snd) { sysexSender = snd; }
-    ISysexSender* getSysexSender() const { return sysexSender; }
+    typedef TControlComponent ControllerBase;
+    typedef typename ControllerBase::ControlerValueType T;
+    I7Parameter(const char *modelId, ISysexSender* _sysexSender) :  sysexSender(_sysexSender) 
+    {
+        model = i7::getNode(modelId);
+        if (model.node == nullptr)
+        {
+            throw std::runtime_error(std::string("missing model for id: ") + modelId);
+        }
+        if (sysexSender == nullptr)
+        {
+            throw std::runtime_error("missing sender");
+        }
+        ControllerBase::i7setControlLimits(model.node->min, model.node->max);
+        i7::put(model, ControllerBase::i7GetDefaultValue(model.node->init));
+        ControllerBase::i7setValue(ControllerBase::i7GetDefaultValue(model.node->init));
+    }
 protected:
-    virtual void onValueChanged(T v) override;
+    virtual void i7onValueChanged(T v) override;
 private:
     i7::NodeInfo model;
-    ISysexSender *sysexSender = nullptr;
+    ISysexSender *sysexSender;
 };
 
 template<class TControlComponent>
-void I7Parameter<TControlComponent>::onValueChanged(T v)
+void I7Parameter<TControlComponent>::i7onValueChanged(T v)
 {
-    if (model.node == nullptr)
-    {
-        throw std::runtime_error("missing model");
-    }
-    if (sysexSender == nullptr)
-    {
-        throw std::runtime_error("missing sender");
-    }
     i7::put(model, v);
     i7::Bytes sysexMsg = i7::createSysexData(model);
     sysexSender->sendSysex(sysexMsg.data(), sysexMsg.size());

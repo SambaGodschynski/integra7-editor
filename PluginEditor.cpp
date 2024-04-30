@@ -9,8 +9,11 @@ extern "C" {
 
 #define LOCK(mutex) std::lock_guard<Mutex> guard(mutex)
 
-PluginEditor::PluginEditor (PluginProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p), mainTabs(juce::TabbedButtonBar::TabsAtTop)
+PluginEditor::PluginEditor(PluginProcessor& p)
+    : AudioProcessorEditor(&p), 
+    processorRef(p), 
+    mainTabs(juce::TabbedButtonBar::TabsAtTop),
+    toneEditorPanel(&p)
 {
     int w = 1024, h = 768;
     setSize(w, h);
