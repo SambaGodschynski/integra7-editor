@@ -3,7 +3,7 @@ execute_process(COMMAND git --work-tree=. log --pretty=format:%h -n 1 OUTPUT_VAR
 execute_process(COMMAND git branch --show-current OUTPUT_VARIABLE GIT_BRANCH_NAME)   
 
 # Project name.
-project(werckmeister-vst VERSION 1.0.0)
+project(integra7ed VERSION 1.0.0)
 set (CMAKE_CXX_STANDARD 17)
 set(BOOST_VERSION "1.78.0")
 SET(BOOST_PACKAGES system)
