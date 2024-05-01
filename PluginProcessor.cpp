@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sstream>
 
+constexpr size_t MidiBufferReserveBytes = 1024 * 1024 * 4;
 
 PluginProcessor::PluginProcessor()
 	: AudioProcessor(BusesProperties()
@@ -88,6 +89,7 @@ void PluginProcessor::changeProgramName(int, const juce::String&)
 
 void PluginProcessor::prepareToPlay(double, int)
 {
+	localMidiBuffer.ensureSize(MidiBufferReserveBytes);
 }
 
 
@@ -115,10 +117,13 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 void PluginProcessor::sendSysex(const unsigned char* sysexData, size_t numBytes)
 {
 	std::cout << bytesToString(sysexData, sysexData + numBytes) << std::endl;
+	const std::lock_guard<Mutex> lock(midiBufferMutex);
+	int eventCount = localMidiBuffer.getNumEvents();
+	localMidiBuffer.addEvent(sysexData, numBytes, eventCount);
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-	juce::MidiBuffer&)
+	juce::MidiBuffer& inOutMidiBff)
 {
 	juce::ScopedNoDenormals noDenormals;
 	auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -126,6 +131,13 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 	{
 		buffer.clear(i, 0, buffer.getNumSamples());
 	}
+	const std::lock_guard<Mutex> lock(midiBufferMutex);
+	auto it = localMidiBuffer.cbegin();
+	for(; it != localMidiBuffer.cend(); ++it)
+	{
+		inOutMidiBff.addEvent((*it).getMessage(), (*it).samplePosition);
+	}
+	localMidiBuffer.clear();
 }
 
 bool PluginProcessor::hasEditor() const

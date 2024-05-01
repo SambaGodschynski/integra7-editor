@@ -35,6 +35,9 @@ public:
 	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void sendSysex(const unsigned char*, size_t numBytes) override;
 private:
+	typedef std::mutex Mutex;
+	std::mutex midiBufferMutex;
+	juce::MidiBuffer localMidiBuffer;
 	LogCache logCache;
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
