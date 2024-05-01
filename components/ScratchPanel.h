@@ -8,10 +8,10 @@
 #include "I7TextInput.h"
 #include "I7Host.h"
 
-class ToneEditorPanel : public juce::Component
+class ScratchPanel : public juce::Viewport
 {
 public:
-    ToneEditorPanel(I7Host*);
+    ScratchPanel(I7Host*);
 private:
     PatchSelector patchSelector;
     juce::Label testLabel;

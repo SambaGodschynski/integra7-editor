@@ -1,9 +1,9 @@
-#include "ToneEditorPanel.h"
+#include "ScratchPanel.h"
 #include <vector>
 
 
-ToneEditorPanel::ToneEditorPanel(I7Host* _sysexSender) : 
-    juce::Component("tone editor panel"),
+ScratchPanel::ScratchPanel(I7Host* _sysexSender) : 
+    juce::Viewport("scratch panel"),
     p1("PRM-_SYS-_SC-NESC_TUNE", _sysexSender),
     p2("PRM-_FPART1-_PAT-_PC-RFPC_NAME", _sysexSender)
 {

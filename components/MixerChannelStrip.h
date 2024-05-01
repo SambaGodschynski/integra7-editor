@@ -7,6 +7,7 @@ class MixerChannelStrip : public juce::Component
 {
 public:
     MixerChannelStrip();
+    virtual void resized() override;
 private:
     juce::Slider volume;
     juce::Slider pan;

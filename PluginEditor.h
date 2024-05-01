@@ -6,7 +6,8 @@
 #include <list>
 #include <string>
 #include "components/MixerPanel.h"
-#include "components/ToneEditorPanel.h"
+#include "components/ScratchPanel.h"
+#include "components/toneEditor/ToneEditorPanel.h"
 
 //==============================================================================
 class PluginEditor  : public juce::AudioProcessorEditor
@@ -23,7 +24,7 @@ private:
     juce::TabbedComponent mainTabs;
     MixerPanel mixerPanel;
     ToneEditorPanel toneEditorPanel;
-    juce::ImageComponent background;
+    ScratchPanel scratchPanel;
     std::list<std::string> logCache;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
 };

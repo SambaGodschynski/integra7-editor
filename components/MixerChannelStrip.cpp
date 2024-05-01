@@ -3,7 +3,7 @@
 MixerChannelStrip::MixerChannelStrip() : juce::Component("mixer channel strip")
 {
     flexBox.flexDirection = juce::FlexBox::Direction::column;
-	flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+	//flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
 	// flexBox.alignContent = juce::FlexBox::AlignContent::flexStart;
 	// flexBox.alignItems = juce::FlexBox::AlignItems::flexStart;
 	// flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
@@ -33,7 +33,11 @@ MixerChannelStrip::MixerChannelStrip() : juce::Component("mixer channel strip")
         flexBox.items.add(flexItem);
         addAndMakeVisible(pan);
     }
+    resized();
+}
 
+void MixerChannelStrip::resized()
+{
     auto bounds = juce::Rectangle<int>(0, 0, getWidth(), getHeight());
 	flexBox.performLayout(bounds);
 }

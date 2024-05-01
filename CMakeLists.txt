@@ -26,8 +26,8 @@ ENDIF(APPLE)
 
 include(FileEmbed)
 FileEmbedSetup()
-FileEmbedAdd(${CMAKE_SOURCE_DIR}/Resources/preferences_normal.png)
-FileEmbedAdd(${CMAKE_SOURCE_DIR}/Resources/logo.png)
+# FileEmbedAdd(${CMAKE_SOURCE_DIR}/Resources/preferences_normal.png)
+# FileEmbedAdd(${CMAKE_SOURCE_DIR}/Resources/logo.png)
 
 if ("$ENV{WM_DOWNLOAD_EXTERNALS}")
   #Download Boost
@@ -69,13 +69,17 @@ target_sources(Integra7Editor
         PluginProcessor.cpp
         components/MixerPanel.cpp
         components/MixerChannelStrip.cpp
-        components/ToneEditorPanel.cpp
+        components/ScratchPanel.cpp
         components/PatchSelector.cpp
         components/SearchableCombobox.cpp
         components/Input.cpp
         components/I7Parameter.cpp
         components/I7Slider.cpp
         components/I7TextInput.cpp
+        components/toneEditor/ToneEditorPanel.cpp
+        components/toneEditor/sna/Common.cpp
+        components/toneEditor/sna/Instrument.cpp
+        components/toneEditor/sna/SnaPanel.cpp
         ${IntegraSources}
 )
 

@@ -9,8 +9,14 @@ namespace juce
     class Component;
 }
 
+class I7ParameterBase
+{
+public:
+    virtual ~I7ParameterBase() {}
+};
+
 template<class TControlComponent>
-class I7Parameter : public TControlComponent
+class I7Parameter : public TControlComponent, public I7ParameterBase
 {
 public:
     typedef TControlComponent ControllerBase;
@@ -31,6 +37,7 @@ public:
         }
         i7::put(&i7Host->model, nodeInfo, ControllerBase::i7GetDefaultValue(nodeInfo.node->init));
     }
+    virtual ~I7Parameter() {}
 protected:
     virtual void i7onValueChanged(T v) override;
 private:
