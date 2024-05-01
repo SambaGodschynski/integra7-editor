@@ -1,10 +1,5 @@
 #include "FlexContainer.h"
 
-FlexContainer::FlexContainer() : juce::Component("Flex Container")
-{
-
-}
-
 void FlexContainer::resized()
 {
 	auto w = getWidth();
@@ -18,6 +13,7 @@ void FlexContainer::addToFlexBox(ChildType component)
 	_children.push_back(component);
 	addAndMakeVisible(component.get());
 	juce::FlexItem flexItem(component->getWidth(), component->getHeight(), *component);
+	flexItem.alignSelf = juce::FlexItem::AlignSelf::stretch;
 	_flexbox.items.add(flexItem);
 	resized();
 }

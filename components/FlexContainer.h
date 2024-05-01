@@ -9,7 +9,7 @@ class FlexContainer : public juce::Component
 {
 public:
     typedef std::shared_ptr<juce::Component> ChildType;
-    FlexContainer();
+    FlexContainer(const char* name = "") : Component(name) {}
     virtual void resized() override;
     virtual void addToFlexBox(ChildType);
     juce::FlexBox& flexBox() { return _flexbox; }

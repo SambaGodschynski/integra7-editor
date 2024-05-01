@@ -6,17 +6,15 @@
 #include <components/I7Host.h>
 #include <components/I7Parameter.h>
 #include <components/PartInfo.h>
+#include <components/FlexContainer.h>
 #include <memory>
+
 namespace ted_sna
 {
-    class Common : public juce::Component
+    class Common : public FlexContainer
     {
     public:
         Common(I7Host*, const PartInfo&);
-        virtual void resized() override;
     private:
-        juce::FlexBox flexBox;
-        typedef std::vector<std::shared_ptr<juce::Component>> Parameters;
-        Parameters parameters;
     };
 }
