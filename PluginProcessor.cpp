@@ -119,7 +119,7 @@ void PluginProcessor::sendSysex(const unsigned char* sysexData, size_t numBytes)
 	std::cout << bytesToString(sysexData, sysexData + numBytes) << std::endl;
 	const std::lock_guard<Mutex> lock(midiBufferMutex);
 	int eventCount = localMidiBuffer.getNumEvents();
-	localMidiBuffer.addEvent(sysexData, numBytes, eventCount);
+	localMidiBuffer.addEvent(sysexData, (int)numBytes, eventCount);
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,

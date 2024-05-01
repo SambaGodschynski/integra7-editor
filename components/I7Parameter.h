@@ -3,7 +3,7 @@
 #include <integra7/Model.h>
 #include <stdexcept>
 #include "I7Host.h"
-
+#include <string>
 namespace juce
 {
     class Component;
@@ -38,6 +38,7 @@ public:
         i7::put(&i7Host->model, nodeInfo, ControllerBase::i7GetDefaultValue(nodeInfo.node->init));
     }
     virtual ~I7Parameter() {}
+    std::string i7getDescription() const { return nodeInfo.node->desc; }
 protected:
     virtual void i7onValueChanged(T v) override;
 private:

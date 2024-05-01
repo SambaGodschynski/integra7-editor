@@ -7,9 +7,10 @@ ToneEditorPanel::ToneEditorPanel(I7Host* _i7Host) :
     snaPannel(_i7Host, partInfo)
 {
     addAndMakeVisible(snaPannel);
+    resized();
 }
 
 void ToneEditorPanel::resized()
 {
-   
+    snaPannel.setBoundsRelative(0.0f, 0.0f, 1.0f, 1.0f);
 }

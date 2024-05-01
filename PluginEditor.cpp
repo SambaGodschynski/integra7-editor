@@ -20,6 +20,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     mainTabs.addTab("Mixer", juce::Colour(), &mixerPanel, false);
     mainTabs.addTab("ToneEditor", juce::Colour(), &toneEditorPanel, false);
     mainTabs.addTab("Scratch", juce::Colour(), &scratchPanel, false);
+    resized();
 }
 
 PluginEditor::~PluginEditor()
@@ -35,5 +36,6 @@ void PluginEditor::resized()
 {
     mixerPanel.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
     scratchPanel.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
+    toneEditorPanel.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
     mainTabs.setBoundsRelative(0.f, 0.f, 1.f, 1.f);
 }

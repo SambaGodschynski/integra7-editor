@@ -3,8 +3,8 @@
 
 namespace ted_sna
 {
-    Instrument::Instrument(I7Host* _i7Host) : 
-        juce::Viewport("Instrument")
+    Instrument::Instrument(I7Host* _i7Host, const PartInfo& partInfo) : 
+        juce::Component("Instrument")
     {
     }
 }

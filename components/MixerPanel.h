@@ -8,6 +8,7 @@ class MixerPanel : public juce::Component
 {
 public:
     MixerPanel();
+    virtual void resized() override;
 private:
     enum 
     {

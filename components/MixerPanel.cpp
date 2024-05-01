@@ -3,7 +3,7 @@
 MixerPanel::MixerPanel() : juce::Component("mixer panel")
 {
     flexBox.flexDirection = juce::FlexBox::Direction::row;
-	flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+    flexBox.flexWrap = juce::FlexBox::Wrap::noWrap;
 	flexBox.alignContent = juce::FlexBox::AlignContent::flexStart;
 	flexBox.alignItems = juce::FlexBox::AlignItems::flexStart;
 	flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
@@ -16,7 +16,11 @@ MixerPanel::MixerPanel() : juce::Component("mixer panel")
         flexBox.items.add(flexItem);
         addAndMakeVisible(channelStrip);
     }
+    resized();
+}
+
+void MixerPanel::resized()
+{
     auto bounds = juce::Rectangle<int>(0, 0, getWidth(), getHeight());
 	flexBox.performLayout(bounds);
-
 }
