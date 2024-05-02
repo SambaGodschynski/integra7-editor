@@ -8,12 +8,12 @@ void FlexContainer::resized()
 	_flexbox.performLayout(bounds);
 }
 
-void FlexContainer::addToFlexBox(ChildType component)
+juce::FlexItem* FlexContainer::addToFlexBox(ChildType component)
 {
 	_children.push_back(component);
 	addAndMakeVisible(component.get());
 	juce::FlexItem flexItem(component->getWidth(), component->getHeight(), *component);
-	flexItem.alignSelf = juce::FlexItem::AlignSelf::stretch;
 	_flexbox.items.add(flexItem);
 	resized();
+	return &(_flexbox.items.getReference(_flexbox.items.size()-1));
 }

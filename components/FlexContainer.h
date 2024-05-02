@@ -11,7 +11,7 @@ public:
     typedef std::shared_ptr<juce::Component> ChildType;
     FlexContainer(const char* name = "") : Component(name) {}
     virtual void resized() override;
-    virtual void addToFlexBox(ChildType);
+    virtual juce::FlexItem* addToFlexBox(ChildType);
     juce::FlexBox& flexBox() { return _flexbox; }
 private:
     juce::FlexBox _flexbox;

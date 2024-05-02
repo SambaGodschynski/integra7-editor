@@ -13,7 +13,6 @@ namespace {
 
 SearchableCombobox::SearchableCombobox() : juce::Component("searchable combobox")
 {
-
 	input.setColour(juce::Label::outlineColourId, juce::Colours::darkblue);
 	addAndMakeVisible(input);
 	input.setEditable(true);
@@ -47,11 +46,18 @@ void SearchableCombobox::setDropDownVisible(bool dropDownVisible)
 {
 	if (dropDownVisible)
 	{
-
+		searchQuery.clear();
+		filteredIndices.clear();
+		list.updateContent();
+		input.setText("", juce::NotificationType::dontSendNotification);
 		getTopLevelComponent()->addMouseListener(this, true);
 	}
 	if(this->isDropDownVisible && !dropDownVisible)
 	{
+		if (selectedIndex > 0) 
+		{
+			input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
+		}
 		getTopLevelComponent()->removeMouseListener(this);
 	}
 	list.setVisible(dropDownVisible);
@@ -61,7 +67,8 @@ void SearchableCombobox::setDropDownVisible(bool dropDownVisible)
 
 void SearchableCombobox::resized()
 {
-	if (isDropDownVisible) {
+	if (isDropDownVisible) 
+	{
 		auto h = dropDownHeight;
 		auto neededHeight = CellHeight * getNumRows() + InputHeight;
 		if (neededHeight < h)
@@ -71,7 +78,8 @@ void SearchableCombobox::resized()
 		setBounds(0, 0, getWidth(), h);
 		childrenChanged();
 	}
-	else {
+	else 
+	{
 		setBounds(0, 0, getWidth(), InputHeight);
 	}
 	input.setBounds(0, 0, getWidth(), InputHeight);
@@ -99,7 +107,7 @@ void SearchableCombobox::paintListBoxItem(int rowNumber, juce::Graphics &g, int 
 		index = filteredIndices.at(index);
 	}
     g.setFont(FontSize);
-    g.setColour (rowIsSelected ? juce::Colours::darkblue : getLookAndFeel().findColour(juce::ListBox::textColourId)); 
+    g.setColour (rowIsSelected ? juce::Colours::orangered : getLookAndFeel().findColour(juce::ListBox::textColourId)); 
     g.drawText (getDataStringValue(index), 2, 0, width - 4, height, juce::Justification::centredLeft, true);
 }
 
@@ -123,6 +131,9 @@ void SearchableCombobox::setDataSource(const GetDataCount& _getDataCount,
 void SearchableCombobox::handleAsyncUpdate()
 {
 	updateFilter();
+	if (!isDropDownVisible && list.isVisible()) {
+		setDropDownVisible(false);
+	}
 }
 
 void SearchableCombobox::updateFilter()
@@ -151,4 +162,28 @@ void SearchableCombobox::timerCallback()
 {
 	triggerAsyncUpdate();
 	stopTimer();
+}
+
+int SearchableCombobox::listToSourceIndex(int listIndex)
+{
+	if (listIndex < 0) 
+	{
+		return -1;
+	}
+	if (filteredIndices.empty()) 
+	{
+		return listIndex;
+	}
+	return filteredIndices.at(listIndex);
+}
+
+void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
+{
+	selectedIndex = listToSourceIndex(lastRowSelected);
+	if (selectedIndex >= 0) 
+	{
+		input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
+	}
+	isDropDownVisible = false;
+	triggerAsyncUpdate();
 }

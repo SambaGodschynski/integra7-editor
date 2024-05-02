@@ -13,6 +13,7 @@ public:
     typedef std::function<size_t()> GetDataCount;
     typedef std::function<juce::String(size_t)> GetDataStringValue;
     typedef std::function<bool(size_t,const juce::String)> IsDataMatch;
+    typedef std::function<void(size_t)> SelectionChanged;
     SearchableCombobox();
     virtual int getNumRows() override;
     virtual void paintListBoxItem(int rowNumber, juce::Graphics &g, int width, int height, bool rowIsSelected) override;
@@ -22,6 +23,7 @@ public:
     int dropDownHeight = 120;
     virtual void mouseUp(const juce::MouseEvent& event) override;
     void setDataSource(const GetDataCount&, const GetDataStringValue&, const IsDataMatch&);
+    virtual void selectedRowsChanged(int lastRowSelected) override;
 
 private:
     juce::String searchQuery;
@@ -29,11 +31,14 @@ private:
     GetDataCount getDataCount;
     GetDataStringValue getDataStringValue;
     IsDataMatch isDataMatch;
+    SelectionChanged selectionChanged;
     void setDropDownVisible(bool);
     void onTextChanging(const juce::String*);
     void onInputClick();
     void updateFilter();
+    int listToSourceIndex(int);
     juce::ListBox list;
     Input input;
     bool isDropDownVisible = false;
+    int selectedIndex = -1;
 };

@@ -76,6 +76,7 @@ target_sources(Integra7Editor
         components/I7Parameter.cpp
         components/I7Slider.cpp
         components/I7TextInput.cpp
+        components/I7ComboBox.cpp
         components/FlexContainer.cpp
         components/toneEditor/ToneEditorPanel.cpp
         components/toneEditor/sna/Common.cpp

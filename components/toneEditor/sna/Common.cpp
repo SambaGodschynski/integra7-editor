@@ -14,21 +14,18 @@ namespace ted_sna
 			auto label = std::make_shared<juce::Label>();
 			flexContainer->flexBox().flexDirection = juce::FlexBox::Direction::row;
 			flexContainer->flexBox().flexWrap = juce::FlexBox::Wrap::noWrap;
-			flexContainer->flexBox().alignContent = juce::FlexBox::AlignContent::stretch;
-			flexContainer->flexBox().alignItems = juce::FlexBox::AlignItems::stretch;
-			flexContainer->flexBox().justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
 			label->setText(param->i7getDescription(), juce::NotificationType::dontSendNotification);
 			label->setSize(70, 50);
 
-			param->setSize(550, 50);
+			param->setSize(150, 50);
 			param->setSliderStyle(juce::Slider::LinearHorizontal);
 			param->setTextBoxStyle(juce::Slider::TextBoxRight, false, 30, 20);
 
 			flexContainer->setSize(0, 50);
 			flexContainer->addToFlexBox(label);
-			flexContainer->addToFlexBox(param);
-			
+			auto flexItem = flexContainer->addToFlexBox(param);
+			flexItem->flexGrow = 1;
 			return flexContainer;
 		}
 	}

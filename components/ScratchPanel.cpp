@@ -14,11 +14,13 @@ ScratchPanel::ScratchPanel(I7Host* _sysexSender) :
 
     patchSelector.setBounds(0, 0, 300, 0);
     patchSelector.dropDownHeight = 500;
+    patchSelector.setAlwaysOnTop(true);
+
+    addAndMakeVisible(patchSelector);
     testLabel.setFont (juce::Font (16.0f, juce::Font::bold));
     testLabel.setEditable(true);
     testLabel.setText("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", juce::dontSendNotification);
     testLabel.setBounds(0, 60, 500, 40);
     testLabel.setColour (juce::Label::textColourId, juce::Colours::orange);
     addAndMakeVisible(testLabel);
-    addAndMakeVisible(patchSelector);
 }
