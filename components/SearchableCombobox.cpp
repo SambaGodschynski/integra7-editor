@@ -42,27 +42,36 @@ void SearchableCombobox::onTextChanging(const juce::String *_searchQuery)
 	startTimer(DebounceTimeMillis);
 }
 
-void SearchableCombobox::setDropDownVisible(bool dropDownVisible)
+void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 {
-	if (dropDownVisible)
+	if (nextVisibleState)
 	{
 		searchQuery.clear();
 		filteredIndices.clear();
+		list.selectRow(selectedIndex);
 		list.updateContent();
 		input.setText("", juce::NotificationType::dontSendNotification);
 		getTopLevelComponent()->addMouseListener(this, true);
 	}
-	if(this->isDropDownVisible && !dropDownVisible)
+	if(!nextVisibleState)
 	{
 		if (selectedIndex > 0) 
 		{
 			input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
 		}
+		else 
+		{
+			input.setText("", juce::NotificationType::dontSendNotification);
+		}
 		getTopLevelComponent()->removeMouseListener(this);
 	}
-	list.setVisible(dropDownVisible);
-	isDropDownVisible = dropDownVisible;
+	list.setVisible(nextVisibleState);
+	isDropDownVisible = nextVisibleState;
 	resized();
+	if (isDropDownVisible && selectedIndex>0)
+	{
+		list.scrollToEnsureRowIsOnscreen(selectedIndex);
+	}
 }
 
 void SearchableCombobox::resized()
@@ -179,6 +188,10 @@ int SearchableCombobox::listToSourceIndex(int listIndex)
 
 void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
 {
+	if (!list.isVisible())
+	{
+		return;
+	}
 	selectedIndex = listToSourceIndex(lastRowSelected);
 	if (selectedIndex >= 0) 
 	{
