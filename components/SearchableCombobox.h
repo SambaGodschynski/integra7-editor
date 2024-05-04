@@ -4,8 +4,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Input.h"
 #include <functional>
+#include "LazyExecuter.h"
 
-class SearchableCombobox : public juce::Component, public juce::ListBoxModel, public juce::AsyncUpdater, public juce::Timer
+
+class SearchableCombobox : public juce::Component, public juce::ListBoxModel, public LazyExecuter, public juce::Timer
 {
 public:
     typedef juce::Component Base;
@@ -24,7 +26,7 @@ public:
     virtual void mouseUp(const juce::MouseEvent& event) override;
     void setDataSource(const GetDataCount&, const GetDataStringValue&, const IsDataMatch&);
     virtual void selectedRowsChanged(int lastRowSelected) override;
-
+    virtual void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 private:
     juce::String searchQuery;
     FilteredIndices filteredIndices;
