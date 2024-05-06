@@ -6,8 +6,10 @@
 #include <functional>
 #include "LazyExecuter.h"
 
-
-class SearchableCombobox : public juce::Component, public juce::ListBoxModel, public LazyExecuter, public juce::Timer
+/*
+  TODO: scroll and change search query at the same time -> crash
+*/
+class SearchableCombobox : public juce::Component, public LazyExecuter, public juce::Timer
 {
 public:
     typedef juce::Component Base;
@@ -17,15 +19,12 @@ public:
     typedef std::function<bool(size_t,const juce::String)> IsDataMatch;
     typedef std::function<void(size_t)> SelectionChanged;
     SearchableCombobox();
-    virtual int getNumRows() override;
-    virtual void paintListBoxItem(int rowNumber, juce::Graphics &g, int width, int height, bool rowIsSelected) override;
     virtual void resized() override;
     virtual void handleAsyncUpdate() override;
     virtual void timerCallback() override;
     int dropDownHeight = 120;
     virtual void mouseUp(const juce::MouseEvent& event) override;
     void setDataSource(const GetDataCount&, const GetDataStringValue&, const IsDataMatch&);
-    virtual void selectedRowsChanged(int lastRowSelected) override;
     virtual void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 private:
     juce::String searchQuery;
@@ -39,7 +38,6 @@ private:
     void onInputClick();
     void updateFilter();
     int listToSourceIndex(int);
-    juce::ListBox list;
     Input input;
     bool isDropDownVisible = false;
     int selectedIndex = -1;

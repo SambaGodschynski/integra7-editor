@@ -6,6 +6,7 @@ namespace i7
 {
     typedef unsigned char Byte;
     typedef std::vector<Byte> Bytes;
+    typedef const char* ExtensionId;
     typedef unsigned int UInt;
     typedef UInt CategoryId;
     struct Preset 
