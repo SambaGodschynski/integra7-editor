@@ -16,6 +16,12 @@ SearchableCombobox::SearchableCombobox() : juce::Component("searchable combobox"
 	input.setEditable(true);
 	input.onTextChanging = std::bind(&SearchableCombobox::onTextChanging, this, std::placeholders::_1);
 	input.onClick = std::bind(&SearchableCombobox::onInputClick, this);
+	// nt itemResultID, String itemText, bool isEnabled=true, bool isTicked=false)
+	currentMenu.addItem(0, "item 1", true, false);
+	currentMenu.addItem(1, "item 2", true, false);
+	currentMenu.addItem(2, "item 3", true, false);
+	currentMenu.addItem(3, "item 4", true, false);
+	currentMenu.addItem(4, "item 5", true, false);
 }
 
 void SearchableCombobox::onInputClick()
@@ -49,7 +55,12 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 		searchQuery.clear();
 		filteredIndices.clear();
 		input.setText("", juce::NotificationType::dontSendNotification);
-		getTopLevelComponent()->addMouseListener(this, true);
+
+		juce::PopupMenu::Options options;
+		options.withTargetComponent(this);
+		currentMenu.showMenuAsync(options, [this](int){
+			setDropDownVisible(false);
+		});
 	}
 	if(!nextVisibleState)
 	{
@@ -70,13 +81,6 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 void SearchableCombobox::resized()
 {
 	input.setBounds(0, 0, getWidth(), getHeight());
-}
-
-void SearchableCombobox::mouseUp(const juce::MouseEvent& event)
-{
-	if (!contains(event.getPosition())) {
-		setDropDownVisible(false);
-	}
 }
 
 void SearchableCombobox::setDataSource(const GetDataCount& _getDataCount, 
