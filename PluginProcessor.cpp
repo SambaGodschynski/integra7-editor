@@ -158,11 +158,6 @@ void PluginProcessor::setStateInformation(const void*, int)
 {
 }
 
-I7Host::ExtensionIds PluginProcessor::getCurrentExtensions() const
-{
-	return I7Host::ExtensionIds({"INT"});
-}
-
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
 	return new PluginProcessor();

@@ -14,17 +14,7 @@ ScratchPanel::ScratchPanel(I7Host* _sysexSender) :
 
     patchSelector.setBounds(0, 0, 300, 0);
     patchSelector.dropDownHeight = 500;
-
-    comboBox.setBounds(10, 200, 300, 30);
-    comboBox.addItem("XXX1", 0);
-    comboBox.addItem("XXX2", 1);
-    comboBox.addItem("XXX3", 2);
-    comboBox.addItem("XXX4", 3);
-    comboBox.addItem("XXX5", 4);
-    comboBox.addItem("XXX6", 5);
-    comboBox.addItem("XXX7", 6);
-    comboBox.setEditableText(true); 
-    addAndMakeVisible(comboBox);
+    patchSelector.setAlwaysOnTop(true);
 
     addAndMakeVisible(patchSelector);
     testLabel.setFont (juce::Font (16.0f, juce::Font::bold));

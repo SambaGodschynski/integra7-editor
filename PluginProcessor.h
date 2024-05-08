@@ -34,7 +34,6 @@ public:
 	void getStateInformation(juce::MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void sendSysex(const unsigned char*, size_t numBytes) override;
-	virtual I7Host::ExtensionIds getCurrentExtensions() const override;
 private:
 	typedef std::mutex Mutex;
 	std::mutex midiBufferMutex;

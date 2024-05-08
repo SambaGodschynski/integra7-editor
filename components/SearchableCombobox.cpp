@@ -3,6 +3,8 @@
 #include <cassert>
 
 namespace {
+	const int InputHeight = 30;
+	const int MinHeight = InputHeight;
 	const int MinSearchChars = 2;
 	const float FontSize = 14.0f;
 	const float CellHeight = FontSize + 8.0f;
@@ -16,6 +18,9 @@ SearchableCombobox::SearchableCombobox() : juce::Component("searchable combobox"
 	input.setEditable(true);
 	input.onTextChanging = std::bind(&SearchableCombobox::onTextChanging, this, std::placeholders::_1);
 	input.onClick = std::bind(&SearchableCombobox::onInputClick, this);
+	list.setModel(this);
+    addAndMakeVisible(list);
+	list.setVisible(false);
 }
 
 void SearchableCombobox::onInputClick()
@@ -29,7 +34,7 @@ void SearchableCombobox::onInputClick()
 
 void SearchableCombobox::mouseWheelMove(const juce::MouseEvent& ev, const juce::MouseWheelDetails& mwd)
 {
-
+	list.mouseWheelMove(ev, mwd);
 }
 
 void SearchableCombobox::onTextChanging(const juce::String *_searchQuery)
@@ -48,6 +53,7 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 	{
 		searchQuery.clear();
 		filteredIndices.clear();
+		list.updateContent();
 		input.setText("", juce::NotificationType::dontSendNotification);
 		getTopLevelComponent()->addMouseListener(this, true);
 	}
@@ -65,11 +71,56 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 	}
 	isDropDownVisible = nextVisibleState;
 	resized();
+	list.setVisible(nextVisibleState);
+	if (isDropDownVisible && selectedIndex > 0) {
+		list.selectRow(selectedIndex);
+	}
 }
 
 void SearchableCombobox::resized()
 {
-	input.setBounds(0, 0, getWidth(), getHeight());
+	if (isDropDownVisible) 
+	{
+		auto h = dropDownHeight;
+		auto neededHeight = CellHeight * getNumRows() + InputHeight;
+		if (neededHeight < h)
+		{
+			h = std::max((int)neededHeight, MinHeight);
+		}
+		setBounds(0, 0, getWidth(), h);
+		childrenChanged();
+	}
+	else 
+	{
+		setBounds(0, 0, getWidth(), InputHeight);
+	}
+	input.setBounds(0, 0, getWidth(), InputHeight);
+	list.setBounds(0, InputHeight, getWidth(), getHeight() - InputHeight);
+}
+
+int SearchableCombobox::getNumRows()
+{
+	if(!getDataCount)
+	{
+		return 0;
+	}
+	if (searchQuery.isEmpty())
+	{
+    	return getDataCount();
+	}
+	return filteredIndices.size();
+}
+
+void SearchableCombobox::paintListBoxItem(int rowNumber, juce::Graphics &g, int width, int height, bool rowIsSelected)
+{
+	size_t index = (size_t)rowNumber;
+	if (!filteredIndices.empty())
+	{
+		index = filteredIndices.at(index);
+	}
+    g.setFont(FontSize);
+    g.setColour (rowIsSelected ? juce::Colours::orangered : getLookAndFeel().findColour(juce::ListBox::textColourId)); 
+    g.drawText (getDataStringValue(index), 2, 0, width - 4, height, juce::Justification::centredLeft, true);
 }
 
 void SearchableCombobox::mouseUp(const juce::MouseEvent& event)
@@ -86,6 +137,7 @@ void SearchableCombobox::setDataSource(const GetDataCount& _getDataCount,
 	getDataCount = _getDataCount;
 	getDataStringValue = _getStringVal;
 	isDataMatch = _isDataMatch;
+	list.updateContent();
 }
 
 void SearchableCombobox::handleAsyncUpdate()
@@ -100,6 +152,7 @@ void SearchableCombobox::updateFilter()
 	if (searchQuery.isEmpty())
 	{
 		resized();
+		list.updateContent();
 		return;
 	}
 	size_t count = getDataCount();
@@ -112,6 +165,7 @@ void SearchableCombobox::updateFilter()
 		}
 	}
 	resized();
+	list.updateContent();
 }
 
 void SearchableCombobox::timerCallback()
@@ -131,4 +185,20 @@ int SearchableCombobox::listToSourceIndex(int listIndex)
 		return listIndex;
 	}
 	return filteredIndices.at(listIndex);
+}
+
+void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
+{
+	if (lastRowSelected == selectedIndex)
+	{
+		return;
+	}
+	selectedIndex = listToSourceIndex(lastRowSelected);
+	if (selectedIndex >= 0) 
+	{
+		input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
+	}
+	doLater([this] {
+		setDropDownVisible(false);
+	});
 }

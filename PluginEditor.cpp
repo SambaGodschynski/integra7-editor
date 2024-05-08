@@ -14,7 +14,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 {
     int w = 1024, h = 768;
     setSize(w, h);
-    setResizable(true, false);
+    setResizable(true, true);
     //
     addAndMakeVisible(mainTabs);
     mainTabs.addTab("Mixer", juce::Colour(), &mixerPanel, false);
