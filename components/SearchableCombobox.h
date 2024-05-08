@@ -23,6 +23,7 @@ public:
     virtual void handleAsyncUpdate() override;
     virtual void timerCallback() override;
     int dropDownHeight = 120;
+    virtual void mouseUp(const juce::MouseEvent& event) override;
     void setDataSource(const GetDataCount&, const GetDataStringValue&, const IsDataMatch&);
     virtual void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 private:
@@ -32,7 +33,6 @@ private:
     GetDataStringValue getDataStringValue;
     IsDataMatch isDataMatch;
     SelectionChanged selectionChanged;
-    juce::PopupMenu currentMenu;
     void setDropDownVisible(bool);
     void onTextChanging(const juce::String*);
     void onInputClick();
