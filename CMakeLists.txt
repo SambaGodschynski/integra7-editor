@@ -83,6 +83,7 @@ target_sources(Integra7Editor
         components/toneEditor/sna/Common.cpp
         components/toneEditor/sna/Instrument.cpp
         components/toneEditor/sna/SnaPanel.cpp
+        components/toneEditor/sna/SnaInstrumentSelector.cpp
         ${IntegraSources}
 )
 

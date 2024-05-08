@@ -13,7 +13,6 @@ ScratchPanel::ScratchPanel(I7Host* _sysexSender) :
     addAndMakeVisible(p1);
 
     patchSelector.setBounds(0, 0, 300, 0);
-    patchSelector.dropDownHeight = 500;
     patchSelector.setAlwaysOnTop(true);
 
     addAndMakeVisible(patchSelector);

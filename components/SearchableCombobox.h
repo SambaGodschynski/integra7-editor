@@ -1,11 +1,21 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "Input.h"
 #include <functional>
 #include "LazyExecuter.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
+namespace
+{
+    struct SelectPopup : juce::Component
+	{
+		SelectPopup(juce::ListBoxModel* model);
+		void show();
+        void hide();
+		juce::ListBox list;
+	};
+}
 
 class SearchableCombobox : public juce::Component, public juce::ListBoxModel, public LazyExecuter, public juce::Timer
 {
@@ -34,12 +44,12 @@ private:
     GetDataStringValue getDataStringValue;
     IsDataMatch isDataMatch;
     SelectionChanged selectionChanged;
+    SelectPopup selectPopup;
     void setDropDownVisible(bool);
     void onTextChanging(const juce::String*);
     void onInputClick();
     void updateFilter();
     int listToSourceIndex(int);
-    juce::ListBox list;
     Input input;
     bool isDropDownVisible = false;
     int selectedIndex = -1;
