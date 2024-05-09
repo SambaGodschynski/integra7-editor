@@ -2,7 +2,8 @@
 #include <iostream>
 #include <cassert>
 
-namespace {
+namespace 
+{
 	const int InputHeight = 30;
 	const int MinHeight = InputHeight;
 	const int MinSearchChars = 2;
@@ -10,38 +11,81 @@ namespace {
 	const float CellHeight = FontSize + 8.0f;
 	const int DebounceTimeMillis = 500;
 
-	SelectPopup::SelectPopup(juce::ListBoxModel* model)
+	struct SelectPopup : juce::Component
+    {
+        SelectPopup(juce::ListBoxModel*, juce::Component*);
+        virtual ~SelectPopup() = default;
+        void show();
+        void hide();
+        juce::ListBox list;
+        juce::Component* parent = nullptr;
+		juce::ListBoxModel* model = nullptr;
+        juce::Component* _toplevelParent = nullptr;
+        juce::Component* toplevelParent();
+        virtual void resized() override;
+    };
+
+	SelectPopup::SelectPopup(juce::ListBoxModel* _model, juce::Component* _parent) : model(_model), parent(_parent)
 	{
 		list.setModel(model);
 		addAndMakeVisible(list);
-		setBounds(0, 0, 800, 500);
-		list.setBounds(0, 0, 800, 500);
+	}
+	void SelectPopup::resized()
+	{
+		if (!isVisible())
+		{
+			return;
+		}
+		int h = 500;
+		auto parentBounds = parent->getBounds();
+		auto bounds = toplevelParent()->getLocalArea(parent, parentBounds);
+		auto neededHeight = CellHeight * model->getNumRows() + InputHeight;
+		if (neededHeight < h)
+		{
+			h = std::max((int)neededHeight, MinHeight);
+		}
+		setBounds(bounds.getX()/2, bounds.getY()+parentBounds.getHeight(), parentBounds.getWidth(), h);
+		list.setBounds(0, 0, parentBounds.getWidth(), h);
+		list.updateContent();
 	}
 	void SelectPopup::show()
 	{
-		auto& lf = getLookAndFeel();
-		addToDesktop (juce::ComponentPeer::windowIsTemporary
-                          | juce::ComponentPeer::windowIgnoresKeyPresses
-                          | lf.getMenuWindowFlags());
-		setOpaque(true);
+		toplevelParent()->addAndMakeVisible(*this);
 		setAlwaysOnTop (true);
-		list.updateContent();
+		resized();
 	}
 	void SelectPopup::hide()
 	{
-		removeFromDesktop();
+		setVisible(false);
+		toplevelParent()->removeChildComponent(this);
+	}
+	juce::Component* SelectPopup::toplevelParent()
+	{
+		if (!_toplevelParent)
+		{
+			auto viewport = parent->findParentComponentOfClass<juce::Viewport>();
+			if (viewport)
+			{
+				_toplevelParent = viewport->getViewedComponent();
+			}
+			else 
+			{
+				_toplevelParent = parent->getTopLevelComponent();
+				jassert(_toplevelParent != parent); // happens when the component was not added to the app yet
+			}
+		}
+		return _toplevelParent;
 	}
 }
 
-SearchableCombobox::SearchableCombobox() : juce::Component("searchable combobox"), selectPopup(this)
+SearchableCombobox::SearchableCombobox() : juce::Component("searchable combobox")
 {
 	input.setColour(juce::Label::outlineColourId, juce::Colours::darkblue);
 	addAndMakeVisible(input);
 	input.setEditable(true);
 	input.onTextChanging = std::bind(&SearchableCombobox::onTextChanging, this, std::placeholders::_1);
 	input.onClick = std::bind(&SearchableCombobox::onInputClick, this);
-	addChildComponent(selectPopup);
-
+	selectPopup = std::make_shared<SelectPopup>(this, this);
 }
 
 void SearchableCombobox::onInputClick()
@@ -70,10 +114,8 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 	{
 		searchQuery.clear();
 		filteredIndices.clear();
-		// list.updateContent();
 		input.setText("", juce::NotificationType::dontSendNotification);
-		selectPopup.setVisible(true);
-		selectPopup.show();
+		selectPopup->show();
 		juce::Desktop::getInstance().addGlobalMouseListener(this);
 		
 	}
@@ -88,20 +130,17 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 			input.setText("", juce::NotificationType::dontSendNotification);
 		}
 		juce::Desktop::getInstance().removeGlobalMouseListener(this);
-		selectPopup.hide();
-		selectPopup.setVisible(false);
+		selectPopup->hide();
 	}
 	isDropDownVisible = nextVisibleState;
 	resized();
-	// list.setVisible(nextVisibleState);
 	if (isDropDownVisible && selectedIndex > 0) {
-		// list.selectRow(selectedIndex);
+		selectPopup->list.selectRow(selectedIndex);
 	}
 }
-#include <iostream>
 void SearchableCombobox::mouseUp(const juce::MouseEvent& event)
 {
-	if(!selectPopup.contains(event.getPosition()) && !contains(event.getPosition()))
+	if(!selectPopup->contains(event.getPosition()) && !contains(event.getPosition()))
 	{
 		setDropDownVisible(false);
 	}
@@ -115,23 +154,7 @@ void SearchableCombobox::mouseWheelMove(const juce::MouseEvent& ev, const juce::
 void SearchableCombobox::resized()
 {
 	input.setBounds(0, 0, getWidth(), getHeight());
-	// if (isDropDownVisible) 
-	// {
-	// 	auto h = dropDownHeight;
-	// 	auto neededHeight = CellHeight * getNumRows() + InputHeight;
-	// 	if (neededHeight < h)
-	// 	{
-	// 		h = std::max((int)neededHeight, MinHeight);
-	// 	}
-	// 	setBounds(0, 0, getWidth(), h);
-	// 	childrenChanged();
-	// }
-	// else 
-	// {
-	// 	setBounds(0, 0, getWidth(), InputHeight);
-	// }
-	// input.setBounds(0, 0, getWidth(), InputHeight);
-	// list.setBounds(0, InputHeight, getWidth(), getHeight() - InputHeight);
+	selectPopup->resized();
 }
 
 int SearchableCombobox::getNumRows()
@@ -167,7 +190,7 @@ void SearchableCombobox::setDataSource(const GetDataCount& _getDataCount,
 	getDataCount = _getDataCount;
 	getDataStringValue = _getStringVal;
 	isDataMatch = _isDataMatch;
-	// list.updateContent();
+	selectPopup->list.updateContent();
 }
 
 void SearchableCombobox::handleAsyncUpdate()
@@ -182,7 +205,6 @@ void SearchableCombobox::updateFilter()
 	if (searchQuery.isEmpty())
 	{
 		resized();
-		// list.updateContent();
 		return;
 	}
 	size_t count = getDataCount();
@@ -195,7 +217,7 @@ void SearchableCombobox::updateFilter()
 		}
 	}
 	resized();
-	// list.updateContent();
+	selectPopup->list.updateContent();
 }
 
 void SearchableCombobox::timerCallback()

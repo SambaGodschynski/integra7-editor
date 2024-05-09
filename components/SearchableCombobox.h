@@ -5,16 +5,10 @@
 #include <functional>
 #include "LazyExecuter.h"
 #include <juce_gui_basics/juce_gui_basics.h>
-
-namespace
+#include <memory>
+namespace 
 {
-    struct SelectPopup : juce::Component
-	{
-		SelectPopup(juce::ListBoxModel* model);
-		void show();
-        void hide();
-		juce::ListBox list;
-	};
+    struct SelectPopup;
 }
 
 class SearchableCombobox : public juce::Component, public juce::ListBoxModel, public LazyExecuter, public juce::Timer
@@ -44,7 +38,7 @@ private:
     GetDataStringValue getDataStringValue;
     IsDataMatch isDataMatch;
     SelectionChanged selectionChanged;
-    SelectPopup selectPopup;
+    std::shared_ptr<SelectPopup> selectPopup;
     void setDropDownVisible(bool);
     void onTextChanging(const juce::String*);
     void onInputClick();

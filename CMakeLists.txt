@@ -1,3 +1,4 @@
+# -DCMAKE_BUILD_TYPE=Debug
 cmake_minimum_required(VERSION 3.15)
 execute_process(COMMAND git --work-tree=. log --pretty=format:%h -n 1 OUTPUT_VARIABLE GIT_VERSION)
 execute_process(COMMAND git branch --show-current OUTPUT_VARIABLE GIT_BRANCH_NAME)   
