@@ -1,5 +1,7 @@
 #include "Instrument.h"
 #include <vector>
+#include <components/I7Parameter.h>
+
 
 namespace ted_sna
 {
@@ -30,7 +32,7 @@ namespace ted_sna
         auto TodoRefactor(const PartInfo& partInfo, I7Host*& _i7Host, const char* id)
 		{
 			auto flexContainer = std::make_shared<FlexContainer>();
-			auto param = std::make_shared<SnaInstrumentSelector>();
+			auto param = std::make_shared<I7Parameter<SnaInstrumentSelector>>(partInfo.createId(id).c_str(), _i7Host);
 
             param->setBounds(0, 0, 150, 0);
 
@@ -38,7 +40,7 @@ namespace ted_sna
 			flexContainer->flexBox().flexDirection = juce::FlexBox::Direction::row;
 			flexContainer->flexBox().flexWrap = juce::FlexBox::Wrap::noWrap;
 
-			label->setText("XXXX", juce::NotificationType::dontSendNotification);
+			label->setText(param->i7getDescription(), juce::NotificationType::dontSendNotification);
 			label->setSize(70, 30);
             param->setSize(150, 30);
             
@@ -56,7 +58,7 @@ namespace ted_sna
         float width = getWidth();
         flexBox().flexDirection = juce::FlexBox::Direction::column;
         {
-			auto param = TodoRefactor(partInfo, _i7Host, "");
+			auto param = TodoRefactor(partInfo, _i7Host, "_SNTONE-_SNTC-SNTC_INST_BS_PC");
 			juce::FlexItem flexItem(width, (float)param->getHeight(), *param);
 			addToFlexBox(param);
 		}
