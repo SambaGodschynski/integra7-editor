@@ -43,6 +43,7 @@ private:
     void onTextChanging(const juce::String*);
     void onInputClick();
     void updateFilter();
+    bool containsInputAndSelection(juce::Point<int>);
     int listToSourceIndex(int);
     Input input;
     bool isDropDownVisible = false;

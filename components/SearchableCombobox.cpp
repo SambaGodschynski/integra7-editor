@@ -51,7 +51,6 @@ namespace
 	void SelectPopup::show()
 	{
 		toplevelParent()->addAndMakeVisible(*this);
-		setAlwaysOnTop (true);
 		resized();
 	}
 	void SelectPopup::hide()
@@ -117,11 +116,10 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 		input.setText("", juce::NotificationType::dontSendNotification);
 		selectPopup->show();
 		juce::Desktop::getInstance().addGlobalMouseListener(this);
-		
 	}
 	if(!nextVisibleState)
 	{
-		if (selectedIndex > 0) 
+		if (selectedIndex >= 0) 
 		{
 			input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
 		}
@@ -140,15 +138,34 @@ void SearchableCombobox::setDropDownVisible(bool nextVisibleState)
 }
 void SearchableCombobox::mouseUp(const juce::MouseEvent& event)
 {
-	if(!selectPopup->contains(event.getPosition()) && !contains(event.getPosition()))
+	if (!event.mouseWasClicked())
+	{
+		return;
+	}
+	if(!containsInputAndSelection(event.getPosition()) && isDropDownVisible)
 	{
 		setDropDownVisible(false);
 	}
 }
 
+bool SearchableCombobox::containsInputAndSelection(juce::Point<int> point)
+{
+	auto popupPos = selectPopup->getLocalPoint(this, point);
+	popupPos.setX(popupPos.getX() - getX());
+	if(!selectPopup->contains(popupPos) && !contains(point))
+	{
+		return false;
+	}
+	return true;
+}
+
 void SearchableCombobox::mouseWheelMove(const juce::MouseEvent& ev, const juce::MouseWheelDetails& mwd)
 {
-	
+	if (!isDropDownVisible || !containsInputAndSelection(ev.getPosition()))
+	{
+		return;
+	}
+	selectPopup->list.mouseWheelMove(ev, mwd);
 }
 
 void SearchableCombobox::resized()
