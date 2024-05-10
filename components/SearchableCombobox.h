@@ -48,4 +48,5 @@ private:
     Input input;
     bool isDropDownVisible = false;
     int selectedIndex = -1;
+    juce::String lastSearchQuery;
 };

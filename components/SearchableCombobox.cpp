@@ -20,8 +20,8 @@ namespace
         juce::ListBox list;
         juce::Component* parent = nullptr;
 		juce::ListBoxModel* model = nullptr;
-        juce::Component* _toplevelParent = nullptr;
-        juce::Component* toplevelParent();
+        juce::Component* _parentPanel = nullptr;
+        juce::Component* parentPanel();
         virtual void resized() override;
     };
 
@@ -37,43 +37,55 @@ namespace
 			return;
 		}
 		int h = 500;
+		auto parentPane = parentPanel();
 		auto parentBounds = parent->getBounds();
-		auto bounds = toplevelParent()->getLocalArea(parent, parentBounds);
+		auto bounds = parentPane->getLocalArea(parent, parentBounds);
 		auto neededHeight = CellHeight * model->getNumRows() + InputHeight;
 		if (neededHeight < h)
 		{
 			h = std::max((int)neededHeight, MinHeight);
 		}
-		setBounds(bounds.getX()/2, bounds.getY()+parentBounds.getHeight(), parentBounds.getWidth(), h);
+		auto appComponent = getTopLevelComponent();
+		auto appBounds = appComponent->getBounds();
+		auto globalBounds = appComponent->getLocalArea(parentPane, bounds);
+		bool showBelow = abs(globalBounds.getY() - appBounds.getHeight()) > globalBounds.getY();
+		if (showBelow)
+		{
+			setBounds(bounds.getX() / 2, bounds.getY() + parentBounds.getHeight(), parentBounds.getWidth(), h);
+		}
+		else 
+		{
+			setBounds(bounds.getX() / 2, bounds.getY() - h, parentBounds.getWidth(), h);
+		}
 		list.setBounds(0, 0, parentBounds.getWidth(), h);
 		list.updateContent();
 	}
 	void SelectPopup::show()
 	{
-		toplevelParent()->addAndMakeVisible(*this);
+		parentPanel()->addAndMakeVisible(*this);
 		resized();
 	}
 	void SelectPopup::hide()
 	{
 		setVisible(false);
-		toplevelParent()->removeChildComponent(this);
+		parentPanel()->removeChildComponent(this);
 	}
-	juce::Component* SelectPopup::toplevelParent()
+	juce::Component* SelectPopup::parentPanel()
 	{
-		if (!_toplevelParent)
+		if (!_parentPanel)
 		{
 			auto viewport = parent->findParentComponentOfClass<juce::Viewport>();
 			if (viewport)
 			{
-				_toplevelParent = viewport->getViewedComponent();
+				_parentPanel = viewport->getViewedComponent();
 			}
 			else 
 			{
-				_toplevelParent = parent->getTopLevelComponent();
-				jassert(_toplevelParent != parent); // happens when the component was not added to the app yet
+				_parentPanel = parent->getTopLevelComponent();
+				jassert(_parentPanel != parent); // happens when the component was not added to the app yet
 			}
 		}
-		return _toplevelParent;
+		return _parentPanel;
 	}
 }
 
@@ -218,6 +230,11 @@ void SearchableCombobox::handleAsyncUpdate()
 
 void SearchableCombobox::updateFilter()
 {
+	if (lastSearchQuery == searchQuery)
+	{
+		return;
+	}
+	lastSearchQuery = searchQuery;
 	filteredIndices.clear();
 	if (searchQuery.isEmpty())
 	{
@@ -234,7 +251,6 @@ void SearchableCombobox::updateFilter()
 		}
 	}
 	resized();
-	selectPopup->list.updateContent();
 }
 
 void SearchableCombobox::timerCallback()
@@ -258,6 +274,10 @@ int SearchableCombobox::listToSourceIndex(int listIndex)
 
 void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
 {
+	if (lastRowSelected < 0)
+	{
+		return;
+	}
 	if (lastRowSelected == selectedIndex)
 	{
 		return;
