@@ -8,6 +8,7 @@
 class SnaInstrumentSelector : public SearchableCombobox
 {
 public:
+    typedef SearchableCombobox Base;
     SnaInstrumentSelector();
     typedef unsigned int ItemIndex;
     typedef ItemIndex ControlerValueType;

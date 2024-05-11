@@ -31,6 +31,7 @@ public:
     void setDataSource(const GetDataCount&, const GetDataStringValue&, const IsDataMatch&);
     virtual void selectedRowsChanged(int lastRowSelected) override;
     virtual void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
+    void setSelectionIndex(int index);
 private:
     juce::String searchQuery;
     FilteredIndices filteredIndices;

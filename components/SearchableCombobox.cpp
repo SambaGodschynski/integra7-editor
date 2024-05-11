@@ -206,6 +206,7 @@ void SearchableCombobox::paintListBoxItem(int rowNumber, juce::Graphics &g, int 
 	{
 		index = filteredIndices.at(index);
 	}
+	rowIsSelected = index == selectedIndex;
     g.setFont(FontSize);
     g.setColour (rowIsSelected ? juce::Colours::orangered : getLookAndFeel().findColour(juce::ListBox::textColourId)); 
     g.drawText (getDataStringValue(index), 2, 0, width - 4, height, juce::Justification::centredLeft, true);
@@ -278,16 +279,25 @@ void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
 	{
 		return;
 	}
-	if (lastRowSelected == selectedIndex)
+	setSelectionIndex(lastRowSelected);
+	if (selectionChanged)
 	{
-		return;
-	}
-	selectedIndex = listToSourceIndex(lastRowSelected);
-	if (selectedIndex >= 0) 
-	{
-		input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
+		selectionChanged(selectedIndex);
 	}
 	doLater([this] {
 		setDropDownVisible(false);
 	});
+}
+
+void SearchableCombobox::setSelectionIndex(int index)
+{
+	if (index == selectedIndex)
+	{
+		return;
+	}
+	selectedIndex = listToSourceIndex(index);
+	if (selectedIndex >= 0) 
+	{
+		input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
+	}
 }

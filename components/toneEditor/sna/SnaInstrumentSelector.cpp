@@ -23,5 +23,5 @@ void SnaInstrumentSelector::i7setControlLimits(i7::UInt min, i7::UInt max)
 }
 void SnaInstrumentSelector::i7setValue(ControlerValueType v)
 {
-    
+    Base::setSelectionIndex(v);
 }
