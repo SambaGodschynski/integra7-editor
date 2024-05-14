@@ -1,40 +1,19 @@
 #include "Instrument.h"
 #include <vector>
 #include <components/I7Parameter.h>
-
+#include <components/I7Slider.h>
+#include <tuple>
 
 namespace ted_sna
 {
     	namespace
 	{
-		// auto CreateSlider(const PartInfo& partInfo, I7Host*& _i7Host, const char* id)
-		// {
-		// 	auto flexContainer = std::make_shared<FlexContainer>();
-		// 	auto param = std::make_shared<I7Parameter<I7Slider>>(partInfo.createId(id).c_str(), _i7Host);
-		// 	auto label = std::make_shared<juce::Label>();
-		// 	flexContainer->flexBox().flexDirection = juce::FlexBox::Direction::row;
-		// 	flexContainer->flexBox().flexWrap = juce::FlexBox::Wrap::noWrap;
-
-		// 	label->setText(param->i7getDescription(), juce::NotificationType::dontSendNotification);
-		// 	label->setSize(70, 50);
-
-		// 	param->setSize(150, 50);
-		// 	param->setSliderStyle(juce::Slider::LinearHorizontal);
-		// 	param->setTextBoxStyle(juce::Slider::TextBoxRight, false, 30, 20);
-
-		// 	flexContainer->setSize(0, 50);
-		// 	flexContainer->addToFlexBox(label);
-		// 	auto flexItem = flexContainer->addToFlexBox(param);
-		// 	flexItem->flexGrow = 1;
-		// 	return flexContainer;
-		// }
-
-        auto TodoRefactor(const PartInfo& partInfo, I7Host*& _i7Host, const char* id)
+		template<class TControl>
+        std::tuple<std::shared_ptr<FlexContainer>, std::shared_ptr<I7Parameter<TControl>>> CreateControl(const PartInfo& partInfo, I7Host*& _i7Host, const char* id)
 		{
 			auto flexContainer = std::make_shared<FlexContainer>();
-			auto param = std::make_shared<I7Parameter<SnaInstrumentSelector>>(partInfo.createId(id).c_str(), _i7Host);
-			param->i7PartInfo = partInfo;
-
+			auto param = std::make_shared<I7Parameter<TControl>>(partInfo.createId(id).c_str(), _i7Host);
+			
             param->setBounds(0, 0, 150, 0);
 
 			auto label = std::make_shared<juce::Label>();
@@ -49,7 +28,19 @@ namespace ted_sna
 			flexContainer->addToFlexBox(label);
 			auto flexItem = flexContainer->addToFlexBox(param);
 			flexItem->flexGrow = 1;
-			return flexContainer;
+			return std::make_tuple(flexContainer, param);
+		}
+
+		std::tuple<std::shared_ptr<FlexContainer>, std::shared_ptr<I7Parameter<I7Slider>>> CreateSlider(const PartInfo& partInfo, I7Host*& _i7Host, const char* id)
+		{
+			std::shared_ptr<FlexContainer> flexContainer;
+			std::shared_ptr<I7Parameter<I7Slider>> control;
+			std::tie(flexContainer, control) = CreateControl<I7Slider>(partInfo, _i7Host, id);
+			// param->setSize(150, 50);
+			//flexContainer->setSize(0, 50);
+			control->setSliderStyle(juce::Slider::LinearHorizontal);
+			control->setTextBoxStyle(juce::Slider::TextBoxRight, false, 30, 20);
+			return std::make_tuple(flexContainer, control);
 		}
 	}
 
@@ -57,12 +48,45 @@ namespace ted_sna
         FlexContainer("Instrument")
     {
         float width = (float)getWidth();
+		const i7::SnaInstr* initInstrument = nullptr;
         flexBox().flexDirection = juce::FlexBox::Direction::column;
         {
-			auto param = TodoRefactor(partInfo, _i7Host, "_SNTONE-_SNTC-SNTC_INST_BS_PC");
-			juce::FlexItem flexItem(width, (float)param->getHeight(), *param);
-			addToFlexBox(param);
+			std::shared_ptr<FlexContainer> flexContainer;
+			std::shared_ptr<I7Parameter<SnaInstrumentSelector>> control;
+			std::tie(flexContainer, control) = CreateControl<SnaInstrumentSelector>(partInfo, _i7Host, "_SNTONE-_SNTC-SNTC_INST_BS_PC");
+			control->i7PartInfo = partInfo;
+			control->i7InstrumentChanged = std::bind(&Instrument::onInstrumentChanged, this, std::placeholders::_1);
+			initInstrument = control->i7currentInstrument;
+			juce::FlexItem flexItem(width, (float)flexContainer->getHeight(), *flexContainer);
+			addToFlexBox(flexContainer);
 		}
+		for (int i = 0; i < i7::SnaInstr::NumMods; ++i)
+		{
+			auto modId = std::string("_SNTONE-_SNTC-SNTC_MOD_PRM") + std::to_string(i+1);
+			std::shared_ptr<FlexContainer> flexContainer;
+			std::tie(flexContainer, std::ignore) = CreateSlider(partInfo, _i7Host, modId.c_str());
+			juce::FlexItem flexItem(width, (float)flexContainer->getHeight(), *flexContainer);
+			auto x = addToFlexBox(flexContainer);
+			//if (i < i7::SnaInstr::NumMods - 2) {
+			//	flexContainer->setVisible(false);
+			//	x->width = 0;
+			//	x->height = 0;
+			//	x->order = 999;
+			//}
+
+		}
+		jassert(initInstrument != nullptr);
+		updateModControls(*initInstrument);
         resized();
     }
+
+	void Instrument::onInstrumentChanged(const i7::SnaInstr& instrument)
+	{
+		updateModControls(instrument);
+	}
+
+	void Instrument::updateModControls(const i7::SnaInstr& instrument)
+	{
+
+	}
 }

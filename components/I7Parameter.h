@@ -67,12 +67,12 @@ void I7Parameter<TControlComponent>::i7putValue(const char* nodeId, i7::UInt v)
     {
         return;
     }
-    auto nodeInfo = i7::getNode(nodeId);
-    if (nodeInfo.node == nullptr)
+    auto otherNodeInfo = i7::getNode(nodeId);
+    if (otherNodeInfo.node == nullptr)
     {
         throw std::runtime_error(std::string("missing model for id: ") + nodeId);
     }
-    i7::put(&i7Host->model, nodeInfo, v);
-    i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, nodeInfo);
+    i7::put(&i7Host->model, otherNodeInfo, v);
+    i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, otherNodeInfo);
     i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
 }

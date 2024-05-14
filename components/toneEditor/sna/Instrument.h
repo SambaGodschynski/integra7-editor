@@ -6,6 +6,7 @@
 #include <components/PartInfo.h>
 #include "SnaInstrumentSelector.h"
 #include <components/FlexContainer.h>
+#include <integra7/Integra7Defs.h>
 #include <memory>
 
 namespace ted_sna
@@ -16,5 +17,7 @@ namespace ted_sna
         Instrument(I7Host*, const PartInfo&);
     private:
         std::shared_ptr<SnaInstrumentSelector> instrumentSelector;
+        void onInstrumentChanged(const i7::SnaInstr&);
+        void updateModControls(const i7::SnaInstr&);
     };
 }

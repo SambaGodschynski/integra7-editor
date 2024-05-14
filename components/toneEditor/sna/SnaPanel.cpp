@@ -21,16 +21,16 @@ namespace ted_sna
 
     void SnaPanel::resized()
     {
-        int w = getWidth() - 15;
+        int w = (int)getWidth() - 15;
         commonPanel.setSize(w, 600);
-        flexBox.items.getReference(0).width = commonPanel.getWidth();
-        flexBox.items.getReference(0).height = commonPanel.getHeight();
+        flexBox.items.getReference(0).width = (float)commonPanel.getWidth();
+        flexBox.items.getReference(0).height = (float)commonPanel.getHeight();
 
         instrumentPannel.setSize(w, 1000);
-        flexBox.items.getReference(1).width = instrumentPannel.getWidth();
-        flexBox.items.getReference(1).height = instrumentPannel.getHeight();
+        flexBox.items.getReference(1).width = (float)instrumentPannel.getWidth();
+        flexBox.items.getReference(1).height = (float)instrumentPannel.getHeight();
 
-        int totalHeight = commonPanel.getHeight() + instrumentPannel.getHeight();
+        int totalHeight = (int)(commonPanel.getHeight() + instrumentPannel.getHeight());
 
         viewChild.setSize(w, totalHeight);
         auto bounds = juce::Rectangle<int>(0, 0, viewChild.getWidth(), viewChild.getHeight());

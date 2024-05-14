@@ -1,8 +1,7 @@
 #include "SnaInstrumentSelector.h"
-#include <integra7/SnaInstr.h>
 #include <integra7/Model.h>
-#include <functional>
 #include <stdexcept>
+#include <integra7/SnaInstr.h>
 
 SnaInstrumentSelector::SnaInstrumentSelector() : SearchableCombobox()
 {
@@ -17,6 +16,7 @@ SnaInstrumentSelector::SnaInstrumentSelector() : SearchableCombobox()
             return name.containsIgnoreCase(str);
         }
     );
+    i7currentInstrument = &i7::SnaInstruments[0];
     selectionChanged = std::bind(&SnaInstrumentSelector::onSelectionChanged, this, std::placeholders::_1);
 }
 
@@ -27,6 +27,11 @@ void SnaInstrumentSelector::i7setControlLimits(i7::UInt min, i7::UInt max)
 void SnaInstrumentSelector::i7setValue(ControlerValueType v)
 {
     Base::setSelectionIndex(v);
+    if (v > i7::NumSnAcousticInstruments)
+    {
+        throw std::runtime_error("NumSnAcousticInstruments out of bounds");
+    }
+    i7currentInstrument = &i7::SnaInstruments[v];
 }
 
 void SnaInstrumentSelector::onSelectionChanged(int index)
@@ -36,8 +41,12 @@ void SnaInstrumentSelector::onSelectionChanged(int index)
         throw std::runtime_error("NumSnAcousticInstruments out of bounds");
     }
     i7onValueChanged(index);
-    const auto& instrument = i7::SnaInstruments[index];
-    i7putValue(i7PartInfo.createId("_SNTONE-_SNTC-SNTC_INST_BS_LSB").c_str(), instrument.lsb);
-    i7putValue(i7PartInfo.createId("_SNTONE-_SNTC-SNTC_INST_BS_PC").c_str(), instrument.pc);
+    i7currentInstrument = &i7::SnaInstruments[index];
+    i7putValue(i7PartInfo.createId("_SNTONE-_SNTC-SNTC_INST_BS_LSB").c_str(), i7currentInstrument->lsb);
+    i7putValue(i7PartInfo.createId("_SNTONE-_SNTC-SNTC_INST_BS_PC").c_str(), i7currentInstrument->pc);
+    if (i7InstrumentChanged)
+    {
+        i7InstrumentChanged(*i7currentInstrument);
+    }
 
 }

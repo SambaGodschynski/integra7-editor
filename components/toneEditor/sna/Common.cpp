@@ -32,7 +32,7 @@ namespace ted_sna
 
 	Common::Common(I7Host* _i7Host, const PartInfo& partInfo) : FlexContainer("Tone Editor Sna Common")
 	{
-		float width = getWidth();
+		float width = (float)getWidth();
 		flexBox().flexDirection = juce::FlexBox::Direction::column;
 		{
 			auto param = CreateSlider(partInfo, _i7Host, "_SNTONE-_SNTC-SNTC_PHRASE_OCT");
