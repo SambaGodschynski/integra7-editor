@@ -33,6 +33,7 @@ namespace ted_sna
 		{
 			auto flexContainer = std::make_shared<FlexContainer>();
 			auto param = std::make_shared<I7Parameter<SnaInstrumentSelector>>(partInfo.createId(id).c_str(), _i7Host);
+			param->i7PartInfo = partInfo;
 
             param->setBounds(0, 0, 150, 0);
 
@@ -55,7 +56,7 @@ namespace ted_sna
     Instrument::Instrument(I7Host* _i7Host, const PartInfo& partInfo) : 
         FlexContainer("Instrument")
     {
-        float width = getWidth();
+        float width = (float)getWidth();
         flexBox().flexDirection = juce::FlexBox::Direction::column;
         {
 			auto param = TodoRefactor(partInfo, _i7Host, "_SNTONE-_SNTC-SNTC_INST_BS_PC");

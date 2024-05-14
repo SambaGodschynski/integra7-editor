@@ -32,13 +32,13 @@ public:
     virtual void selectedRowsChanged(int lastRowSelected) override;
     virtual void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void setSelectionIndex(int index);
+    SelectionChanged selectionChanged;
 private:
     juce::String searchQuery;
     FilteredIndices filteredIndices;
     GetDataCount getDataCount;
     GetDataStringValue getDataStringValue;
     IsDataMatch isDataMatch;
-    SelectionChanged selectionChanged;
     std::shared_ptr<SelectPopup> selectPopup;
     void setDropDownVisible(bool);
     void onTextChanging(const juce::String*);

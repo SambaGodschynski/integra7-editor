@@ -41,6 +41,8 @@ public:
     std::string i7getDescription() const { return nodeInfo.node->desc; }
 protected:
     virtual void i7onValueChanged(T v) override;
+    virtual void i7putValue(const char *nodeId, i7::UInt v);
+    virtual I7Host* getHost() { return i7Host; }
 private:
     i7::NodeInfo nodeInfo;
     I7Host *i7Host;
@@ -52,6 +54,23 @@ void I7Parameter<TControlComponent>::i7onValueChanged(T v)
     if (!i7Host)
     {
         return;
+    }
+    i7::put(&i7Host->model, nodeInfo, v);
+    i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, nodeInfo);
+    i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
+}
+
+template<class TControlComponent>
+void I7Parameter<TControlComponent>::i7putValue(const char* nodeId, i7::UInt v)
+{
+    if (!i7Host)
+    {
+        return;
+    }
+    auto nodeInfo = i7::getNode(nodeId);
+    if (nodeInfo.node == nullptr)
+    {
+        throw std::runtime_error(std::string("missing model for id: ") + nodeId);
     }
     i7::put(&i7Host->model, nodeInfo, v);
     i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, nodeInfo);
