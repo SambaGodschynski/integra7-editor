@@ -4,6 +4,10 @@
 #include <stdexcept>
 #include "I7Host.h"
 #include <string>
+#include <iostream>
+
+#include <components/Common.h>
+
 namespace juce
 {
     class Component;
@@ -21,9 +25,9 @@ class I7Parameter : public TControlComponent, public I7ParameterBase
 public:
     typedef TControlComponent ControllerBase;
     typedef typename ControllerBase::ControlerValueType T;
-    I7Parameter(const char *nodeId, I7Host* _i7Host) :  i7Host(nullptr) 
+    I7Parameter(const char *_nodeId, I7Host* _i7Host) :  i7Host(nullptr), nodeId(_nodeId)
     {
-        nodeInfo = i7::getNode(nodeId);
+        nodeInfo = i7::getNode(nodeId.c_str());
         if (nodeInfo.node == nullptr)
         {
             throw std::runtime_error(std::string("missing model for id: ") + nodeId);
@@ -46,6 +50,7 @@ protected:
 private:
     i7::NodeInfo nodeInfo;
     I7Host *i7Host;
+    std::string nodeId;
 };
 
 template<class TControlComponent>
@@ -58,21 +63,23 @@ void I7Parameter<TControlComponent>::i7onValueChanged(T v)
     i7::put(&i7Host->model, nodeInfo, v);
     i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, nodeInfo);
     i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
+    DEBUGONLY(std::cout << nodeId << std::endl);
 }
 
 template<class TControlComponent>
-void I7Parameter<TControlComponent>::i7putValue(const char* nodeId, i7::UInt v)
+void I7Parameter<TControlComponent>::i7putValue(const char* otherNodeId, i7::UInt v)
 {
     if (!i7Host)
     {
         return;
     }
-    auto otherNodeInfo = i7::getNode(nodeId);
+    auto otherNodeInfo = i7::getNode(otherNodeId);
     if (otherNodeInfo.node == nullptr)
     {
-        throw std::runtime_error(std::string("missing model for id: ") + nodeId);
+        throw std::runtime_error(std::string("missing model for id: ") + otherNodeId);
     }
     i7::put(&i7Host->model, otherNodeInfo, v);
     i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, otherNodeInfo);
     i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
+    DEBUGONLY(std::cout << otherNodeId << std::endl);
 }

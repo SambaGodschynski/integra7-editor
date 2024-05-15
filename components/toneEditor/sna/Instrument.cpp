@@ -36,8 +36,8 @@ namespace ted_sna
 			std::shared_ptr<FlexContainer> flexContainer;
 			std::shared_ptr<I7Parameter<I7Slider>> control;
 			std::tie(flexContainer, control) = CreateControl<I7Slider>(partInfo, _i7Host, id);
-			// param->setSize(150, 50);
-			//flexContainer->setSize(0, 50);
+			control->setSize(150, 50);
+			flexContainer->setSize(0, 50);
 			control->setSliderStyle(juce::Slider::LinearHorizontal);
 			control->setTextBoxStyle(juce::Slider::TextBoxRight, false, 30, 20);
 			return std::make_tuple(flexContainer, control);
@@ -60,24 +60,17 @@ namespace ted_sna
 			juce::FlexItem flexItem(width, (float)flexContainer->getHeight(), *flexContainer);
 			addToFlexBox(flexContainer);
 		}
+		indexStartModParameter = flexBox().items.size();
 		for (int i = 0; i < i7::SnaInstr::NumMods; ++i)
 		{
 			auto modId = std::string("_SNTONE-_SNTC-SNTC_MOD_PRM") + std::to_string(i+1);
 			std::shared_ptr<FlexContainer> flexContainer;
 			std::tie(flexContainer, std::ignore) = CreateSlider(partInfo, _i7Host, modId.c_str());
 			juce::FlexItem flexItem(width, (float)flexContainer->getHeight(), *flexContainer);
-			auto x = addToFlexBox(flexContainer);
-			//if (i < i7::SnaInstr::NumMods - 2) {
-			//	flexContainer->setVisible(false);
-			//	x->width = 0;
-			//	x->height = 0;
-			//	x->order = 999;
-			//}
-
+			addToFlexBox(flexContainer);
 		}
 		jassert(initInstrument != nullptr);
 		updateModControls(*initInstrument);
-        resized();
     }
 
 	void Instrument::onInstrumentChanged(const i7::SnaInstr& instrument)
@@ -87,6 +80,27 @@ namespace ted_sna
 
 	void Instrument::updateModControls(const i7::SnaInstr& instrument)
 	{
-
+		jassert(indexStartModParameter > 0);
+		for (int i = 0; i < i7::SnaInstr::NumMods; ++i)
+		{
+			int modIndex = indexStartModParameter + i;
+			auto& flexItem = flexBox().items.getReference(modIndex);
+			auto modName = instrument.mods[i];
+			bool isModVisible = modName != nullptr;
+			if (isModVisible)
+			{
+				flexItem.order = modIndex;
+				flexItem.associatedComponent->setVisible(true);
+				auto label = dynamic_cast<juce::Label*>(flexItem.associatedComponent->getChildComponent(0));
+				jassert(label);
+				label->setText(modName, juce::NotificationType::dontSendNotification);
+			}
+			else 
+			{
+				flexItem.order = 99999;
+				flexItem.associatedComponent->setVisible(false);
+			}
+		}
+		resized();
 	}
 }

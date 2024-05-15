@@ -19,5 +19,6 @@ namespace ted_sna
         std::shared_ptr<SnaInstrumentSelector> instrumentSelector;
         void onInstrumentChanged(const i7::SnaInstr&);
         void updateModControls(const i7::SnaInstr&);
+        int indexStartModParameter = -1;
     };
 }

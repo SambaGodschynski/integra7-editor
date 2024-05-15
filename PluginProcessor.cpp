@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include <algorithm>
 #include <sstream>
+#include <components/Common.h>
 
 constexpr size_t MidiBufferReserveBytes = 1024 * 1024 * 4;
 
@@ -116,7 +117,7 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 #include <Helper.h>
 void PluginProcessor::sendSysex(const unsigned char* sysexData, size_t numBytes)
 {
-	std::cout << bytesToString(sysexData, sysexData + numBytes) << std::endl;
+	DEBUGONLY(std::cout << bytesToString(sysexData, sysexData + numBytes) << std::endl);
 	const std::lock_guard<Mutex> lock(midiBufferMutex);
 	int eventCount = localMidiBuffer.getNumEvents();
 	localMidiBuffer.addEvent(sysexData, (int)numBytes, eventCount);
