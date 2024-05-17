@@ -87,6 +87,20 @@ namespace ted_sna
 			auto& flexItem = flexBox().items.getReference(modIndex);
 			auto modName = instrument.mods[i];
 			bool isModVisible = modName != nullptr;
+			if (isModVisible) 
+			{
+				// todo: combine isModVisible and this assert as one expression
+				jassert(i < instrument.modInstrumentTable->numMods);
+			}
+			const i7::ModDef* modDef = &instrument.modInstrumentTable->mod[i];
+			if (std::string(modDef->id) == std::string("MOD_SNSTD_VARIATION"))
+			{
+				isModVisible &= instrument.modInstrumentTable->vari != nullptr;
+			}
+			if (std::string(modDef->id) == std::string("MOD_SNSTD_PLAY_SCALE"))
+			{
+				isModVisible &= instrument.modInstrumentTable->scale != nullptr;
+			}
 			if (isModVisible)
 			{
 				flexItem.order = modIndex;
@@ -94,6 +108,18 @@ namespace ted_sna
 				auto label = dynamic_cast<juce::Label*>(flexItem.associatedComponent->getChildComponent(0));
 				jassert(label);
 				label->setText(modName, juce::NotificationType::dontSendNotification);
+				auto slider = dynamic_cast<I7Parameter<I7Slider>*>(flexItem.associatedComponent->getChildComponent(1));
+				jassert(slider);
+				if (std::string(modDef->id) == std::string("MOD_SNSTD_VARIATION"))
+				{
+					modDef = instrument.modInstrumentTable->vari;
+				}
+				if (std::string(modDef->id) == std::string("MOD_SNSTD_PLAY_SCALE"))
+				{
+					modDef = instrument.modInstrumentTable->scale;
+				}
+				slider->i7setControlLimits(modDef->min, modDef->max);
+				slider->i7setValue(modDef->init);
 			}
 			else 
 			{
