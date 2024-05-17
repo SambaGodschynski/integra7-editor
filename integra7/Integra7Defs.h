@@ -17,6 +17,26 @@ namespace i7
         CategoryId category;
         const char * fullName;
     };
+    struct ModDef
+    {
+        const char* desc;
+        const char* id;
+        UInt init;
+        UInt min;
+        UInt max;
+        UInt cc;
+    };
+    struct ModInstrumentTable 
+    {
+        Byte lsb;
+        Byte pc;
+        Byte monopoly;
+        const ModDef* mod;
+        UInt numMods;
+        const ModDef* scale;
+        const ModDef* vari;
+        const char* desc;
+    };
     struct SnaInstr
     {
         const char* bank;
@@ -24,6 +44,7 @@ namespace i7
         const char* cate;
         Byte lsb;
         Byte pc;
+        const ModInstrumentTable *modInstrumentTable;
         enum { NumMods = 22 };
         const char* mods[NumMods];
     };
