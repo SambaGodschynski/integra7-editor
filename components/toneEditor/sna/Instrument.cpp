@@ -73,6 +73,18 @@ namespace ted_sna
 		updateModControls(*initInstrument);
     }
 
+	int Instrument::calculateNeededHeight() const
+	{
+		float total = 0.0f;
+		auto n = getNumChildComponents();
+		for (int i = 0; i < n; ++i)
+		{
+			auto component = getChildComponent(i);
+			total += component->getHeight();
+		}
+		return (int)ceil(total);
+	}
+
 	void Instrument::onInstrumentChanged(const i7::SnaInstr& instrument)
 	{
 		updateModControls(instrument);

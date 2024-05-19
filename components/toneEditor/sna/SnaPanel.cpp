@@ -26,7 +26,8 @@ namespace ted_sna
         flexBox.items.getReference(0).width = (float)commonPanel.getWidth();
         flexBox.items.getReference(0).height = (float)commonPanel.getHeight();
 
-        instrumentPannel.setSize(w, 1000);
+        auto iPanelHeight = instrumentPannel.calculateNeededHeight();
+        instrumentPannel.setSize(w, iPanelHeight);
         flexBox.items.getReference(1).width = (float)instrumentPannel.getWidth();
         flexBox.items.getReference(1).height = (float)instrumentPannel.getHeight();
 

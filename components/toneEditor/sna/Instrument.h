@@ -15,6 +15,7 @@ namespace ted_sna
     {
     public:
         Instrument(I7Host*, const PartInfo&);
+        int calculateNeededHeight() const;
     private:
         std::shared_ptr<SnaInstrumentSelector> instrumentSelector;
         void onInstrumentChanged(const i7::SnaInstr&);
