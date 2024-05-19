@@ -279,7 +279,11 @@ void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
 	{
 		return;
 	}
-	setSelectionIndex(lastRowSelected);
+	bool selectionHasChanged = setSelectionIndex(lastRowSelected);
+	if (!selectionHasChanged) 
+	{
+		return;
+	}
 	if (selectionChanged)
 	{
 		selectionChanged(selectedIndex);
@@ -289,15 +293,17 @@ void SearchableCombobox::selectedRowsChanged(int lastRowSelected)
 	});
 }
 
-void SearchableCombobox::setSelectionIndex(int index)
+bool SearchableCombobox::setSelectionIndex(int index)
 {
+	index = listToSourceIndex(index);
 	if (index == selectedIndex)
 	{
-		return;
+		return false;
 	}
-	selectedIndex = listToSourceIndex(index);
+	selectedIndex = index;
 	if (selectedIndex >= 0) 
 	{
 		input.setText(getDataStringValue((size_t)selectedIndex), juce::NotificationType::dontSendNotification);
 	}
+	return true;
 }

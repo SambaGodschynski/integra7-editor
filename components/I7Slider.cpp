@@ -2,7 +2,7 @@
 
 I7Slider::I7Slider()
 {
-
+    setScrollWheelEnabled(false);
 }
 
 void I7Slider::i7setControlLimits(i7::UInt min, i7::UInt max)
