@@ -8,7 +8,7 @@ namespace
 	const int MinHeight = InputHeight;
 	const int MinSearchChars = 2;
 	const float FontSize = 14.0f;
-	const float CellHeight = FontSize + 8.0f;
+	const float CellHeight = FontSize + 1.0f;
 	const int DebounceTimeMillis = 500;
 
 	struct SelectPopup : juce::Component

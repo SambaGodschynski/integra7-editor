@@ -2,6 +2,17 @@
 #include <integra7/Model.h>
 #include <stdexcept>
 #include <integra7/SnaInstr.h>
+#include <sstream>
+
+namespace
+{
+    std::string instrumentToString(const i7::SnaInstr& instr)
+    {
+        std::stringstream ss;
+        ss << "[" << instr.bank << "] " << instr.desc;
+        return ss.str();
+    }
+}
 
 SnaInstrumentSelector::SnaInstrumentSelector() : SearchableCombobox()
 {
@@ -9,11 +20,18 @@ SnaInstrumentSelector::SnaInstrumentSelector() : SearchableCombobox()
         []() { 
             return i7::NumSnAcousticInstruments; 
         },
-        [](size_t index) { return juce::String(i7::SnaInstruments[index].desc); },
+        [](size_t index) { return instrumentToString(i7::SnaInstruments[index]); },
         [](size_t index, const juce::String &str)
         {
-            juce::String name(i7::SnaInstruments[index].desc);
-            return name.containsIgnoreCase(str);
+            auto queries = juce::StringArray::fromTokens(str, true);
+            bool match = true;
+            for (int i = 0; i < queries.size(); ++i)
+            {
+                const auto& query = queries.getReference(i);
+                juce::String name(instrumentToString(i7::SnaInstruments[index]));
+                match &= name.containsIgnoreCase(query);
+            }
+            return match;
         }
     );
     i7currentInstrument = &i7::SnaInstruments[0];
