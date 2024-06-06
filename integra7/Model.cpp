@@ -117,6 +117,26 @@ namespace i7
         return std::string(&result[0]);
     }
 
+    Bytes createRq1SysexData(const RequestInfo& sendInfo)
+    {
+        UInt addr = sendInfo.addr;
+        Bytes result;
+        result.reserve(SizeRolandRq1 + ADDR_SIZE + sendInfo.size + SIZE_CHKSM + SIZE_F7);
+        result.insert(result.begin(), &ROLAND_RQ1[0], &ROLAND_RQ1[SizeRolandRq1]);
+        result.push_back((addr >> 24) & 0xff);
+        result.push_back((addr >> 16) & 0xff);
+        result.push_back((addr >> 8) & 0xff);
+        result.push_back(addr & 0xff);
+        size_t bytes = sendInfo.sizeNumBytes > 0  ? sendInfo.sizeNumBytes : ADDR_SIZE;
+        while(bytes-- > 0)
+        {
+            result.push_back((sendInfo.size >> (bytes*8)) & 0xff);
+        }
+        result.push_back(chksum(result.begin() + SizeRolandRq1, result.end()));
+        result.push_back(0xf7);
+        return result;
+    }
+
     Bytes createSysexData(const ModelData* model, const NodeInfo& nodeData)
     {
         UInt addr = nodeData.addr;
@@ -144,6 +164,26 @@ namespace i7
         Bytes result = createSysexData(model, nodeData);
         result[DeviceIdOffset] = deviceId;
         return result;
+    }
+
+    RequestResponse getResponseData(const Byte* bytes, size_t numBytes)
+    {
+        const size_t responseOverhead = 11;
+        RequestResponse response;
+        if (((int)numBytes - (int)responseOverhead) <= 0)
+        {
+            return response;
+        }
+        size_t i = 0;
+        ++i; // 0xF0
+        ++i; // 0x41
+        response.deviceId = bytes[i++];
+        response.modelId = (bytes[i++] << 16) + (bytes[i++] << 8) + bytes[i++];
+        response.requestType = bytes[i++];
+        response.addr = (bytes[i++] << 24) + (bytes[i++] << 16) + (bytes[i++] << 8) + bytes[i++];
+        response.payload = &bytes[i];
+        response.numBytes = numBytes - i - 1; // -1 = f7
+        return response;
     }
 
     //-------------------------------------------------------------------------

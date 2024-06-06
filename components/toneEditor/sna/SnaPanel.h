@@ -17,6 +17,7 @@ namespace ted_sna
     private:
         juce::Component viewChild;
         juce::FlexBox flexBox;
+        juce::TextButton receiveBtn;
         Common commonPanel;
         Instrument instrumentPannel;
     };

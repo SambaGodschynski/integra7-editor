@@ -68,6 +68,7 @@ target_sources(Integra7Editor
     PRIVATE
         PluginEditor.cpp
         PluginProcessor.cpp
+        AI7Host.cpp
         components/MixerPanel.cpp
         components/MixerChannelStrip.cpp
         components/ScratchPanel.cpp
@@ -95,6 +96,7 @@ target_compile_definitions(Integra7Editor
         JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
+        JUCE_MODAL_LOOPS_PERMITTED=1
         )
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of

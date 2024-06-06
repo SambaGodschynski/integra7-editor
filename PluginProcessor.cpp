@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <sstream>
 #include <components/Common.h>
+#include <iostream>
+#include <Helper.h>
+#include <integra7/Model.h>
 
 constexpr size_t MidiBufferReserveBytes = 1024 * 1024 * 4;
 
@@ -34,29 +37,17 @@ const juce::String PluginProcessor::getName() const
 
 bool PluginProcessor::acceptsMidi() const
 {
-#if JucePlugin_WantsMidiInput
 	return true;
-#else
-	return false;
-#endif
 }
 
 bool PluginProcessor::producesMidi() const
 {
-#if JucePlugin_ProducesMidiOutput
 	return true;
-#else
-	return false;
-#endif
 }
 
 bool PluginProcessor::isMidiEffect() const
 {
-#if JucePlugin_IsMidiEffect
 	return true;
-#else
-	return false;
-#endif
 }
 
 double PluginProcessor::getTailLengthSeconds() const
@@ -113,19 +104,22 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 #endif
 }
 
-#include <iostream>
-#include <Helper.h>
-void PluginProcessor::sendSysex(const unsigned char* sysexData, size_t numBytes)
-{
-	DEBUGONLY(std::cout << bytesToString(sysexData, sysexData + numBytes) << std::endl);
-	const std::lock_guard<Mutex> lock(midiBufferMutex);
-	int eventCount = localMidiBuffer.getNumEvents();
-	localMidiBuffer.addEvent(sysexData, (int)numBytes, eventCount);
-}
-
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 	juce::MidiBuffer& inOutMidiBff)
 {
+	if (inOutMidiBff.getNumEvents() > 0) 
+	{
+		for (const juce::MidiMessageMetadata &metadata : inOutMidiBff)
+		{
+			if (!metadata.getMessage().isSysEx())
+			{
+				continue;
+			}
+			auto data = metadata.data;
+			onSysexRexecived(data, metadata.numBytes);
+		}
+		inOutMidiBff.clear();
+	}
 	juce::ScopedNoDenormals noDenormals;
 	auto totalNumOutputChannels = getTotalNumOutputChannels();
 	for (auto i = 0; i < totalNumOutputChannels; ++i)
@@ -162,4 +156,15 @@ void PluginProcessor::setStateInformation(const void*, int)
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
 	return new PluginProcessor();
+}
+
+// I7Host ////////////////////////////////////////////////////////////////
+
+
+void PluginProcessor::sendSysex(const unsigned char* sysexData, size_t numBytes)
+{
+	DEBUGONLY(std::cout << "S:" << bytesToString(sysexData, sysexData + numBytes) << std::endl);
+	const std::lock_guard<Mutex> lock(midiBufferMutex);
+	int eventCount = localMidiBuffer.getNumEvents();
+	localMidiBuffer.addEvent(sysexData, (int)numBytes, eventCount);
 }

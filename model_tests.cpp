@@ -111,7 +111,25 @@ int main(int, const char**)
         auto strSysex = bytesToString(sysex.cbegin(), sysex.cend());
         assert(strSysex == std::string("f04110000064121900000030313233343520202020202078f7"));
     }
-
+    {
+        i7::RequestInfo sendInfo;
+        sendInfo.addr = i7::REQ_READ_EXP_ADDR;
+        auto sysex = i7::createRq1SysexData(sendInfo);
+        auto strSysex = bytesToString(sysex.cbegin(), sysex.cend());
+        assert(strSysex == std::string("f04110000064110f0000100000000061f7"));
+    }
+    {
+        i7::RequestInfo sendInfo;
+        sendInfo.addr = i7::REQ_READ_EXP_ADDR;
+        auto sysex = i7::createRq1SysexData(sendInfo);
+        auto response = i7::getResponseData(sysex.data(), sysex.size());
+        assert(response.deviceId == 0x10);
+        assert(response.addr == i7::REQ_READ_EXP_ADDR);
+        assert(response.modelId == 0x64);
+        assert(response.requestType == 0x11);
+        auto payloadString = bytesToString(response.payload, response.payload + response.numBytes);
+        assert(payloadString == std::string("0000000061"));
+    }
     return 0;
 
 }

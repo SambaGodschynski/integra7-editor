@@ -60,8 +60,48 @@ namespace i7
 	extern void put(ModelData*, const NodeInfo&, const std::string& str);
 	extern UInt get(const ModelData*, const NodeInfo&);
 	extern std::string getString(const ModelData*, const NodeInfo&);
+	struct RequestInfo 
+	{
+		UInt addr = 0;
+		size_t size = 0;
+		size_t sizeNumBytes = 0;
+	};
+	extern Bytes createRq1SysexData(const RequestInfo&);
 	extern Bytes createSysexData(const ModelData*, const NodeInfo&);
 	extern Bytes createSysexData(const ModelData*, const NodeInfo&, Byte deviceId);
+	struct RequestResponse
+	{
+		UInt addr = 0;
+		Byte deviceId = 0;
+		UInt modelId = 0;
+		/// RQ1 = 0x11; DT1 = 0x12;
+		Byte requestType = 0;
+		const Byte* payload = nullptr;
+		size_t numBytes = 0;
+	};
+	extern RequestResponse getResponseData(const Byte *bytes, size_t numBytes);
+
+	constexpr UInt STUDIO_BANK_MSB			= 0x55;
+	constexpr UInt STUDIO_BANK_LSB			= 0x00;
+	constexpr UInt REQ_STUDIO_SET_NAME 		= 0x0F000302;
+	constexpr UInt REQ_TONE_NAME 			= 0x0F000402;
+	constexpr UInt REQ_INITIALIZE 			= 0x0F001800;
+	constexpr UInt REQ_COPY					= 0x0F001900;
+	constexpr UInt INIT_RESULT_ADDR 		= 0x0F001802;
+	constexpr UInt COPY_RESULT_ADDR			= 0x0F001902;
+	constexpr UInt INIT_FIXED_DATA			= 0x7F7F0000;
+	constexpr UInt WRITE_REQ_ADDR			= 0x0F001000;
+	constexpr UInt WRITE_COMPLETED			= 0x0F001002;
+	constexpr UInt REQ_LOAD_EXP_ADDR		= 0x0F003000;
+	constexpr UInt REQ_LOAD_EXP_START_ADDR 	= 0x0F003001;
+	constexpr UInt REQ_LOAD_EXP_END_ADDR	= 0x0F003002;
+	constexpr UInt PREVIEW_ADDR				= 0x0F002000;
+	constexpr UInt REQ_READ_EXP_ADDR		= 0x0F000010;
+	constexpr UInt TYPE_STUDIO_SET			= 0x00;
+	constexpr UInt  TYPE_SOUND_CTRL			= 0x08;
+	constexpr UInt  TYPE_PART				= 0x10;
+	constexpr UInt TYPE_TONE				= 0x20;
+	constexpr UInt TYPE_PARTIAL				= 0x30;
 
 	constexpr Node STP[] = // Setup
 	{
