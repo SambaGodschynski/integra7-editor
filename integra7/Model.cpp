@@ -10,7 +10,6 @@ namespace i7
         void valueToBytes(UInt, ValueByteSizeType, Byte* outBytes);
         void valueToBytes(const std::string&, ValueByteSizeType, Byte* outBytes);
         UInt bytesToValue(const Byte* bytes, ValueByteSizeType byteSizeType);
-        UInt getByteSize(ValueByteSizeType);
         template<class TIterator>
         Byte chksum(TIterator begin, TIterator end);
         constexpr UInt ADDR_SIZE = 4;
@@ -186,29 +185,29 @@ namespace i7
         return response;
     }
 
+    UInt getByteSize(ValueByteSizeType byteSizeType)
+    {
+        switch (byteSizeType)
+        {
+        case ZeroByteSize: return 0;
+        case INTEGER1x1:
+        case INTEGER1x2:
+        case INTEGER1x3:
+        case INTEGER1x4:
+        case INTEGER1x5:
+        case INTEGER1x6:
+        case INTEGER1x7: return 1;
+        case INTEGER2x4: return 2;
+        case INTEGER4x4: return 4;
+        case ByteSize12: return 12;
+        case ByteSize16: return 16;
+        default:
+            throw std::runtime_error("unexpected byte size type");
+        }
+    }
     //-------------------------------------------------------------------------
     namespace
     {
-        UInt getByteSize(ValueByteSizeType byteSizeType)
-        {
-            switch (byteSizeType)
-            {
-            case ZeroByteSize: return 0;
-            case INTEGER1x1:
-            case INTEGER1x2:
-            case INTEGER1x3:
-            case INTEGER1x4:
-            case INTEGER1x5:
-            case INTEGER1x6:
-            case INTEGER1x7: return 1;
-            case INTEGER2x4: return 2;
-            case INTEGER4x4: return 4;
-            case ByteSize12: return 12;
-            case ByteSize16: return 16;
-            default:
-                throw std::runtime_error("unexpected byte size type");
-            }
-        }
         void valueToBytes(UInt v, ValueByteSizeType byteSizeType, Byte* outBytes)
         {
             switch (byteSizeType)

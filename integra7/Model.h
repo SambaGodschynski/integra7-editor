@@ -80,6 +80,7 @@ namespace i7
 		size_t numBytes = 0;
 	};
 	extern RequestResponse getResponseData(const Byte *bytes, size_t numBytes);
+	extern UInt getByteSize(ValueByteSizeType);
 
 	constexpr UInt STUDIO_BANK_MSB			= 0x55;
 	constexpr UInt STUDIO_BANK_LSB			= 0x00;
