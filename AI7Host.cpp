@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <components/Common.h>
 #include <cassert>
+#include <components/PartInfo.h>
+
 namespace 
 {
 	constexpr long long MaxRequestTimeOutSeconds = 5;
@@ -36,14 +38,58 @@ void AI7Host::requestExpansion()
 	expansions[3] = (i7::Expansion)response.payload[3];
 }
 
-void AI7Host::requestToneSna(int partNumber)
+void AI7Host::requestToneType(int partNumber)
 {
-	assert(partNumber >=0 && partNumber<= 6);
+	assert(partNumber >=0 && partNumber<NumParts);
 	constexpr i7::UInt ADDR_BASE = 0x18002006;
 	i7::RequestInfo rqInfo;
 	rqInfo.addr = ADDR_BASE + 0x100 * (i7::UInt)partNumber;
-	rqInfo.addr = 1;
+	rqInfo.size = 1;
+	auto future = request(rqInfo);
+	auto response = waitForRequest(future);
+	auto partMsb = response.payload[0];
+	i7::PartType partType = i7::PartType::Unknown;
+	switch (partMsb)
+	{
+	case 89: partType = i7::PartType::SNA; break;
+	case 95: partType = i7::PartType::SNS; break;
+	case 88: partType = i7::PartType::SND; break;
+	case 87: 
+	case 93: 
+	case 97: 
+	case 121: partType = i7::PartType::PCMS; break;
+	case 86:
+	case 92:
+	case 96:
+	case 120: partType = i7::PartType::PCMD; break;
+	default:
+		throw std::runtime_error("unknown part type received");
+	}
+	partTypes[partNumber] = partType;
+}
 
+void AI7Host::requestPartSetup(int partNumber)
+{
+	assert(partNumber >= 0 && partNumber < NumParts);
+	std::stringstream sid;
+	sid << "PRM-_FPART" << (partNumber + 1) << "-";
+	switch (partTypes[partNumber])
+	{
+	case i7::PartType::SNA:
+		sid << "_SNTONE"; break;
+	default:
+		throw std::runtime_error("unknown part type");
+	}
+	auto nodeId = sid.str();
+	i7::NodeInfo nodeInfo = i7::getNode(nodeId.c_str());
+	int i = 0;
+}
+
+void AI7Host::requestPart(int partNumber)
+{
+	requestExpansion();
+	requestToneType(partNumber);
+	requestPartSetup(partNumber);
 }
 
 I7Host::RequestResponseFuture AI7Host::request(const i7::RequestInfo& requestInfo)

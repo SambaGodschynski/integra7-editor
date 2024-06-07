@@ -17,7 +17,7 @@ namespace ted
         {
             try 
             {
-                _i7Host->requestExpansion();
+                _i7Host->requestPart(0);
             }
             catch (const std::exception &ex)
             {
