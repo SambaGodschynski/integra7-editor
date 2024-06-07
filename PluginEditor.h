@@ -16,14 +16,14 @@ public:
     explicit PluginEditor (PluginProcessor&);
     virtual ~PluginEditor() override;
 
-    //==============================================================================
+//==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
 private:
     PluginProcessor& processorRef;
     juce::TabbedComponent mainTabs;
     MixerPanel mixerPanel;
-    ToneEditorPanel toneEditorPanel;
+    ted::ToneEditorPanel toneEditorPanel;
     ScratchPanel scratchPanel;
     std::list<std::string> logCache;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)

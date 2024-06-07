@@ -82,6 +82,7 @@ target_sources(Integra7Editor
         components/LazyExecuter.cpp
         components/FlexContainer.cpp
         components/toneEditor/ToneEditorPanel.cpp
+        components/toneEditor/Header.cpp
         components/toneEditor/sna/Common.cpp
         components/toneEditor/sna/Instrument.cpp
         components/toneEditor/sna/SnaPanel.cpp

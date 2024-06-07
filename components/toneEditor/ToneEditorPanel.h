@@ -5,13 +5,18 @@
 #include <components/I7Host.h>
 #include "sna/SnaPanel.h"
 #include <components/PartInfo.h>
+#include <components/FlexContainer.h>
+#include "Header.h"
 
-class ToneEditorPanel : public juce::Component
+namespace ted
 {
-public:
-    ToneEditorPanel(I7Host*);
-    virtual void resized() override;
-private:
-    PartInfo partInfo;
-    ted_sna::SnaPanel snaPannel;
-};
+    class ToneEditorPanel : public FlexContainer
+    {
+    public:
+        ToneEditorPanel(I7Host*);
+    private:
+        PartInfo partInfo;
+        std::shared_ptr<ted::Header> header;
+        std::shared_ptr<ted_sna::SnaPanel> snaPannel;
+    };
+}

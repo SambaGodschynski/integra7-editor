@@ -11,22 +11,6 @@ namespace ted_sna
     {
 
         flexBox.flexDirection = juce::FlexBox::Direction::column;
-        receiveBtn.setSize(100, 50);
-        receiveBtn.setButtonText("Receive");
-        receiveBtn.onClick = [_i7Host]()
-        {
-            try 
-            {
-                _i7Host->requestExpansion();
-            }
-            catch (const std::exception &ex)
-            {
-                I7Alert(ex.what());
-            }
-        };
-        viewChild.addAndMakeVisible(receiveBtn);
-        flexBox.items.add(juce::FlexItem(0, 0, receiveBtn));
-
         viewChild.addAndMakeVisible(commonPanel);
         flexBox.items.add(juce::FlexItem(0, 0, commonPanel));
 
