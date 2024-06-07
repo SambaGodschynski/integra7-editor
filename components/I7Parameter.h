@@ -39,7 +39,7 @@ public:
         {
             throw std::runtime_error("missing i7Host");
         }
-        i7::put(&i7Host->model, nodeInfo, ControllerBase::i7GetDefaultValue(nodeInfo.node->init));
+        i7::put(i7Host->getModel(), nodeInfo, ControllerBase::i7GetDefaultValue(nodeInfo.node->init));
     }
     virtual ~I7Parameter() {}
     std::string i7getDescription() const { return nodeInfo.node->desc; }
@@ -60,8 +60,8 @@ void I7Parameter<TControlComponent>::i7onValueChanged(T v)
     {
         return;
     }
-    i7::put(&i7Host->model, nodeInfo, v);
-    i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, nodeInfo);
+    i7::put(i7Host->getModel(), nodeInfo, v);
+    i7::Bytes sysexMsg = i7::createSysexData(i7Host->getModel(), nodeInfo);
     i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
     DEBUGONLY(std::cout << nodeId << std::endl);
 }
@@ -78,8 +78,8 @@ void I7Parameter<TControlComponent>::i7putValue(const char* otherNodeId, i7::UIn
     {
         throw std::runtime_error(std::string("missing model for id: ") + otherNodeId);
     }
-    i7::put(&i7Host->model, otherNodeInfo, v);
-    i7::Bytes sysexMsg = i7::createSysexData(&i7Host->model, otherNodeInfo);
+    i7::put(i7Host->getModel(), otherNodeInfo, v);
+    i7::Bytes sysexMsg = i7::createSysexData(i7Host->getModel(), otherNodeInfo);
     i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
     DEBUGONLY(std::cout << otherNodeId << std::endl);
 }
