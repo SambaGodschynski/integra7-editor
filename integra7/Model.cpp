@@ -1,8 +1,8 @@
 #include "Model.h"
 #include <sstream>
 #include <iostream>
+#include <functional>
 #include "ModelIds.h"
-
 namespace i7
 {
     namespace
@@ -72,6 +72,15 @@ namespace i7
         }
         return result;
     }
+
+    NodeInfos getLeafNodes(const char* id)
+    {
+        NodeInfos result;
+        NodeInfo parent = getNode(id);
+        auto walk = [](){};
+        return result;
+    }
+
     void put(ModelData* model, const NodeInfo& nodeData, UInt v)
     {
         if ((UInt)nodeData.node->valueByteSizeType > (UInt)INTEGER_MASK) {

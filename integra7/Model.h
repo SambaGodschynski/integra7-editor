@@ -2,6 +2,7 @@
 
 #include "Integra7Defs.h"
 #include <string>
+#include <vector>
 
 namespace i7 
 {
@@ -56,6 +57,8 @@ namespace i7
 	};
 	struct ModelData;
 	extern NodeInfo getNode(const char* id);
+	typedef std::vector<NodeInfo> NodeInfos; 
+	extern NodeInfos getLeafNodes(const char* id);
 	extern void put(ModelData*, const NodeInfo&, UInt value);
 	extern void put(ModelData*, const NodeInfo&, const std::string& str);
 	extern UInt get(const ModelData*, const NodeInfo&);
