@@ -77,7 +77,40 @@ namespace i7
     {
         NodeInfos result;
         NodeInfo parent = getNode(id);
-        auto walk = [](){};
+        if (parent.node == nullptr)
+        {
+            return result;
+        }
+        std::function<UInt(NodeInfo)> walk = [&parent, &result, &walk](NodeInfo nodeInfo)
+        {
+            if (nodeInfo.node == nullptr)
+            {
+                return UInt(0);
+            }
+            UInt offset = 0;
+            for (size_t i = 0; i < nodeInfo.node->numChildren; ++i)
+            {
+                
+                auto childNode = &nodeInfo.node->node[i];
+                bool isLeaf = childNode->numChildren == 0;
+                
+                NodeInfo childNodeInfo;
+                childNodeInfo.node = childNode;
+                childNodeInfo.offset = nodeInfo.offset + offset;
+                childNodeInfo.addr = nodeInfo.addr + getModelIdAddress(childNode->id);
+                if (isLeaf)
+                {
+                    result.push_back(childNodeInfo);
+                    offset += getByteSize(childNode->valueByteSizeType);
+                }
+                else 
+                {
+                    offset += walk(childNodeInfo);
+                }
+            }
+            return offset;
+        };
+        walk(parent);
         return result;
     }
 
@@ -193,27 +226,6 @@ namespace i7
         response.numBytes = numBytes - i - 1; // -1 = f7
         return response;
     }
-
-    UInt getByteSize(ValueByteSizeType byteSizeType)
-    {
-        switch (byteSizeType)
-        {
-        case ZeroByteSize: return 0;
-        case INTEGER1x1:
-        case INTEGER1x2:
-        case INTEGER1x3:
-        case INTEGER1x4:
-        case INTEGER1x5:
-        case INTEGER1x6:
-        case INTEGER1x7: return 1;
-        case INTEGER2x4: return 2;
-        case INTEGER4x4: return 4;
-        case ByteSize12: return 12;
-        case ByteSize16: return 16;
-        default:
-            throw std::runtime_error("unexpected byte size type");
-        }
-    }
     //-------------------------------------------------------------------------
     namespace
     {
@@ -283,7 +295,6 @@ namespace i7
             default: /* ASCII String */
                 throw std::runtime_error("unexpected byte size type");
             }
-            return 0;
         }
         void valueToBytes(const std::string& str, ValueByteSizeType valueByteSizeType, Byte* outBytes)
         {

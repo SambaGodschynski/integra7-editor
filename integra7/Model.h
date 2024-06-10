@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+
 namespace i7 
 {
 	enum ValueByteSizeType {
@@ -83,7 +84,45 @@ namespace i7
 		size_t numBytes = 0;
 	};
 	extern RequestResponse getResponseData(const Byte *bytes, size_t numBytes);
-	extern UInt getByteSize(ValueByteSizeType);
+	
+	constexpr UInt getByteSize(ValueByteSizeType byteSizeType)
+	{
+		switch (byteSizeType)
+		{
+		case ZeroByteSize: return 0;
+		case INTEGER1x1:
+		case INTEGER1x2:
+		case INTEGER1x3:
+		case INTEGER1x4:
+		case INTEGER1x5:
+		case INTEGER1x6:
+		case INTEGER1x7: return 1;
+		case INTEGER2x4: return 2;
+		case INTEGER4x4: return 4;
+		case ByteSize12: return 12;
+		case ByteSize16: return 16;
+		default:
+			return 0;
+		}
+	}
+
+	constexpr UInt getTotalByteSize(const Node *nodes, size_t numChildren)
+	{
+		UInt total = 0;
+		for (size_t i = 0; i < numChildren; ++i)
+		{
+			const Node* node = &nodes[i];
+			bool isLeaf = node->numChildren == 0;
+			if (isLeaf)
+			{
+				total += getByteSize(node->valueByteSizeType);
+				continue;
+			}
+			total += getTotalByteSize(node->node, node->numChildren);
+		}
+		return total;
+	}
+
 
 	constexpr UInt STUDIO_BANK_MSB			= 0x55;
 	constexpr UInt STUDIO_BANK_LSB			= 0x00;
@@ -1771,7 +1810,7 @@ namespace i7
 	constexpr Node PAT[] = // PCM Tone
 	{
 		Node(0x0, 0, "PCM Tone Common", "_PC", &PC[0], sizeof(PC)/sizeof(PC[0])),
-		Node(0x200, 62, "PCM Tone Common MFX", "_PF", &PF[0], sizeof(PF)/sizeof(PF[0])),
+		Node(0x200, 0, "PCM Tone Common MFX", "_PF", &PF[0], sizeof(PF)/sizeof(PF[0])),
 		Node(0x1000, 110, "PCM Tone PMT (Partial Mix Table)", "_PX", &PX[0], sizeof(PX)/sizeof(PX[0])),
 		Node(0x2000, 151, "PCM Tone Partial (Partial 1)", "_PT1", &PT[0], sizeof(PT)/sizeof(PT[0])),
 		Node(0x2200, 289, "PCM Tone Partial (Partial 2)", "_PT2", &PT[0], sizeof(PT)/sizeof(PT[0])),
@@ -1889,7 +1928,7 @@ namespace i7
 	constexpr Node SNTONE[] = // SuperNATURAL Tone
 	{
 		Node(0x0, 0, "SN Tone Common", "_SNTC", &SNTC[0], sizeof(SNTC)/sizeof(SNTC[0])),
-		Node(0x200, 50, "SN Tone MFX", "_SNTF", &SNTF[0], sizeof(SNTF)/sizeof(SNTF[0]))
+		Node(0x200,0, "SN Tone MFX", "_SNTF", &SNTF[0], sizeof(SNTF) / sizeof(SNTF[0]))
 	};
 
 	constexpr Node KIT[] = // Drum Kit
@@ -2063,7 +2102,7 @@ namespace i7
 		Node(0x1C600000, 226183, "Temporary Tone (Studio Mode Part 16)", "_FPART16", &FPART[0], sizeof(FPART)/sizeof(FPART[0])),
 	};
 	constexpr UInt NumRootNodes = sizeof(root) / sizeof(root[0]);
-	constexpr UInt ModelByteSize = (226183 + 2052 + 12894 + 35) * sizeof(Byte);
+	constexpr UInt ModelByteSize = getTotalByteSize(&root[0], NumRootNodes);
 	struct ModelData 
 	{
 		i7::Byte data[i7::ModelByteSize] = {0};

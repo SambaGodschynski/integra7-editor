@@ -19,6 +19,7 @@ if(WIN32)
     SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
     SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4250")
+    add_compile_options(/constexpr:steps99999999)
 endif(WIN32)
 
 IF(APPLE)
@@ -121,3 +122,4 @@ target_link_libraries(Integra7Editor
         juce::juce_recommended_warning_flags)
 
 add_executable(model_tests model_tests.cpp ${IntegraSources})
+
