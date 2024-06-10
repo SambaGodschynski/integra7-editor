@@ -3,6 +3,8 @@
 #include <iostream>
 #include <functional>
 #include "ModelIds.h"
+#include <cassert>
+
 namespace i7
 {
     namespace
@@ -35,7 +37,7 @@ namespace i7
         const Node* node = nullptr;
         UInt numNodes = NumRootNodes;
         std::string partId;
-        std::stringstream ss(id); 
+        std::stringstream ss(id);
         while (std::getline(ss, partId, '-'))
         {
             if (partId == "PRM") 
@@ -43,18 +45,15 @@ namespace i7
                 // prm has no data representation
                 continue;
             }
-            UInt localOffset = 0;
             for (UInt i = 0; i < numNodes; ++i)
             {
                 const Node* n = &nodes[i];
                 if (partId == std::string(n->id))
                 {
                     result.addr += getModelIdAddress(partId);
-                    result.offset += n->offset;
                     node = n;
                     if (ss.eof()) 
                     {
-                        result.offset += localOffset;
                         result.node = node;
                         return result;
                     }
@@ -62,7 +61,6 @@ namespace i7
                     numNodes = node->numChildren;
                     break;
                 }
-                localOffset += getByteSize(n->valueByteSizeType);
             }
             if (nodes == &root[0]) 
             {
@@ -96,7 +94,6 @@ namespace i7
                 
                 NodeInfo childNodeInfo;
                 childNodeInfo.node = childNode;
-                childNodeInfo.offset = nodeInfo.offset + offset;
                 childNodeInfo.addr = nodeInfo.addr + getModelIdAddress(childNode->id);
                 if (isLeaf)
                 {
@@ -114,36 +111,47 @@ namespace i7
         return result;
     }
 
-    void put(ModelData* model, const NodeInfo& nodeData, UInt v)
+    void put(ModelData* model, const NodeInfo& nodeInfo, UInt v)
     {
-        if ((UInt)nodeData.node->valueByteSizeType > (UInt)INTEGER_MASK) {
-            v = std::max(nodeData.node->min, std::min(nodeData.node->max, v));
+        if ((UInt)nodeInfo.node->valueByteSizeType > (UInt)INTEGER_MASK) {
+            v = std::max(nodeInfo.node->min, std::min(nodeInfo.node->max, v));
         }
-        if ((nodeData.offset + getByteSize(nodeData.node->valueByteSizeType)) > ModelByteSize)
-        {
-            throw std::runtime_error("index overflow");
-        }
-        valueToBytes(v, nodeData.node->valueByteSizeType, &(model->data[nodeData.offset]));
+        assert(nodeInfo.node->isLeaf());
+        ModelValue& modelValue = (*model)[nodeInfo.addr];
+        valueToBytes(v, nodeInfo.node->valueByteSizeType, &(modelValue.bytes[0]));
     }
-    void put(ModelData* model, const NodeInfo& nodeData, const std::string &str)
+    void put(ModelData* model, const NodeInfo& nodeInfo, const std::string &str)
     {
-        if ((nodeData.offset + getByteSize(nodeData.node->valueByteSizeType)) > ModelByteSize)
-        {
-            throw std::runtime_error("index overflow");
-        }
-        valueToBytes(str, nodeData.node->valueByteSizeType, &(model->data[nodeData.offset]));
+        assert(nodeInfo.node->isLeaf());
+        ModelValue& modelValue = (*model)[nodeInfo.addr];
+        valueToBytes(str, nodeInfo.node->valueByteSizeType, &(modelValue.bytes[0]));
     }
 
     UInt get(const ModelData* model, const NodeInfo& nodeInfo)
     {
-        return bytesToValue(&(model->data[nodeInfo.offset]), nodeInfo.node->valueByteSizeType);
+        assert(nodeInfo.node->isLeaf());
+        auto it = model->find(nodeInfo.addr);
+        if (it == model->end())
+        {
+            return 0;
+        }
+        const ModelValue& modelValue = it->second;
+        return bytesToValue(&(modelValue.bytes[0]), nodeInfo.node->valueByteSizeType);
     }
     
     std::string getString(const ModelData* model, const NodeInfo& nodeInfo)
     {
+        assert(nodeInfo.node->isLeaf());
+        auto it = model->find(nodeInfo.addr);
+        if (it == model->end())
+        {
+            return std::string();
+        }
+        const ModelValue& modelValue = it->second;
+
         UInt byteSize = getByteSize(nodeInfo.node->valueByteSizeType);
         char result[Integra7MaxValueBytes + 1] = {0};
-        const Byte* begin = &(model->data[nodeInfo.offset]);
+        const Byte* begin = &(modelValue.bytes[0]);
         const Byte* end = begin + byteSize - 1;
         for(; end >= begin; --end)
         {
@@ -178,10 +186,15 @@ namespace i7
         return result;
     }
 
-    Bytes createSysexData(const ModelData* model, const NodeInfo& nodeData)
+    Bytes createSysexData(const ModelData* model, const NodeInfo& nodeInfo)
     {
-        UInt addr = nodeData.addr;
-        UInt resultSize = getByteSize(nodeData.node->valueByteSizeType);
+        static ModelValue nullValue;
+        assert(nodeInfo.node->isLeaf());
+        auto modelIt = model->find(nodeInfo.addr);
+        const ModelValue& modelValue = modelIt != model->end() ? modelIt->second : nullValue;
+
+        UInt addr = nodeInfo.addr;
+        UInt resultSize = getByteSize(nodeInfo.node->valueByteSizeType);
         Bytes result;
         result.reserve(SizeRolandDt1 + ADDR_SIZE + resultSize + SIZE_CHKSM + SIZE_F7);
         result.insert(result.begin(), &ROLAND_DT1[0], &ROLAND_DT1[SizeRolandDt1]);
@@ -189,7 +202,7 @@ namespace i7
         result.push_back((addr >> 16) & 0xff);
         result.push_back((addr >> 8) & 0xff);
         result.push_back(addr & 0xff);
-        const Byte* it = &(model->data[nodeData.offset]);
+        const Byte* it = &(modelValue.bytes[0]);
         const Byte* end = it + resultSize;
         for (; it != end; ++it)
         {

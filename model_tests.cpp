@@ -4,35 +4,10 @@
 #include "Helper.h"
 
 
-namespace
-{
-    using namespace i7;
-    UInt _getTotalByteSize(const Node* nodes, size_t numChildren)
-    {
-        UInt total = 0;
-        for (size_t i = 0; i < numChildren; ++i)
-        {
-            const Node* node = &nodes[i];
-            bool isLeaf = node->numChildren == 0;
-            if (isLeaf)
-            {
-                total += getByteSize(node->valueByteSizeType);
-                continue;
-            }
-            total += _getTotalByteSize(node->node, node->numChildren);
-        }
-        return total;
-    }
-}
-
 
 int main(int, const char**)
 {
-    auto totalBytes = _getTotalByteSize(&i7::root[0], i7::NumRootNodes);
     i7::ModelData model;
-    {
-        assert(i7::ModelByteSize == totalBytes);
-    }
     {
         auto nodeResult = i7::getNode("PRM-_FPART1");
         assert(nodeResult.node->addr == i7::nibble(0x19000000));
@@ -47,20 +22,16 @@ int main(int, const char**)
         auto nodeResult = i7::getNode("PRM-_SETUP-_STP-_RC2-NESTP_SND_MODE_SD1");
         assert(nodeResult.node != nullptr);
         assert(std::string(nodeResult.node->desc) == std::string("Side 1 Sound Mode"));
-        assert(model.data[0] == 0);
         assert(i7::get(&model, nodeResult) == 0);
         i7::put(&model, nodeResult, 4);
-        assert(model.data[0] == 4);
         assert(i7::get(&model, nodeResult) == 4);
     }
     {
         auto nodeResult = i7::getNode("PRM-_FPART16-_RHY-_RC2-RFRC2_TFX_SW");
         assert(nodeResult.node != nullptr);
         assert(std::string(nodeResult.node->desc) == std::string("TFX Switch"));
-        assert(model.data[i7::ModelByteSize - 1] == 0);
         assert(i7::get(&model, nodeResult) == 0);
         i7::put(&model, nodeResult, 1);
-        assert(model.data[i7::ModelByteSize - 1] == 1);
         assert(i7::get(&model, nodeResult) == 1);
     }
     {
@@ -167,15 +138,13 @@ int main(int, const char**)
         assert(leafNodes.size() == 98);
         auto someNode = i7::getNode("PRM-_FPART1-_SNTONE-_SNTC-SNTC_NAME");
         assert(leafNodes[0].addr == someNode.addr);
-        assert(leafNodes[0].offset == someNode.offset);
         assert(leafNodes[0].node == someNode.node);
 
         auto anotherNode = i7::getNode("PRM-_FPART1-_SNTONE-_SNTF-SNTF_MFX_PRM32");
         assert(leafNodes[97].addr == anotherNode.addr);
-        //assert(leafNodes[97].offset == anotherNode.offset);
         assert(leafNodes[97].node == anotherNode.node);
 
-    }
+     }
     return 0;
 
 }
