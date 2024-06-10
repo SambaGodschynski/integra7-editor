@@ -66,6 +66,7 @@ namespace i7
 	extern NodeInfos getLeafNodes(const char* id);
 	extern void put(ModelData*, const NodeInfo&, UInt value);
 	extern void put(ModelData*, const NodeInfo&, const std::string& str);
+	extern void put(ModelData*, const NodeInfo&, const Byte*, size_t);
 	extern UInt get(const ModelData*, const NodeInfo&);
 	extern std::string getString(const ModelData*, const NodeInfo&);
 	struct RequestInfo 

@@ -81,8 +81,17 @@ void AI7Host::requestPartSetup(int partNumber)
 		throw std::runtime_error("unknown part type");
 	}
 	auto nodeId = sid.str();
-	i7::NodeInfo nodeInfo = i7::getNode(nodeId.c_str());
-	int i = 0;
+	auto nodeInfos = i7::getLeafNodes(nodeId.c_str());
+	for (auto nodeInfo : nodeInfos)
+	{
+		i7::RequestInfo rqInfo;
+		rqInfo.addr = nodeInfo.addr;
+		rqInfo.size = i7::getByteSize(nodeInfo.node->valueByteSizeType);
+		auto future = request(rqInfo);
+		auto response = waitForRequest(future);
+		i7::put(&model, nodeInfo, response.payload, response.numBytes);
+	}
+	notifyParameterValueChanged();
 }
 
 void AI7Host::requestPart(int partNumber)
@@ -123,5 +132,23 @@ void AI7Host::onSysexRexecived(const unsigned char* sysexData, size_t numBytes)
 	{
 		const std::lock_guard<Mutex> lock(midiRqMutex);
 		openRequests.erase(it);
+	}
+}
+
+void AI7Host::registerParameter(I7ParameterBase* parameter)
+{
+	registeredParameters.insert(parameter);
+}
+
+void AI7Host::unregisterParameter(I7ParameterBase* parameter)
+{
+	registeredParameters.erase(parameter);
+}
+
+void AI7Host::notifyParameterValueChanged()
+{
+	for (auto parameter : registeredParameters)
+	{
+		parameter->modelValueChanged();
 	}
 }

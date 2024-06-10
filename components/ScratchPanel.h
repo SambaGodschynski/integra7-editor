@@ -15,6 +15,6 @@ public:
 private:
     PatchSelector patchSelector;
     juce::Label testLabel;
-    I7Parameter<I7Slider> p1;
-    I7Parameter<I7TextInput> p2;
+    //I7Parameter<I7Slider> p1;
+    //I7Parameter<I7TextInput> p2;
 };

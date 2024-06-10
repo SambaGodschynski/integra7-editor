@@ -9,6 +9,7 @@ class I7Slider : public juce::Slider
 public:
     typedef unsigned int ControlerValueType;
     I7Slider();
+    virtual ~I7Slider() = default;
     void i7setControlLimits(i7::UInt min, i7::UInt max);
     void i7setValue(ControlerValueType v);
     ControlerValueType i7GetDefaultValue(i7::UInt initValue) const { return initValue; }

@@ -3,6 +3,7 @@
 #include <integra7/Model.h>
 #include <integra7/Expansion.h>
 #include <integra7/PartType.h>
+#include "I7ParameterBase.h"
 #include <future>
 class I7Host
 {
@@ -18,6 +19,8 @@ public:
     virtual void requestToneType(int partNumber) = 0;
     virtual void requestPartSetup(int partNumber) = 0;
     virtual void requestPart(int partNumber) = 0;
+    virtual void registerParameter(I7ParameterBase*) = 0;
+    virtual void unregisterParameter(I7ParameterBase*) = 0;
     virtual RequestResponseFuture request(const i7::RequestInfo &requestInfo) = 0;
     virtual ~I7Host() = default;
 };

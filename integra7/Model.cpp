@@ -127,6 +127,14 @@ namespace i7
         valueToBytes(str, nodeInfo.node->valueByteSizeType, &(modelValue.bytes[0]));
     }
 
+    void put(ModelData* model, const NodeInfo& nodeInfo, const Byte* src, size_t numBytes)
+    {
+        assert(nodeInfo.node->isLeaf());
+        assert(getByteSize(nodeInfo.node->valueByteSizeType) == numBytes);
+        ModelValue& value = (*model)[nodeInfo.addr];
+        ::memcpy(&value.bytes[0], src, numBytes);
+    }
+
     UInt get(const ModelData* model, const NodeInfo& nodeInfo)
     {
         assert(nodeInfo.node->isLeaf());
@@ -236,7 +244,7 @@ namespace i7
         response.requestType = bytes[i++];
         response.addr = (bytes[i++] << 24) + (bytes[i++] << 16) + (bytes[i++] << 8) + bytes[i++];
         response.payload = &bytes[i];
-        response.numBytes = numBytes - i - 1; // -1 = f7
+        response.numBytes = numBytes - i - 1 - 1; // -1 = f7 -1 = checksum
         return response;
     }
     //-------------------------------------------------------------------------

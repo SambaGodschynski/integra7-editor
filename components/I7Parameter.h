@@ -5,7 +5,7 @@
 #include "I7Host.h"
 #include <string>
 #include <iostream>
-
+#include "I7ParameterBase.h"
 #include <components/Common.h>
 
 namespace juce
@@ -13,20 +13,15 @@ namespace juce
     class Component;
 }
 
-class I7ParameterBase
-{
-public:
-    virtual ~I7ParameterBase() {}
-};
-
 template<class TControlComponent>
 class I7Parameter : public TControlComponent, public I7ParameterBase
 {
 public:
     typedef TControlComponent ControllerBase;
     typedef typename ControllerBase::ControlerValueType T;
-    I7Parameter(const char *_nodeId, I7Host* _i7Host) :  i7Host(nullptr), nodeId(_nodeId)
+    I7Parameter(const char *_nodeId, I7Host* _i7Host) :  i7Host(nullptr), nodeId(_nodeId), omitSendSysex(true)
     {
+        _i7Host->registerParameter(this);
         nodeInfo = i7::getNode(nodeId.c_str());
         if (nodeInfo.node == nullptr)
         {
@@ -40,9 +35,14 @@ public:
             throw std::runtime_error("missing i7Host");
         }
         i7::put(i7Host->getModel(), nodeInfo, ControllerBase::i7GetDefaultValue(nodeInfo.node->init));
+        omitSendSysex = false;
     }
-    virtual ~I7Parameter() {}
+    virtual ~I7Parameter() 
+    {
+        i7Host->unregisterParameter(this);
+    }
     std::string i7getDescription() const { return nodeInfo.node->desc; }
+    virtual void modelValueChanged() override;
 protected:
     virtual void i7onValueChanged(T v) override;
     virtual void i7putValue(const char *nodeId, i7::UInt v);
@@ -51,12 +51,13 @@ private:
     i7::NodeInfo nodeInfo;
     I7Host *i7Host;
     std::string nodeId;
+    bool omitSendSysex;
 };
 
 template<class TControlComponent>
 void I7Parameter<TControlComponent>::i7onValueChanged(T v)
 {
-    if (!i7Host)
+    if (!i7Host || omitSendSysex)
     {
         return;
     }
@@ -82,4 +83,13 @@ void I7Parameter<TControlComponent>::i7putValue(const char* otherNodeId, i7::UIn
     i7::Bytes sysexMsg = i7::createSysexData(i7Host->getModel(), otherNodeInfo);
     i7Host->sendSysex(sysexMsg.data(), sysexMsg.size());
     DEBUGONLY(std::cout << otherNodeId << std::endl);
+}
+
+template<class TControlComponent>
+void I7Parameter<TControlComponent>::modelValueChanged()
+{
+    omitSendSysex = true;
+    auto v = i7::get(i7Host->getModel(), nodeInfo);
+    ControllerBase::i7setValue(v);
+    omitSendSysex = false;
 }
