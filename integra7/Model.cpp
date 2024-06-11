@@ -4,7 +4,7 @@
 #include <functional>
 #include "ModelIds.h"
 #include <cassert>
-
+#include <cstring> 
 namespace i7
 {
     namespace
