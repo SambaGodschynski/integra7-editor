@@ -266,7 +266,7 @@ int SearchableCombobox::listToSourceIndex(int listIndex)
 	{
 		return -1;
 	}
-	if (filteredIndices.empty()) 
+	if (listIndex >= filteredIndices.size())
 	{
 		return listIndex;
 	}

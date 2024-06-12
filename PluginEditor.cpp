@@ -26,9 +26,9 @@
     }
 
 
-    #ifdef _DEBUG
+    //#ifdef _DEBUG
     Console console;
-    #endif
+    //#endif
 #endif
 
 

@@ -99,45 +99,44 @@ namespace ted_sna
 			auto& flexItem = flexBox().items.getReference(modIndex);
 			auto modName = instrument.mods[i];
 			bool isModVisible = modName != nullptr;
-			if (isModVisible) 
-			{
-				// todo: combine isModVisible and this assert as one expression
-				jassert(i < instrument.modInstrumentTable->numMods);
-			}
-			const i7::ModDef* modDef = &instrument.modInstrumentTable->mod[i];
-			if (std::string(modDef->id) == std::string("MOD_SNSTD_VARIATION"))
+
+			const i7::ModDef* modDef = i < instrument.modInstrumentTable->numMods ? &instrument.modInstrumentTable->mod[i] : nullptr;
+			if (modDef != nullptr && std::string(modDef->id) == std::string("MOD_SNSTD_VARIATION"))
 			{
 				isModVisible &= instrument.modInstrumentTable->vari != nullptr;
-			}
-			if (std::string(modDef->id) == std::string("MOD_SNSTD_PLAY_SCALE"))
-			{
-				isModVisible &= instrument.modInstrumentTable->scale != nullptr;
-			}
-			if (isModVisible)
-			{
-				flexItem.order = modIndex;
-				flexItem.associatedComponent->setVisible(true);
-				auto label = dynamic_cast<juce::Label*>(flexItem.associatedComponent->getChildComponent(0));
-				jassert(label);
-				label->setText(modName, juce::NotificationType::dontSendNotification);
-				auto slider = dynamic_cast<I7Parameter<I7Slider>*>(flexItem.associatedComponent->getChildComponent(1));
-				jassert(slider);
-				if (std::string(modDef->id) == std::string("MOD_SNSTD_VARIATION"))
+				if (isModVisible)
 				{
 					modDef = instrument.modInstrumentTable->vari;
 				}
-				if (std::string(modDef->id) == std::string("MOD_SNSTD_PLAY_SCALE"))
+			}
+			 if (modDef != nullptr && std::string(modDef->id) == std::string("MOD_SNSTD_PLAY_SCALE"))
+			 {
+			 	isModVisible &= instrument.modInstrumentTable->scale != nullptr;
+				if (isModVisible)
 				{
 					modDef = instrument.modInstrumentTable->scale;
 				}
-				slider->i7setControlLimits(modDef->min, modDef->max);
-				slider->i7setValue(modDef->init);
-			}
-			else 
-			{
-				flexItem.order = 99999;
-				flexItem.associatedComponent->setVisible(false);
-			}
+			 }
+			 if (isModVisible)
+			 {
+			 	flexItem.order = modIndex;
+			 	flexItem.associatedComponent->setVisible(true);
+			 	auto label = dynamic_cast<juce::Label*>(flexItem.associatedComponent->getChildComponent(0));
+			 	jassert(label);
+			 	label->setText(modName, juce::NotificationType::dontSendNotification);
+			 	auto slider = dynamic_cast<I7Parameter<I7Slider>*>(flexItem.associatedComponent->getChildComponent(1));
+			 	jassert(slider);
+				if (modDef)
+				{
+					slider->i7setControlLimits(modDef->min, modDef->max);
+					slider->i7setValue(modDef->init);
+				}
+			 }
+			 else 
+			 {
+			 	flexItem.order = 99999;
+			 	flexItem.associatedComponent->setVisible(false);
+			 }
 		}
 		resized();
 	}
