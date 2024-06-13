@@ -78,6 +78,10 @@ void SnaInstrumentSelector::i7ModelValueChanged(ControlerValueType)
         if (instrument.lsb == lsb && pc == instrument.pc)
         {
             i7setValue(i);
+            if (i7InstrumentChanged)
+            {
+                i7InstrumentChanged(*i7currentInstrument);
+            }
             break;
         }
     }
