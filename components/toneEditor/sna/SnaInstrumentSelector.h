@@ -7,6 +7,7 @@
 #include <components/I7Host.h>
 #include <components/PartInfo.h>
 #include <functional>
+#include <string>
 
 class SnaInstrumentSelector : public SearchableCombobox
 {
@@ -26,4 +27,7 @@ protected:
     void onSelectionChanged(int index);
     virtual void i7onValueChanged(ControlerValueType v) = 0;
     virtual void i7putValue(const char* nodeId, i7::UInt v) = 0;
+    virtual i7::UInt i7getValue(const char* nodeId) const = 0;
+    virtual std::string i7getStrValue(const char* nodeId) const = 0;
+    void i7ModelValueChanged(ControlerValueType);
 };

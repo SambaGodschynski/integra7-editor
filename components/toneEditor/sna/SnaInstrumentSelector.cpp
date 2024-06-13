@@ -66,5 +66,19 @@ void SnaInstrumentSelector::onSelectionChanged(int index)
     {
         i7InstrumentChanged(*i7currentInstrument);
     }
+}
 
+void SnaInstrumentSelector::i7ModelValueChanged(ControlerValueType)
+{
+    auto lsb = i7getValue(i7PartInfo.createId("_SNTONE-_SNTC-SNTC_INST_BS_LSB").c_str());
+    auto pc = i7getValue(i7PartInfo.createId("_SNTONE-_SNTC-SNTC_INST_BS_PC").c_str());
+    for (size_t i = 0; i < i7::NumSnAcousticInstruments; ++i)
+    {
+        const auto& instrument = i7::SnaInstruments[i];
+        if (instrument.lsb == lsb && pc == instrument.pc)
+        {
+            i7setValue(i);
+            break;
+        }
+    }
 }

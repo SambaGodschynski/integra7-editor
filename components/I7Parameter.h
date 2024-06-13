@@ -43,12 +43,15 @@ public:
     }
     std::string i7getDescription() const { return nodeInfo.node->desc; }
     virtual void modelValueChanged() override;
+    i7::NodeInfo nodeInfo;
+    virtual std::string getNodeId() const override { return nodeId; }
 protected:
     virtual void i7onValueChanged(T v) override;
     virtual void i7putValue(const char *nodeId, i7::UInt v);
+    virtual i7::UInt i7getValue(const char* nodeId) const override;
+    virtual std::string i7getStrValue(const char* nodeId) const override;
     virtual I7Host* getHost() { return i7Host; }
 private:
-    i7::NodeInfo nodeInfo;
     I7Host *i7Host;
     std::string nodeId;
     bool omitSendSysex;
@@ -86,10 +89,40 @@ void I7Parameter<TControlComponent>::i7putValue(const char* otherNodeId, i7::UIn
 }
 
 template<class TControlComponent>
+i7::UInt I7Parameter<TControlComponent>::i7getValue(const char* nodeId) const
+{
+    return i7::get(i7Host->getModel(), i7::getNode(nodeId));
+}
+
+template<class TControlComponent>
+std::string I7Parameter<TControlComponent>::i7getStrValue(const char* nodeId) const
+{
+    return i7::getString(i7Host->getModel(), nodeInfo);
+}
+
+namespace
+{
+
+    void _getModelValue(const i7::ModelData* model, i7::NodeInfo nodeInfo, i7::UInt *out)
+    {
+        auto v = i7::get(model, nodeInfo);
+        *out = v;
+    }
+    void _getModelValue(const i7::ModelData* model, i7::NodeInfo nodeInfo, std::string *out)
+    {
+        auto v = i7::getString(model, nodeInfo);
+        *out = v;
+    }
+
+}
+
+template<class TControlComponent>
 void I7Parameter<TControlComponent>::modelValueChanged()
 {
     omitSendSysex = true;
-    auto v = i7::get(i7Host->getModel(), nodeInfo);
-    ControllerBase::i7setValue(v);
+    typedef typename TControlComponent::ControlerValueType T;
+    T v[1] = { T() };
+    _getModelValue(i7Host->getModel(), nodeInfo, &v[0]);
+    ControllerBase::i7ModelValueChanged(v[0]);
     omitSendSysex = false;
 }

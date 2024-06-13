@@ -3,6 +3,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <integra7/Integra7Defs.h>
+#include <string>
 
 class I7Slider : public juce::Slider
 {
@@ -16,4 +17,7 @@ public:
     virtual void valueChanged() override;
 protected:
     virtual void i7onValueChanged(ControlerValueType v) = 0;
+    virtual i7::UInt i7getValue(const char* nodeId) const = 0;
+    virtual std::string i7getStrValue(const char* nodeId) const = 0;
+    void i7ModelValueChanged(ControlerValueType v) { i7setValue(v); }
 };
