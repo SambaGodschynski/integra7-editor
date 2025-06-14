@@ -1,10 +1,19 @@
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
-#include <GLFW/glfw3.h> // Will include glad/gl.h if needed
+#include <GLFW/glfw3.h>
+#include <sol/sol.hpp>
+#include <iostream>
 
-int main()
+int main(int argc, const char** args)
 {
+    if (argc < 2) 
+    {
+        std::cout << "missing lua file" << std::endl;
+        return -1;
+    }
+    const char *luaFile = args[1];
+
     if (!glfwInit())
     {
         return -1;
@@ -33,6 +42,15 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+    sol::state lua;
+	lua.open_libraries(sol::lib::base);
+    lua.script_file(luaFile);
+
+    int x = lua["X"];
+    std::cout << x << std::endl;
+
+    std::string message = lua["Main"]["message"];
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -42,7 +60,7 @@ int main()
         ImGui::NewFrame();
 
         ImGui::Begin("Hello, world!");
-        ImGui::Text("Dies ist ein einfaches ImGui-Fenster.");
+        ImGui::TextUnformatted(message.c_str());
         ImGui::End();
 
         ImGui::Render();
