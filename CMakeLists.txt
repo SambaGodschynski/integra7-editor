@@ -6,9 +6,10 @@ cmake_policy(SET CMP0072 NEW)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 
-set(IMGUI_DIR "${CMAKE_SOURCE_DIR}/submodules/imgui")
-set(SOL_DIR "${CMAKE_SOURCE_DIR}/submodules/sol2")
-set(LUA_DIR "${CMAKE_SOURCE_DIR}/submodules/lua")
+set(SUBMOD "${CMAKE_SOURCE_DIR}/submodules")
+set(IMGUI_DIR "${SUBMOD}/imgui")
+set(SOL_DIR "${SUBMOD}/sol2")
+set(LUA_DIR "${SUBMOD}/lua")
 
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -18,6 +19,8 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui_demo.cpp
     ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    # third_party
+    ${SUBMOD}/imgui-knobs/imgui-knobs.cpp
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
 
@@ -64,6 +67,7 @@ include_directories(
     ${IMGUI_DIR}/backends
     ${SOL_DIR}/include
     ${LUA_DIR}
+    ${SUBMOD}/imgui-knobs
 )
 
 add_executable(HelloImGui main.cpp)

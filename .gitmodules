@@ -10,3 +10,6 @@
 [submodule "submodules/lua"]
 	path = submodules/lua
 	url = https://github.com/lua/lua
+[submodule "submodules/imgui-knobs"]
+	path = submodules/imgui-knobs
+	url = https://github.com/altschuler/imgui-knobs

@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include "imgui-knobs.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
@@ -51,6 +52,9 @@ int main(int argc, const char** args)
 
     std::string message = lua["Main"]["message"];
 
+    float value = 0;
+    float value2 = 0;
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -58,11 +62,21 @@ int main(int argc, const char** args)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
         ImGui::Begin("Hello, world!");
         ImGui::TextUnformatted(message.c_str());
-        ImGui::End();
 
+       
+        if (ImGuiKnobs::Knob("Volume", &value, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick))
+        {
+            // value was changed
+        }
+        
+        if (ImGuiKnobs::Knob("Volume2", &value2, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick))
+        {
+            // value was changed
+        }
+
+        ImGui::End();
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -70,7 +84,6 @@ int main(int argc, const char** args)
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
         glfwSwapBuffers(window);
     }
     ImGui_ImplOpenGL3_Shutdown();
