@@ -6,6 +6,7 @@
 #include <sol/sol.hpp>
 #include <iostream>
 #include <rtmidi/RtMidi.h>
+#include <string>
 
 
 struct Args 
@@ -13,6 +14,7 @@ struct Args
     bool listOutputs = false;
     bool listInputs = false;
     bool printHelp = false;
+    std::string mainLuaFilePath;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -28,6 +30,11 @@ Args parseArguments(int argc, const char **argv)
         if (std::string(arg) == "--inputs")
         {
             result.listInputs = true;
+        }
+        if (std::string(arg) == "--lua-main")
+        {
+            ++i;
+            result.mainLuaFilePath = std::string(argv[i]);
         }
         if (std::string(arg) == "--help")
         {
@@ -60,6 +67,7 @@ int main(int argc, const char** args)
         std::cout << "Allowed options:\n" 
                   << "\t--inputs\n"
                   << "\t--outputs\n"
+                  << "\t--lua-main\n"
                   << std::endl;
         return 0;
     }
@@ -77,7 +85,10 @@ int main(int argc, const char** args)
     {
         return 0;
     }
-    const char *luaFile = "./lua/main.lua";
+    const char *luaFile = parsedArgs.mainLuaFilePath.empty() 
+        ?  "./lua/main.lua" 
+        : parsedArgs.mainLuaFilePath.c_str();
+
     if (!glfwInit())
     {
         return -1;
@@ -108,10 +119,7 @@ int main(int argc, const char** args)
 	lua.open_libraries(sol::lib::base);
     lua.script_file(luaFile);
 
-    int x = lua["X"];
-    std::cout << x << std::endl;
-
-    std::string message = lua["Main"]["message"];
+    sol::table mainSections = lua["Main"];
 
     float value = 0;
     float value2 = 0;
@@ -123,21 +131,28 @@ int main(int argc, const char** args)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        ImGui::Begin("Hello, world!");
-        ImGui::TextUnformatted(message.c_str());
 
-       
-        if (ImGuiKnobs::Knob("Volume", &value, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick))
+        for(auto &sectionPair : mainSections)
         {
-            // value was changed
-        }
-        
-        if (ImGuiKnobs::Knob("Volume2", &value2, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick))
-        {
-            // value was changed
+            auto section = sectionPair.second.as<sol::table>();
+            sol::object name = section["name"];
+            ImGui::Begin(name.as<std::string>().c_str());
+
+
+            sol::table params = section["params"];
+            for(auto &paramPair : params)
+            {
+                auto param = paramPair.second.as<sol::table>();
+                static float value = 0;
+                sol::object paramName = param["name"];
+                if (ImGuiKnobs::Knob(paramName.as<std::string>().c_str(), &value, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick)) {
+                    // value was changed
+                }
+            }
+
+            ImGui::End();
         }
 
-        ImGui::End();
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
