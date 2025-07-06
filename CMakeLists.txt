@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(HelloImGui)
+project(i7ed)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 cmake_policy(SET CMP0072 NEW)
@@ -10,6 +10,11 @@ set(SUBMOD "${CMAKE_SOURCE_DIR}/submodules")
 set(IMGUI_DIR "${SUBMOD}/imgui")
 set(SOL_DIR "${SUBMOD}/sol2")
 set(LUA_DIR "${SUBMOD}/lua")
+set(RTMIDI_DIR "${SUBMOD}/rtmidi")
+set(RTMIDI_BUILD_STATIC_LIBS ON CACHE BOOL "Build RtMidi as static library")
+
+set(LUA_SRC "${CMAKE_SOURCE_DIR}/lua")
+set(LUA_SRC_DST "${CMAKE_BINARY_DIR}/lua")
 
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -68,7 +73,17 @@ include_directories(
     ${SOL_DIR}/include
     ${LUA_DIR}
     ${SUBMOD}/imgui-knobs
+    ${RTMIDI_DIR}
 )
 
-add_executable(HelloImGui main.cpp)
-target_link_libraries(HelloImGui PRIVATE glfw OpenGL::GL imgui lua)
+add_subdirectory(${RTMIDI_DIR})
+
+add_executable(i7ed main.cpp)
+target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
+
+
+add_custom_command(
+    TARGET i7ed POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${LUA_SRC}" "${LUA_SRC_DST}"
+)

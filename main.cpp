@@ -5,25 +5,86 @@
 #include <GLFW/glfw3.h>
 #include <sol/sol.hpp>
 #include <iostream>
+#include <rtmidi/RtMidi.h>
+
+
+struct Args 
+{
+    bool listOutputs = false;
+    bool listInputs = false;
+    bool printHelp = false;
+};
+
+Args parseArguments(int argc, const char **argv)
+{
+    Args result;
+    for (int i = 1; i < argc; ++i)
+    {
+        const char *arg = argv[i];
+        if (std::string(arg) == "--outputs")
+        {
+            result.listOutputs = true;
+        }
+        if (std::string(arg) == "--inputs")
+        {
+            result.listInputs = true;
+        }
+        if (std::string(arg) == "--help")
+        {
+            result.printHelp = true;
+        }
+
+    }
+    return result;
+}
+
+
+template<class TMidiIO>
+void printMidiIo()
+{
+    TMidiIO midiIo;
+    auto nOutputs = midiIo.getPortCount();
+    for (size_t idx = 0; idx < nOutputs; ++idx)
+    {
+        std::cout << (idx) << ": " << midiIo.getPortName(idx) << std::endl;
+    }
+}
+
 
 int main(int argc, const char** args)
 {
-    if (argc < 2) 
-    {
-        std::cout << "missing lua file" << std::endl;
-        return -1;
-    }
-    const char *luaFile = args[1];
 
+    auto parsedArgs = parseArguments(argc, args);
+    if (parsedArgs.printHelp)
+    {
+        std::cout << "Allowed options:\n" 
+                  << "\t--inputs\n"
+                  << "\t--outputs\n"
+                  << std::endl;
+        return 0;
+    }
+    if (parsedArgs.listInputs)
+    {
+        std::cout << "Inputs:"  << std::endl;
+        printMidiIo<RtMidiIn>();
+    }
+    if (parsedArgs.listOutputs)
+    {
+        std::cout << "Outputs:"  << std::endl;
+        printMidiIo<RtMidiOut>();
+    }
+    if (parsedArgs.listOutputs || parsedArgs.listInputs)
+    {
+        return 0;
+    }
+    const char *luaFile = "./lua/main.lua";
     if (!glfwInit())
     {
         return -1;
     }
 
-    // OpenGL-Kontext Version 3.0+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Hello, ImGui!", NULL, NULL);
     if (!window)
     {
