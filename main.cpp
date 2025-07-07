@@ -7,7 +7,7 @@
 #include <iostream>
 #include <rtmidi/RtMidi.h>
 #include <string>
-
+#include "ParameterDef.h"
 
 struct Args 
 {
@@ -26,24 +26,28 @@ Args parseArguments(int argc, const char **argv)
         if (std::string(arg) == "--outputs")
         {
             result.listOutputs = true;
+            continue;
         }
         if (std::string(arg) == "--inputs")
         {
             result.listInputs = true;
+            continue;
         }
         if (std::string(arg) == "--lua-main")
         {
             ++i;
             result.mainLuaFilePath = std::string(argv[i]);
+            continue;
         }
         if (std::string(arg) == "--help")
         {
             result.printHelp = true;
+            continue;
         }
-
     }
     return result;
 }
+
 
 
 template<class TMidiIO>
@@ -58,9 +62,34 @@ void printMidiIo()
 }
 
 
+SectionDef::Sections getDefs(sol::state &lua)
+{
+    SectionDef::Sections result;
+    sol::table mainSections = lua["Main"];
+    for(auto &luaSectionPair : mainSections)
+    {
+        SectionDef sectionDef;
+        auto luaSection = luaSectionPair.second.as<sol::table>();
+        sol::object name = luaSection["name"];
+        sectionDef.name = name.as<std::string>();
+        sol::table params = luaSection["params"];
+        for(auto &luaParamPair : params)
+        {
+            ParameterDef param;
+            auto luaParam = luaParamPair.second.as<sol::table>();
+            sol::object paramName = luaParam["name"];
+            sol::object paramId = luaParam["id"];
+            param.name = paramName.as<std::string>();
+            param.id = paramId.as<std::string>();
+            sectionDef.params.push_back(param);
+        }
+        result.insert({luaSectionPair.first.as<std::string>(), sectionDef});
+    }
+    return result;
+}
+
 int main(int argc, const char** args)
 {
-
     auto parsedArgs = parseArguments(argc, args);
     if (parsedArgs.printHelp)
     {
@@ -96,7 +125,7 @@ int main(int argc, const char** args)
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Hello, ImGui!", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "i7Ed", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -119,10 +148,8 @@ int main(int argc, const char** args)
 	lua.open_libraries(sol::lib::base);
     lua.script_file(luaFile);
 
-    sol::table mainSections = lua["Main"];
+    auto sections = getDefs(lua);
 
-    float value = 0;
-    float value2 = 0;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -132,20 +159,13 @@ int main(int argc, const char** args)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        for(auto &sectionPair : mainSections)
+        for(auto &sectionPair : sections)
         {
-            auto section = sectionPair.second.as<sol::table>();
-            sol::object name = section["name"];
-            ImGui::Begin(name.as<std::string>().c_str());
-
-
-            sol::table params = section["params"];
-            for(auto &paramPair : params)
+            auto& section = sectionPair.second;
+            ImGui::Begin(section.name.c_str());
+            for(auto &param : section.params)
             {
-                auto param = paramPair.second.as<sol::table>();
-                static float value = 0;
-                sol::object paramName = param["name"];
-                if (ImGuiKnobs::Knob(paramName.as<std::string>().c_str(), &value, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick)) {
+                if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick)) {
                     // value was changed
                 }
             }
