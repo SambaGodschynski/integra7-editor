@@ -26,6 +26,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
     # third_party
     ${SUBMOD}/imgui-knobs/imgui-knobs.cpp
+    ${SUBMOD}/imgui-command-palette/imcmd_command_palette.cpp #no submodule for purpose because of build errors in the outdated origin
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
 
@@ -73,6 +74,7 @@ include_directories(
     ${SOL_DIR}/include
     ${LUA_DIR}
     ${SUBMOD}/imgui-knobs
+    ${SUBMOD}/imgui-command-palette
     ${RTMIDI_DIR}
 )
 
