@@ -27,6 +27,7 @@ set(IMGUI_SOURCES
     # third_party
     ${SUBMOD}/imgui-knobs/imgui-knobs.cpp
     ${SUBMOD}/imgui-command-palette/imcmd_command_palette.cpp #no submodule for purpose because of build errors in the outdated origin
+    ${SUBMOD}/imgui-command-palette/imcmd_fuzzy_search.cpp
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
 

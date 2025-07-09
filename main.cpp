@@ -212,6 +212,7 @@ int main(int argc, const char** args)
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImCmd::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     ImGui::StyleColorsDark();
@@ -224,7 +225,14 @@ int main(int argc, const char** args)
     lua.script_file(luaFile);
 
     auto sections = getDefs(lua);
+    bool show_command_palette = false;
 
+    ImCmd::Command toggle_demo_cmd;
+    toggle_demo_cmd.Name = "Toggle ImGui demo window";
+    toggle_demo_cmd.InitialCallback = [&]() {
+        //show_demo_window = !show_demo_window;
+    };
+    ImCmd::AddCommand(std::move(toggle_demo_cmd));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -234,6 +242,14 @@ int main(int argc, const char** args)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+
+
+        if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P)) {
+            show_command_palette = !show_command_palette;
+        }
+        if (show_command_palette) {
+            ImCmd::CommandPaletteWindow("CommandPalette", &show_command_palette);
+        }
         for(auto &sectionPair : sections)
         {
             auto& section = sectionPair.second;
