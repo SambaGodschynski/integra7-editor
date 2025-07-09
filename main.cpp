@@ -1,5 +1,6 @@
 #include "imgui.h"
 #include "imgui-knobs.h"
+//#include "imcmd_command_palette.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
@@ -8,6 +9,7 @@
 #include <rtmidi/RtMidi.h>
 #include <string>
 #include "ParameterDef.h"
+#include <vector>
 
 struct Args 
 {
@@ -15,6 +17,8 @@ struct Args
     bool listInputs = false;
     bool printHelp = false;
     std::string mainLuaFilePath;
+    int inPortNr = -1;
+    int outPortNr = -1;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -26,23 +30,52 @@ Args parseArguments(int argc, const char **argv)
         if (std::string(arg) == "--outputs")
         {
             result.listOutputs = true;
-            continue;
         }
-        if (std::string(arg) == "--inputs")
+        else if (std::string(arg) == "--inputs")
         {
             result.listInputs = true;
-            continue;
         }
-        if (std::string(arg) == "--lua-main")
+        else if (std::string(arg) == "--lua-main")
         {
             ++i;
+            if (i >= argc)
+            {
+                std::cerr << "missing argument for " << arg << std::endl;
+                exit(-1);
+            }
             result.mainLuaFilePath = std::string(argv[i]);
             continue;
         }
-        if (std::string(arg) == "--help")
+        else if (std::string(arg) == "--in-portnr")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                std::cerr << "missing argument for " << arg << std::endl;
+                exit(-1);
+            }
+            result.inPortNr = (int)atoi(argv[i]);
+            continue;
+        }
+        else if (std::string(arg) == "--out-portnr")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                std::cerr << "missing argument for " << arg << std::endl;
+                exit(-1);
+            }
+            result.outPortNr = (int)atoi(argv[i]);
+            continue;
+        }
+        else if (std::string(arg) == "--help")
         {
             result.printHelp = true;
-            continue;
+        }
+        else 
+        {
+            std::cout << "unkown argument: " << arg << std::endl;
+            exit(-1);
         }
     }
     return result;
@@ -54,11 +87,24 @@ template<class TMidiIO>
 void printMidiIo()
 {
     TMidiIO midiIo;
-    auto nOutputs = midiIo.getPortCount();
-    for (size_t idx = 0; idx < nOutputs; ++idx)
+    auto nIos = midiIo.getPortCount();
+    for (size_t idx = 0; idx < nIos; ++idx)
     {
         std::cout << (idx) << ": " << midiIo.getPortName(idx) << std::endl;
     }
+}
+
+template<class TMidiIO>
+void openPort(TMidiIO &port, size_t portNr)
+{
+    auto nIos = port.getPortCount();
+    if (portNr >= nIos)
+    {
+        std::cerr << "invalid port number: " << portNr << std::endl;
+        exit(1);
+    } 
+    port.openPort(portNr);
+    std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
 }
 
 
@@ -88,6 +134,20 @@ SectionDef::Sections getDefs(sol::state &lua)
     return result;
 }
 
+void valueChanged(sol::state &lua, RtMidiOut &midiOut, const ParameterDef& def)
+{
+    sol::function create_sysex = lua["CreateSysexMessage"];
+    sol::protected_function_result result = create_sysex(def.id, def.value);
+    if (!result.valid()) {
+        sol::error err = result;
+        std::cerr << "Lua error: " << err.what() << "\n";
+        return;
+    }
+    sol::table sysexTable = result;
+    auto sysex = sysexTable.as<std::vector<unsigned char>>();
+    midiOut.sendMessage(&sysex);
+}
+
 int main(int argc, const char** args)
 {
     auto parsedArgs = parseArguments(argc, args);
@@ -97,6 +157,8 @@ int main(int argc, const char** args)
                   << "\t--inputs\n"
                   << "\t--outputs\n"
                   << "\t--lua-main\n"
+                  << "\t--in-portnr\n"
+                  << "\t--in-portnr\n"
                   << std::endl;
         return 0;
     }
@@ -114,6 +176,19 @@ int main(int argc, const char** args)
     {
         return 0;
     }
+
+    RtMidiIn midiIn;
+    RtMidiOut midiOut;
+
+    if (parsedArgs.inPortNr >= 0)
+    {
+        openPort(midiIn, (size_t)parsedArgs.inPortNr);
+    }
+    if (parsedArgs.outPortNr >= 0)
+    {
+        openPort(midiOut, (size_t)parsedArgs.outPortNr);
+    }
+    
     const char *luaFile = parsedArgs.mainLuaFilePath.empty() 
         ?  "./lua/main.lua" 
         : parsedArgs.mainLuaFilePath.c_str();
@@ -145,7 +220,7 @@ int main(int argc, const char** args)
     ImGui_ImplOpenGL3_Init("#version 330");
 
     sol::state lua;
-	lua.open_libraries(sol::lib::base);
+	lua.open_libraries();
     lua.script_file(luaFile);
 
     auto sections = getDefs(lua);
@@ -165,8 +240,9 @@ int main(int argc, const char** args)
             ImGui::Begin(section.name.c_str());
             for(auto &param : section.params)
             {
-                if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, -6.0f, 6.0f, 0.1f, "%.1fdB", ImGuiKnobVariant_Tick)) {
-                    // value was changed
+                // TODO: make min, max part of param def
+                if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, 0.0f, 100.0f, 1.0f, "%.1fdB", ImGuiKnobVariant_Tick)) {
+                    valueChanged(lua, midiOut, param);
                 }
             }
 
@@ -187,5 +263,13 @@ int main(int argc, const char** args)
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
+    if (midiIn.isPortOpen())
+    {
+        midiIn.closePort();
+    }
+    if (midiOut.isPortOpen())
+    {
+        midiOut.closePort();
+    }
     return 0;
 }
