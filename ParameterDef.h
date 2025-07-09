@@ -18,4 +18,5 @@ struct SectionDef
     typedef std::map<std::string, SectionDef> Sections;
     std::string name;
     ParameterDef::Params params;
+    bool isOpen = true;
 };

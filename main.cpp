@@ -237,15 +237,20 @@ int main(int argc, const char** args)
         for(auto &sectionPair : sections)
         {
             auto& section = sectionPair.second;
-            ImGui::Begin(section.name.c_str());
-            for(auto &param : section.params)
+            if (!section.isOpen)
             {
-                // TODO: make min, max part of param def
-                if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, 0.0f, 100.0f, 1.0f, "%.1fdB", ImGuiKnobVariant_Tick)) {
-                    valueChanged(lua, midiOut, param);
+                continue;
+            }
+            if (ImGui::Begin(section.name.c_str(), &section.isOpen))
+            {
+                for(auto &param : section.params)
+                {
+                    // TODO: make min, max part of param def
+                    if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, 0.0f, 100.0f, 1.0f, "%.1fdB", ImGuiKnobVariant_Tick)) {
+                        valueChanged(lua, midiOut, param);
+                    }
                 }
             }
-
             ImGui::End();
         }
 
