@@ -208,12 +208,12 @@ int main(int argc, const char** args)
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // V-Sync
+    glfwSwapInterval(0); // V-Sync
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImCmd::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO(); 
 
     ImGui::StyleColorsDark();
 
