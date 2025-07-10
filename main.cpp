@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "imgui-knobs.h"
 #include "imcmd_command_palette.h"
+#include "imsearch.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
@@ -213,6 +214,8 @@ int main(int argc, const char** args)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImCmd::CreateContext();
+    ImSearch::CreateContext();
+
     ImGuiIO& io = ImGui::GetIO(); 
 
     ImGui::StyleColorsDark();
@@ -237,6 +240,8 @@ int main(int argc, const char** args)
         ImCmd::AddCommand(std::move(cmd));
     }
 
+    std::vector<std::string> demoCombo({"people","history","way","art","world","information","map","two","family"});
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -245,14 +250,15 @@ int main(int argc, const char** args)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-
-
+        // Command Palette
         if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P)) {
             show_command_palette = !show_command_palette;
         }
         if (show_command_palette) {
             ImCmd::CommandPaletteWindow("CommandPalette", &show_command_palette);
         }
+
+        // Section Windows
         for(auto &sectionPair : sections)
         {
             auto& section = sectionPair.second;
@@ -270,8 +276,38 @@ int main(int argc, const char** args)
                     }
                 }
             }
+
+            if (ImGui::TreeNode("Combo"))
+            {
+                static std::string selectedString = demoCombo[0];
+                if (ImGui::BeginCombo("Combo Stuff", selectedString.c_str()))
+                {
+                    if (ImSearch::BeginSearch())
+                    {
+                        ImSearch::SearchBar();
+
+                        for (const std::string& entry : demoCombo)
+                        {
+                            ImSearch::SearchableItem(entry.c_str(),
+                                [&](const char* name)
+                                {
+                                    const bool isSelected = name == selectedString;
+                                    if (ImGui::Selectable(name, isSelected))
+                                    {
+                                        selectedString = name;
+                                    }
+                                });
+                        }
+                        ImSearch::EndSearch();
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::TreePop();
+            }
+
             ImGui::End();
         }
+
 
         ImGui::Render();
         int display_w, display_h;
@@ -284,6 +320,9 @@ int main(int argc, const char** args)
     }
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+
+    ImCmd::DestroyContext();
+    ImSearch::DestroyContext();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();

@@ -13,3 +13,6 @@
 [submodule "submodules/rtmidi"]
 	path = submodules/rtmidi
 	url = https://github.com/thestk/rtmidi
+[submodule "submodules/imsearch"]
+	path = submodules/imsearch
+	url = https://github.com/GuusKemperman/imsearch.git
