@@ -227,12 +227,15 @@ int main(int argc, const char** args)
     auto sections = getDefs(lua);
     bool show_command_palette = false;
 
-    ImCmd::Command toggle_demo_cmd;
-    toggle_demo_cmd.Name = "Toggle ImGui demo window";
-    toggle_demo_cmd.InitialCallback = [&]() {
-        //show_demo_window = !show_demo_window;
-    };
-    ImCmd::AddCommand(std::move(toggle_demo_cmd));
+    for(auto &section : sections)
+    {
+        ImCmd::Command cmd;
+        cmd.Name = std::string("open ") + section.second.name;
+        cmd.InitialCallback = [&section]() {
+            section.second.isOpen = true;
+        };
+        ImCmd::AddCommand(std::move(cmd));
+    }
 
     while (!glfwWindowShouldClose(window))
     {
