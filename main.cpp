@@ -108,18 +108,23 @@ void openPort(TMidiIO &port, size_t portNr)
     std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
 }
 
+// BEGIN: LUA to DEF. TODO Refactor into separate file
+template<typename T>
+T require_key(sol::table tbl, const std::string& key) {
+    sol::optional<T> val = tbl[key];
+    if (!val) {
+        throw std::runtime_error("Lua table is missing required key: " + key);
+    }
+    return val.value();
+}
 
-SectionDef::Sections getDefs(sol::state &lua)
+SectionDef getSection(const sol::table &lua_table)
 {
-    SectionDef::Sections result;
-    sol::table mainSections = lua["Main"];
-    for(auto &luaSectionPair : mainSections)
+    SectionDef sectionDef;
+    sectionDef.name = require_key<std::string>(lua_table, "name");
+    if (lua_table["params"] != sol::nil) 
     {
-        SectionDef sectionDef;
-        auto luaSection = luaSectionPair.second.as<sol::table>();
-        sol::object name = luaSection["name"];
-        sectionDef.name = name.as<std::string>();
-        sol::table params = luaSection["params"];
+        sol::table params = lua_table["params"];
         for(auto &luaParamPair : params)
         {
             ParameterDef param;
@@ -130,12 +135,35 @@ SectionDef::Sections getDefs(sol::state &lua)
             param.id = paramId.as<std::string>();
             sectionDef.params.push_back(param);
         }
+    }
+    if(lua_table["sub"] != sol::nil)
+    {
+        sol::table luaSubSection = lua_table["sub"];
+        auto subSection = getSection(luaSubSection);
+        sectionDef.subSections.push_back(subSection);
+    }
+    if(lua_table["isOpen"] != sol::nil)
+    {
+        sectionDef.isOpen = lua_table["isOpen"];
+    }
+    return sectionDef;
+}
+
+SectionDef::NamedSections getDefs(const sol::state &lua)
+{
+    SectionDef::NamedSections result;
+    sol::table mainSections = lua["Main"];
+    for(auto &luaSectionPair : mainSections)
+    {
+        sol::table luaSection = luaSectionPair.second.as<sol::table>();
+        auto sectionDef = getSection(luaSection);
         result.insert({luaSectionPair.first.as<std::string>(), sectionDef});
     }
     return result;
 }
+// END: Lua to Def
 
-void valueChanged(sol::state &lua, RtMidiOut &midiOut, const ParameterDef& def)
+void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef& def)
 {
     sol::function create_sysex = lua["CreateSysexMessage"];
     sol::protected_function_result result = create_sysex(def.id, def.value);
@@ -146,13 +174,36 @@ void valueChanged(sol::state &lua, RtMidiOut &midiOut, const ParameterDef& def)
     }
     sol::table sysexTable = result;
     auto sysex = sysexTable.as<std::vector<unsigned char>>();
+    // TODO: let lua send the message
     midiOut.sendMessage(&sysex);
+}
+
+struct I7Ed 
+{
+    RtMidiIn  midiIn;
+    RtMidiOut midiOut;
+    Args args;
+    sol::state lua;
+};
+
+void renderSection(SectionDef &section, I7Ed &ed)
+{
+    for(auto &param : section.params)
+    {
+        // TODO: make min, max part of param def
+        if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, 0.0f, 100.0f, 1.0f, "%.1fdB", ImGuiKnobVariant_Tick)) 
+        {
+            valueChanged(ed.lua, ed.midiOut, param);
+        }
+    }
+    return;
 }
 
 int main(int argc, const char** args)
 {
-    auto parsedArgs = parseArguments(argc, args);
-    if (parsedArgs.printHelp)
+    I7Ed ed;
+    ed.args = parseArguments(argc, args);
+    if (ed.args.printHelp)
     {
         std::cout << "Allowed options:\n" 
                   << "\t--inputs\n"
@@ -163,36 +214,33 @@ int main(int argc, const char** args)
                   << std::endl;
         return 0;
     }
-    if (parsedArgs.listInputs)
+    if (ed.args.listInputs)
     {
         std::cout << "Inputs:"  << std::endl;
         printMidiIo<RtMidiIn>();
     }
-    if (parsedArgs.listOutputs)
+    if (ed.args.listOutputs)
     {
         std::cout << "Outputs:"  << std::endl;
         printMidiIo<RtMidiOut>();
     }
-    if (parsedArgs.listOutputs || parsedArgs.listInputs)
+    if (ed.args.listOutputs || ed.args.listInputs)
     {
         return 0;
     }
 
-    RtMidiIn midiIn;
-    RtMidiOut midiOut;
-
-    if (parsedArgs.inPortNr >= 0)
+    if (ed.args.inPortNr >= 0)
     {
-        openPort(midiIn, (size_t)parsedArgs.inPortNr);
+        openPort(ed.midiIn, (size_t)ed.args.inPortNr);
     }
-    if (parsedArgs.outPortNr >= 0)
+    if (ed.args.outPortNr >= 0)
     {
-        openPort(midiOut, (size_t)parsedArgs.outPortNr);
+        openPort(ed.midiOut, (size_t)ed.args.outPortNr);
     }
     
-    const char *luaFile = parsedArgs.mainLuaFilePath.empty() 
+    const char *luaFile = ed.args.mainLuaFilePath.empty() 
         ?  "./lua/main.lua" 
-        : parsedArgs.mainLuaFilePath.c_str();
+        : ed.args.mainLuaFilePath.c_str();
 
     if (!glfwInit())
     {
@@ -223,11 +271,10 @@ int main(int argc, const char** args)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    sol::state lua;
-	lua.open_libraries();
-    lua.script_file(luaFile);
+	ed.lua.open_libraries();
+    ed.lua.script_file(luaFile);
 
-    auto sections = getDefs(lua);
+    auto sections = getDefs(ed.lua);
     bool show_command_palette = false;
 
     for(auto &section : sections)
@@ -250,7 +297,6 @@ int main(int argc, const char** args)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Command Palette
         if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P)) {
             show_command_palette = !show_command_palette;
         }
@@ -258,7 +304,6 @@ int main(int argc, const char** args)
             ImCmd::CommandPaletteWindow("CommandPalette", &show_command_palette);
         }
 
-        // Section Windows
         for(auto &sectionPair : sections)
         {
             auto& section = sectionPair.second;
@@ -268,16 +313,46 @@ int main(int argc, const char** args)
             }
             if (ImGui::Begin(section.name.c_str(), &section.isOpen))
             {
-                for(auto &param : section.params)
+                renderSection(section, ed);
+                for(auto &subSection : section.subSections)
                 {
-                    // TODO: make min, max part of param def
-                    if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, 0.0f, 100.0f, 1.0f, "%.1fdB", ImGuiKnobVariant_Tick)) {
-                        valueChanged(lua, midiOut, param);
-                    }
+                    renderSection(subSection, ed);
                 }
             }
+            ImGui::End();
+        }
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+    }
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
 
-            if (ImGui::TreeNode("Combo"))
+    ImCmd::DestroyContext();
+    ImSearch::DestroyContext();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    if (ed.midiIn.isPortOpen())
+    {
+         ed.midiIn.closePort();
+    }
+    if (ed.midiOut.isPortOpen())
+    {
+        ed.midiOut.closePort();
+    }
+    return 0;
+}
+
+
+/*
+
+ if (ImGui::TreeNode("Combo"))
             {
                 static std::string selectedString = demoCombo[0];
                 if (ImGui::BeginCombo("Combo Stuff", selectedString.c_str()))
@@ -304,35 +379,4 @@ int main(int argc, const char** args)
                 }
                 ImGui::TreePop();
             }
-
-            ImGui::End();
-        }
-
-
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
-    }
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-
-    ImCmd::DestroyContext();
-    ImSearch::DestroyContext();
-    ImGui::DestroyContext();
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    if (midiIn.isPortOpen())
-    {
-        midiIn.closePort();
-    }
-    if (midiOut.isPortOpen())
-    {
-        midiOut.closePort();
-    }
-    return 0;
-}
+*/

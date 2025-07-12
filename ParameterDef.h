@@ -3,6 +3,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <list>
 
 struct ParameterDef
 {
@@ -15,8 +16,10 @@ struct ParameterDef
 
 struct SectionDef
 {
-    typedef std::map<std::string, SectionDef> Sections;
+    typedef std::map<std::string, SectionDef> NamedSections;
+    typedef std::list<SectionDef> Sections;
+    Sections subSections;
     std::string name;
     ParameterDef::Params params;
-    bool isOpen = true;
+    bool isOpen = false;
 };
