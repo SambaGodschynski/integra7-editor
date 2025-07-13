@@ -11,6 +11,7 @@
 #include <string>
 #include "ParameterDef.h"
 #include <vector>
+#include <tuple>
 
 struct Args 
 {
@@ -127,6 +128,16 @@ T optional_key(sol::table tbl, const std::string& key, const T& defaultValue) {
     return val.value();
 }
 
+std::string getDefaultValue(const ParameterDef::SelectionOptions &options, int defaultValue)
+{
+    const auto& it = options.find(defaultValue);
+    if (it == options.end())
+    {
+        return std::string();
+    }
+    return it->second;
+}
+
 SectionDef getSection(const sol::table &lua_table)
 {
     SectionDef sectionDef;
@@ -142,11 +153,17 @@ SectionDef getSection(const sol::table &lua_table)
             sol::object paramId = luaParam["id"];
             param.name = paramName.as<std::string>();
             param.id = paramId.as<std::string>();
+            param.type = require_key<std::string>(luaParam, "type");
             param.min = optional_key(luaParam, "min", param.min);
             param.max = optional_key(luaParam, "max", param.max);
             param.format = optional_key(luaParam, "format", param.format);
             param.value = optional_key(luaParam, "default", param.min);
             param.toI7Value = optional_key<ParameterDef::FToI7Value>(luaParam, "toI7Value", nullptr);
+            param.options = optional_key<ParameterDef::SelectionOptions>(luaParam, "options", ParameterDef::SelectionOptions());
+            if (!param.options.empty())
+            {
+                param.stringValue = getDefaultValue(param.options, param.value);
+            }
             sectionDef.params.emplace_back(param);
         }
     }
@@ -208,14 +225,55 @@ struct I7Ed
     sol::state lua;
 };
 
+void renderCombo(ParameterDef& param, I7Ed &ed)
+{
+    if (ImGui::BeginCombo(param.name.c_str(), param.stringValue.c_str()))
+    {
+        if (ImSearch::BeginSearch())
+        {
+            ImSearch::SearchBar();
+
+            for (const auto& [value, label] : param.options)
+            {
+
+                ImSearch::SearchableItem(label.c_str(),
+                    [&](const char* name)
+                    {
+                        const bool isSelected = name == param.stringValue;
+                        if (ImGui::Selectable(name, isSelected))
+                        {
+                            param.stringValue = name;
+                            param.value = value;
+                            valueChanged(ed.lua, ed.midiOut, param);
+                        }
+                    });
+            }
+            ImSearch::EndSearch();
+        }
+        ImGui::EndCombo();
+    }
+}
+
 void renderSection(SectionDef &section, I7Ed &ed)
 {
     for(auto &param : section.params)
     {
-        if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, param.min, param.max, 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
+        if (param.type == PARAM_TYPE_RANGE)
         {
-            valueChanged(ed.lua, ed.midiOut, param);
+            if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, param.min, param.max, 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
+            {
+                valueChanged(ed.lua, ed.midiOut, param);
+            }
         }
+        else if (param.type == PARAM_TYPE_SELECTION)
+        {
+            renderCombo(param, ed);
+        }
+        else 
+        {
+            std::cerr << "unknown param type: '" << param.type << "'" << std::endl; 
+        }
+
     }
     return;
 }
@@ -369,35 +427,3 @@ int main(int argc, const char** args)
     }
     return 0;
 }
-
-
-/*
-
- if (ImGui::TreeNode("Combo"))
-            {
-                static std::string selectedString = demoCombo[0];
-                if (ImGui::BeginCombo("Combo Stuff", selectedString.c_str()))
-                {
-                    if (ImSearch::BeginSearch())
-                    {
-                        ImSearch::SearchBar();
-
-                        for (const std::string& entry : demoCombo)
-                        {
-                            ImSearch::SearchableItem(entry.c_str(),
-                                [&](const char* name)
-                                {
-                                    const bool isSelected = name == selectedString;
-                                    if (ImGui::Selectable(name, isSelected))
-                                    {
-                                        selectedString = name;
-                                    }
-                                });
-                        }
-                        ImSearch::EndSearch();
-                    }
-                    ImGui::EndCombo();
-                }
-                ImGui::TreePop();
-            }
-*/
