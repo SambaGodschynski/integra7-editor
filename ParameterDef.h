@@ -4,13 +4,18 @@
 #include <list>
 #include <map>
 #include <list>
-
+#include <functional>
 struct ParameterDef
 {
     typedef std::list<ParameterDef> Params;
+    typedef std::function<int(float)> FToI7Value;
     std::string id;
     std::string name;
-    float value = 0; // TODO: find best type, maybe union
+    std::string format = "%.0f";
+    FToI7Value toI7Value;
+    float value = 0.0f;
+    float min = 0.0f;
+    float max = 127.0f;
 };
 
 

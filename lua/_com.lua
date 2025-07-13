@@ -13,3 +13,9 @@ function DeepCopy(orig)
     end
     return copy
 end
+
+local parameter_partId_placeholder = "xxx"
+
+function CreateId(parameter_node_id_template, part_id)
+    return string.gsub(parameter_node_id_template, parameter_partId_placeholder, part_id)
+end

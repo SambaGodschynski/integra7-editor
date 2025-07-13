@@ -118,6 +118,15 @@ T require_key(sol::table tbl, const std::string& key) {
     return val.value();
 }
 
+template<typename T>
+T optional_key(sol::table tbl, const std::string& key, const T& defaultValue) {
+    sol::optional<T> val = tbl[key];
+    if (!val) {
+       return defaultValue;
+    }
+    return val.value();
+}
+
 SectionDef getSection(const sol::table &lua_table)
 {
     SectionDef sectionDef;
@@ -133,14 +142,23 @@ SectionDef getSection(const sol::table &lua_table)
             sol::object paramId = luaParam["id"];
             param.name = paramName.as<std::string>();
             param.id = paramId.as<std::string>();
-            sectionDef.params.push_back(param);
+            param.min = optional_key(luaParam, "min", param.min);
+            param.max = optional_key(luaParam, "max", param.max);
+            param.format = optional_key(luaParam, "format", param.format);
+            param.value = optional_key(luaParam, "default", param.min);
+            param.toI7Value = optional_key<ParameterDef::FToI7Value>(luaParam, "toI7Value", nullptr);
+            sectionDef.params.emplace_back(param);
         }
     }
     if(lua_table["sub"] != sol::nil)
     {
-        sol::table luaSubSection = lua_table["sub"];
-        auto subSection = getSection(luaSubSection);
-        sectionDef.subSections.push_back(subSection);
+        sol::table luaSubSections = lua_table["sub"];
+        for(const auto& luaSubSectionObj : luaSubSections)
+        {
+            sol::table luaSubSection = luaSubSectionObj.second;
+            auto subSection = getSection(luaSubSection);
+            sectionDef.subSections.push_back(subSection);
+        }
     }
     if(lua_table["isOpen"] != sol::nil)
     {
@@ -163,10 +181,15 @@ SectionDef::NamedSections getDefs(const sol::state &lua)
 }
 // END: Lua to Def
 
-void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef& def)
+void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef& paramDef)
 {
     sol::function create_sysex = lua["CreateSysexMessage"];
-    sol::protected_function_result result = create_sysex(def.id, def.value);
+    int i7Value = (int)paramDef.value;
+    if (paramDef.toI7Value)
+    {
+        i7Value = paramDef.toI7Value(paramDef.value);
+    }
+    sol::protected_function_result result = create_sysex(paramDef.id, i7Value);
     if (!result.valid()) {
         sol::error err = result;
         std::cerr << "Lua error: " << err.what() << "\n";
@@ -174,7 +197,6 @@ void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef&
     }
     sol::table sysexTable = result;
     auto sysex = sysexTable.as<std::vector<unsigned char>>();
-    // TODO: let lua send the message
     midiOut.sendMessage(&sysex);
 }
 
@@ -190,8 +212,7 @@ void renderSection(SectionDef &section, I7Ed &ed)
 {
     for(auto &param : section.params)
     {
-        // TODO: make min, max part of param def
-        if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, 0.0f, 100.0f, 1.0f, "%.1fdB", ImGuiKnobVariant_Tick)) 
+        if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, param.min, param.max, 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
         {
             valueChanged(ed.lua, ed.midiOut, param);
         }
@@ -210,7 +231,7 @@ int main(int argc, const char** args)
                   << "\t--outputs\n"
                   << "\t--lua-main\n"
                   << "\t--in-portnr\n"
-                  << "\t--in-portnr\n"
+                  << "\t--out-portnr\n"
                   << std::endl;
         return 0;
     }
