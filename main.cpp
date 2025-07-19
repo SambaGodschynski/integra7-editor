@@ -122,7 +122,7 @@ T require_key(sol::table tbl, const std::string& key) {
 template<typename T>
 T optional_key(sol::table tbl, const std::string& key, const T& defaultValue) {
     sol::optional<T> val = tbl[key];
-    if (!val) {
+    if (!val.has_value()) {
        return defaultValue;
     }
     return val.value();
@@ -151,13 +151,14 @@ SectionDef getSection(const sol::table &lua_table)
             auto luaParam = luaParamPair.second.as<sol::table>();
             sol::object paramName = luaParam["name"];
             sol::object paramId = luaParam["id"];
-            param.name = paramName.as<std::string>();
+            param.name = paramName.as<ParameterDef::FStringGetter>();
             param.id = paramId.as<std::string>();
             param.type = require_key<std::string>(luaParam, "type");
+            param.setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
             param.min = optional_key(luaParam, "min", param.min);
             param.max = optional_key(luaParam, "max", param.max);
             param.format = optional_key(luaParam, "format", param.format);
-            param.value = optional_key(luaParam, "default", param.min);
+            param.value = optional_key(luaParam, "default", param.min ? param.min() : 0);
             param.toI7Value = optional_key<ParameterDef::FToI7Value>(luaParam, "toI7Value", nullptr);
             param.options = optional_key<ParameterDef::SelectionOptions>(luaParam, "options", ParameterDef::SelectionOptions());
             if (!param.options.empty())
@@ -200,21 +201,19 @@ SectionDef::NamedSections getDefs(const sol::state &lua)
 
 void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef& paramDef)
 {
-    sol::function create_sysex = lua["CreateSysexMessage"];
-    int i7Value = (int)paramDef.value;
-    if (paramDef.toI7Value)
+    try 
     {
-        i7Value = paramDef.toI7Value(paramDef.value);
+        int i7Value = (int)paramDef.value;
+        if (paramDef.toI7Value)
+        {
+            i7Value = paramDef.toI7Value(paramDef.value);
+        }
+        auto sysex = paramDef.setValue(i7Value);
+        midiOut.sendMessage(&sysex);
+    } catch(const sol::error error)
+    {
+        std::cerr << error.what() << std::endl;
     }
-    sol::protected_function_result result = create_sysex(paramDef.id, i7Value);
-    if (!result.valid()) {
-        sol::error err = result;
-        std::cerr << "Lua error: " << err.what() << "\n";
-        return;
-    }
-    sol::table sysexTable = result;
-    auto sysex = sysexTable.as<std::vector<unsigned char>>();
-    midiOut.sendMessage(&sysex);
 }
 
 struct I7Ed 
@@ -227,7 +226,7 @@ struct I7Ed
 
 void renderCombo(ParameterDef& param, I7Ed &ed)
 {
-    if (ImGui::BeginCombo(param.name.c_str(), param.stringValue.c_str()))
+    if (ImGui::BeginCombo(param.name().c_str(), param.stringValue.c_str()))
     {
         if (ImSearch::BeginSearch())
         {
@@ -260,7 +259,7 @@ void renderSection(SectionDef &section, I7Ed &ed)
     {
         if (param.type == PARAM_TYPE_RANGE)
         {
-            if (ImGuiKnobs::Knob(param.name.c_str(), &param.value, param.min, param.max, 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
+            if (ImGuiKnobs::Knob(param.name().c_str(), &param.value, param.min(), param.max(), 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
             {
                 valueChanged(ed.lua, ed.midiOut, param);
             }
