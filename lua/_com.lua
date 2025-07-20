@@ -1,3 +1,4 @@
+HideParam = "__HIDDEN__"
 function DeepCopy(orig)
     local orig_type = type(orig)
     local copy

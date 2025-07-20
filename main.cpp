@@ -13,6 +13,9 @@
 #include <vector>
 #include <tuple>
 
+#define HIDDEN_PARAM_NAME "__HIDDEN__"
+
+
 struct Args 
 {
     bool listOutputs = false;
@@ -151,6 +154,8 @@ SectionDef getSection(const sol::table &lua_table)
             auto luaParam = luaParamPair.second.as<sol::table>();
             sol::object paramName = luaParam["name"];
             sol::object paramId = luaParam["id"];
+            // TODO: default values with functions seems not to work properly
+            // e.g. min and max needs to be set although it is impl. as optional
             param.name = paramName.as<ParameterDef::FStringGetter>();
             param.id = paramId.as<std::string>();
             param.type = require_key<std::string>(luaParam, "type");
@@ -257,6 +262,10 @@ void renderSection(SectionDef &section, I7Ed &ed)
 {
     for(auto &param : section.params)
     {
+        if (param.name() == HIDDEN_PARAM_NAME)
+        {
+            continue;
+        }
         if (param.type == PARAM_TYPE_RANGE)
         {
             if (ImGuiKnobs::Knob(param.name().c_str(), &param.value, param.min(), param.max(), 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
