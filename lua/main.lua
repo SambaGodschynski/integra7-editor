@@ -4,7 +4,7 @@ require "_model"
 require "_com"
 require "_snaSection"
 require "_sysex"
-
+require "_patchesSection"
 
 local p = ParameterSetValueWrapper;
 local get = GetWrapper
@@ -20,3 +20,4 @@ Main = {
 }
 
 CreateSnaSections(Main)
+CreatePatchesSections(Main)

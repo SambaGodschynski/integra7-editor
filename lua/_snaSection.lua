@@ -67,7 +67,6 @@ local function instrumentChange(part, index)
     local instrumentData = getInstrumentData(part)
     local lsb = instrumentData.lsb
     local pc = instrumentData.pc
-    -- CreateSysexMessage(node_id, value)
     local lsbId = "PRM-_FPART" .. tostring(part) .. "-_SNTONE-_SNTC-SNTC_INST_BS_LSB"
     local lsbMessage = CreateSysexMessage(lsbId, lsb)
     local pcId = "PRM-_FPART" .. tostring(part) .. "-_SNTONE-_SNTC-SNTC_INST_BS_PC"
