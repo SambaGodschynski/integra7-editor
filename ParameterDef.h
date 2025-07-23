@@ -8,6 +8,7 @@
 
 #define PARAM_TYPE_RANGE "range"
 #define PARAM_TYPE_SELECTION "select"
+#define PARAM_TYPE_TOGGLE "toggle"
 
 struct ParameterDef
 {

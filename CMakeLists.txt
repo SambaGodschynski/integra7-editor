@@ -29,7 +29,12 @@ set(IMGUI_SOURCES
     ${SUBMOD}/imgui-command-palette/imcmd_command_palette.cpp #no submodule for purpose because of build errors in the outdated origin
     ${SUBMOD}/imgui-command-palette/imcmd_fuzzy_search.cpp
     ${SUBMOD}/imsearch/imsearch.cpp
+    ${SUBMOD}/imgui_toggle/imgui_toggle.cpp
+    ${SUBMOD}/imgui_toggle/imgui_toggle_palette.cpp
+    ${SUBMOD}/imgui_toggle/imgui_toggle_presets.cpp
+    ${SUBMOD}/imgui_toggle/imgui_toggle_renderer.cpp
 )
+
 add_library(imgui STATIC ${IMGUI_SOURCES})
 
 set(LUA_SOURCES
@@ -78,6 +83,7 @@ include_directories(
     ${SUBMOD}/imgui-knobs
     ${SUBMOD}/imgui-command-palette
     ${SUBMOD}/imsearch
+    ${SUBMOD}/imgui_toggle
     ${RTMIDI_DIR}
 )
 

@@ -24,7 +24,7 @@ local setValue = function (newKey, partNr)
     local patch = I7Patches[newKey]
     
     local lsb = patch.lsb
-    local pc = patch.pc
+    local pc = patch.pc - 1
     local msb = patch.msb
     local msbId = "PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB"
     local msbMessage = CreateSysexMessage(msbId, msb)
@@ -40,18 +40,21 @@ local setValue = function (newKey, partNr)
 end
 
 function CreatePatchesSections(main)
+    local section = {
+        name = "Presets",
+        sub = {}
+    }
     for partNr = 1, 16, 1 do
-        local k = "Patches Part" .. string.format("%02d", partNr)
         local onNewValue = function (v)
             return setValue(v, partNr)
         end
-        local patchSel = {
-            name = k,
-            isOpen = partNr == 1,
+        local sub = {
+            name = "Part " .. string.format("%02d", partNr) .. " Presets",
             params = {
-                {type="select", id="PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB", name=get("Patch"), default=0, options = patches, setValue = onNewValue}
-            },
+                {type="select", id="PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB", name=get("Part " .. partNr), default=0, options = patches, setValue = onNewValue}
+            }
         }
-        main[k] = patchSel
+        table.insert(section.sub, sub)
     end
+    main["presets"] = section
 end

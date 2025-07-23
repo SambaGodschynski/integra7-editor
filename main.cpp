@@ -1,7 +1,12 @@
+/*
+    TODO: Man in the middle mode,  midi through, handles i7 sysex 
+*/
+
 #include "imgui.h"
 #include "imgui-knobs.h"
 #include "imcmd_command_palette.h"
 #include "imsearch.h"
+#include "imgui_toggle.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
@@ -276,6 +281,16 @@ void renderSection(SectionDef &section, I7Ed &ed)
         else if (param.type == PARAM_TYPE_SELECTION)
         {
             renderCombo(param, ed);
+        }
+        else if (param.type == PARAM_TYPE_TOGGLE)
+        {
+            auto oldValue = param.value;
+            bool toggleVal = param.value != 0;
+            if (ImGui::Toggle(param.name().c_str(), &toggleVal))
+            {
+                param.value = toggleVal ? 1.0f : 0.0f;
+                valueChanged(ed.lua, ed.midiOut, param);
+            }
         }
         else 
         {

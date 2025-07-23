@@ -16,3 +16,6 @@
 [submodule "submodules/imsearch"]
 	path = submodules/imsearch
 	url = https://github.com/GuusKemperman/imsearch.git
+[submodule "submodules/imgui_toggle"]
+	path = submodules/imgui_toggle
+	url = https://github.com/cmdwtf/imgui_toggle.git

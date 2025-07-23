@@ -5,19 +5,10 @@ require "_com"
 require "_snaSection"
 require "_sysex"
 require "_patchesSection"
+require "_partsSection"
 
-local p = ParameterSetValueWrapper;
-local get = GetWrapper
-
-Main = {
-    parts = {
-        name = "Parts View",
-        isOpen = true,
-        params = {
-            p({type="range", id="PRM-_PRF-_FP1-NEFP_LEVEL", name=get("Part 1 Level"), min=get(0), max=get(127)}),
-        }
-    },
-}
+Main = {}
 
 CreateSnaSections(Main)
 CreatePatchesSections(Main)
+CreatePartsSections(Main)

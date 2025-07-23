@@ -128,7 +128,7 @@ local snaTemplate = {
 
 function CreateSnaSections(main)
     for partNr = 1, 16, 1 do
-        local k = "SNA_" .. string.format("%02d", partNr)
+        local k = "Part " .. string.format("%02d", partNr) .. " SNA"
         local name = k
         local snaData = DeepCopy(snaTemplate);
         snaData.name = name
