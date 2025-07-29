@@ -1,5 +1,12 @@
 require "_model"
 require "_integra7"
+require "_com"
+
+local function assert_equal(a, b)
+    if a ~= b then
+        error("unequal: " .. tostring(a) .. " ~= " .. tostring(b))
+    end
+end
 
 local nodeinfo = Get_Node("xxx")
 assert(nodeinfo == nil)
@@ -108,3 +115,15 @@ assert(sysexStr == "f0 41 10 00 00 64 12 1a 10 02 00 12 42 f7")
 -- set default values
 sysexStr = Bytes_To_String(sysexMessages[2])
 assert(sysexStr == "f0 41 10 00 00 64 12 1a 10 02 0d 00 00 00 00 08 00 07 0f 08 00 00 00 08 00 01 0e 08 00 07 0f 08 00 07 0f 08 00 00 00 08 00 01 0e 08 00 00 00 08 00 07 0f 08 00 00 00 08 00 01 0e 08 00 07 0f 08 00 00 00 08 00 00 00 08 00 01 0e 08 00 00 00 08 00 00 01 08 00 00 0a 08 00 01 02 08 00 03 02 08 00 00 00 08 00 03 0c 08 00 00 00 08 00 00 00 08 00 07 0f 1d f7")
+
+local leafNodes = GetLeafNodes("PRM-_FPART1-_SNTONE")
+assert(#leafNodes == 98)
+
+someNode = Get_Node("PRM-_FPART1-_SNTONE-_SNTF-SNTF_MFX_PRM32");
+assert_equal(leafNodes[97].addr, someNode.addr);
+-- xassert(leafNodes[97].node == anotherNode.node);
+
+
+local someNode = Get_Node("PRM-_FPART1-_SNTONE-_SNTC-SNTC_NAME")
+assert_equal(leafNodes[1].addr, someNode.addr)
+-- xassert(leafNodes[0].node == someNode.node);

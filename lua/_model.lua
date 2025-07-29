@@ -3976,6 +3976,14 @@ function Get_Adress(id)
     return addr
 end
 
+function Get_Model_Id_Address(id)
+    local result = MODEL_ID_MAP[id]
+    if result == nil then
+        error("model id not found " .. id)
+    end
+    return result
+end
+
 function Get_Node(id)
     local result = {
         addr = 0,

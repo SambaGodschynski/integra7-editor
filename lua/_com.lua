@@ -1,3 +1,7 @@
+local _inspect = require "_inspect"
+function Inspect(x) return print(_inspect(x)) end
+function Dump(x) print(Inspect(x)) end
+
 HideParam = "__HIDDEN__"
 function DeepCopy(orig)
     local orig_type = type(orig)

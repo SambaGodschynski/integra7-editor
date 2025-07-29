@@ -60,3 +60,28 @@ function Get_Set_Mfx_Type_Messages(mfxType, part_id, mfx_id, device_id)
         get_set_mfx_default_values_sysex(mfxType, part_id, mfx_id, device_id)
     }
 end
+
+function GetLeafNodes(id)
+    local result = {}
+    local parent = Get_Node(id)
+    if parent == nil or parent.node == nil then
+        error("no node found for id:" .. id)
+    end
+    local function walk(node)
+        local children = node.children
+        for _, child in ipairs(children) do
+            child = DeepCopy(child)
+            child.addr = node.addr + Get_Model_Id_Address(child.id)
+            local child_is_leaf = child.children == nil
+            if child_is_leaf then
+                table.insert(result, child)
+            else
+                walk(child)
+            end
+        end
+    end
+    local root = DeepCopy(parent.node)
+    root.addr = parent.addr
+    walk(root)
+    return result
+end
