@@ -31,6 +31,14 @@ struct Args
     int outPortNr = -1;
 };
 
+struct I7Ed 
+{
+    RtMidiIn  midiIn;
+    RtMidiOut midiOut;
+    Args args;
+    sol::state lua;
+};
+
 Args parseArguments(int argc, const char **argv)
 {
     Args result;
@@ -92,7 +100,7 @@ Args parseArguments(int argc, const char **argv)
 }
 
 
-
+// BEGIN: MIDI IO
 template<class TMidiIO>
 void printMidiIo()
 {
@@ -116,6 +124,29 @@ void openPort(TMidiIO &port, size_t portNr)
     port.openPort(portNr);
     std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
 }
+
+void midiInCallback(double deltatime, std::vector<unsigned char> *message, void *userData) {
+    I7Ed* ed = static_cast<I7Ed*>(userData);
+    unsigned int nBytes = message->size();
+    std::cout << "(R): ";
+    for (unsigned int i = 0; i < nBytes; i++) 
+    {
+        std::cout << std::hex << static_cast<int>(message->at(i)) << " ";
+    }
+    std::cout << std::endl;
+}
+
+void sendMessage(RtMidiOut &midiOut, const std::vector<unsigned char>& message)
+{
+    unsigned int nBytes = message.size();
+    std::cout << "(S): ";
+    for (unsigned int i = 0; i < nBytes; i++) 
+    {
+        std::cout << std::hex << static_cast<int>(message.at(i)) << " ";
+    }
+    std::cout << std::endl;
+}
+// END: MIDI IO
 
 // BEGIN: LUA to DEF. TODO Refactor into separate file
 template<typename T>
@@ -220,20 +251,12 @@ void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef&
             i7Value = paramDef.toI7Value(paramDef.value);
         }
         auto sysex = paramDef.setValue(i7Value);
-        midiOut.sendMessage(&sysex);
+        sendMessage(midiOut, sysex);
     } catch(const sol::error error)
     {
         std::cerr << error.what() << std::endl;
     }
 }
-
-struct I7Ed 
-{
-    RtMidiIn  midiIn;
-    RtMidiOut midiOut;
-    Args args;
-    sol::state lua;
-};
 
 void renderCombo(ParameterDef& param, I7Ed &ed)
 {
@@ -302,21 +325,13 @@ void renderSection(SectionDef &section, I7Ed &ed)
     return;
 }
 
-void midiInCallback(double deltatime, std::vector<unsigned char> *message, void *userData) {
-    I7Ed* ed = static_cast<I7Ed*>(userData);
-    unsigned int nBytes = message->size();
-    std::cout << "(R): ";
-    for (unsigned int i = 0; i < nBytes; i++) 
-    {
-        std::cout << std::hex << static_cast<int>(message->at(i)) << " ";
-    }
-    std::cout << std::endl;
-}
-
 void performReceive(I7Ed &ed, const SectionDef &section)
 {
-    auto msg = section.getReceiveSysex();
-    ed.midiOut.sendMessage(&msg);
+    auto requests = section.getReceiveSysex();
+    for(const auto& request : requests)
+    {
+        sendMessage(ed.midiOut, request.sysex);
+    }
 }
 
 int main(int argc, const char** args)
@@ -395,6 +410,9 @@ int main(int argc, const char** args)
 
 	ed.lua.open_libraries();
     ed.lua.script_file(luaFile);
+
+    ed.lua.new_usertype<RequestMessage>("RequestMessage", 
+		"sysex", &RequestMessage::sysex);
 
     auto sections = getDefs(ed.lua);
     bool show_command_palette = false;

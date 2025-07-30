@@ -31,12 +31,16 @@ struct ParameterDef
     FSetValue setValue;
 };
 
+struct RequestMessage 
+{
+    std::vector<unsigned char> sysex;
+};
 
 struct SectionDef
 {
     typedef std::map<std::string, SectionDef> NamedSections;
     typedef std::list<SectionDef> Sections;
-    typedef std::function<std::vector<unsigned char>()> FGetReceiveSysex;
+    typedef std::function<std::vector<RequestMessage>()> FGetReceiveSysex;
     Sections subSections;
     std::string name;
     ParameterDef::Params params;
