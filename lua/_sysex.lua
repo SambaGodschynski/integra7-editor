@@ -18,3 +18,12 @@ function CreateSysexMessage(node_id, value)
     print(Bytes_To_String(sysex))
     return sysex
 end
+
+function CreateReceiveMessageForBranch(branch_node_id)
+    local leafs = GetLeafNodes(branch_node_id)
+    local first_leaf = leafs[1]
+    local byteSize = Get_Byte_Size(first_leaf.node.valueByteSizeType)
+    local msg = Create_Sysex_Rq1_Message(first_leaf.addr, byteSize)
+    print(Bytes_To_String(msg))
+    return msg
+end

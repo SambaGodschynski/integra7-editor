@@ -29,6 +29,7 @@ local RQ1 = 0x11
 local DT1 = 0x12
 local ROLAND_SYSEX = { 0xF0, 0x41, DEV_ID, MODEL_ID[1], MODEL_ID[2] , MODEL_ID[3] }
 local ROLAND_DT1 = { ROLAND_SYSEX[1], ROLAND_SYSEX[2], ROLAND_SYSEX[3], ROLAND_SYSEX[4], ROLAND_SYSEX[5], ROLAND_SYSEX[6], DT1 }
+local ROLAND_RQ1 = { ROLAND_SYSEX[1], ROLAND_SYSEX[2], ROLAND_SYSEX[3], ROLAND_SYSEX[4], ROLAND_SYSEX[5], ROLAND_SYSEX[6], RQ1 }
 
 Node = {}
 
@@ -4099,4 +4100,25 @@ function Bytes_To_String(bytes)
         table.insert(chars, string.format("%02x", value))
     end
     return table.concat(chars, " ")
+end
+
+function Create_Sysex_Rq1_Message(addr, numBytes, device_id)
+    local result = {table.unpack(ROLAND_RQ1)}
+    table.insert(result, (addr >> 24) & 0xff)
+    table.insert(result, (addr >> 16) & 0xff)
+    table.insert(result, (addr >>  8) & 0xff)
+    table.insert(result, (addr & 0xff))
+    local bytes = ADDR_SIZE
+    while bytes > 0 do
+        bytes = bytes - 1
+        table.insert(result, (numBytes >> (bytes*8)) & 0xff)
+    end
+
+    local checksum = Checksum(result, #ROLAND_RQ1+1, #result)
+    table.insert(result, checksum)
+    table.insert(result, 0xF7)
+    if device_id ~= nil then
+        result[DEVICE_ID_INDEX] = device_id;
+    end
+    return result
 end

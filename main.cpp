@@ -150,6 +150,7 @@ SectionDef getSection(const sol::table &lua_table)
 {
     SectionDef sectionDef;
     sectionDef.name = require_key<std::string>(lua_table, "name");
+    sectionDef.getReceiveSysex = optional_key<SectionDef::FGetReceiveSysex>(lua_table, "getReceiveValueSysex", nullptr);
     if (lua_table["params"] != sol::nil) 
     {
         sol::table params = lua_table["params"];
@@ -301,6 +302,23 @@ void renderSection(SectionDef &section, I7Ed &ed)
     return;
 }
 
+void midiInCallback(double deltatime, std::vector<unsigned char> *message, void *userData) {
+    I7Ed* ed = static_cast<I7Ed*>(userData);
+    unsigned int nBytes = message->size();
+    std::cout << "(R): ";
+    for (unsigned int i = 0; i < nBytes; i++) 
+    {
+        std::cout << std::hex << static_cast<int>(message->at(i)) << " ";
+    }
+    std::cout << std::endl;
+}
+
+void performReceive(I7Ed &ed, const SectionDef &section)
+{
+    auto msg = section.getReceiveSysex();
+    ed.midiOut.sendMessage(&msg);
+}
+
 int main(int argc, const char** args)
 {
     I7Ed ed;
@@ -334,6 +352,8 @@ int main(int argc, const char** args)
     if (ed.args.inPortNr >= 0)
     {
         openPort(ed.midiIn, (size_t)ed.args.inPortNr);
+        ed.midiIn.ignoreTypes(false, false, false);
+        ed.midiIn.setCallback(&midiInCallback, &ed);
     }
     if (ed.args.outPortNr >= 0)
     {
@@ -381,15 +401,24 @@ int main(int argc, const char** args)
 
     for(auto &section : sections)
     {
+        // open section
         ImCmd::Command cmd;
         cmd.Name = std::string("open ") + section.second.name;
         cmd.InitialCallback = [&section]() {
             section.second.isOpen = true;
         };
         ImCmd::AddCommand(std::move(cmd));
+        // receive
+        if (!section.second.getReceiveSysex)
+        {
+            continue;
+        }
+        cmd.Name = std::string("receive ") + section.second.name;
+        cmd.InitialCallback = [&ed, &section]() {
+            performReceive(ed, section.second);
+        };
+        ImCmd::AddCommand(std::move(cmd));
     }
-
-    std::vector<std::string> demoCombo({"people","history","way","art","world","information","map","two","family"});
 
     while (!glfwWindowShouldClose(window))
     {

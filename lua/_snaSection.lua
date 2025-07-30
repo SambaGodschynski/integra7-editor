@@ -77,6 +77,7 @@ end
 
 local snaTemplate = {
     name = "SN-A",
+    getReceiveValueSysex = nil,
     sub =
     {
         {
@@ -131,6 +132,9 @@ function CreateSnaSections(main)
         local k = "Part " .. string.format("%02d", partNr) .. " SNA"
         local name = k
         local snaData = DeepCopy(snaTemplate);
+        snaData.getReceiveValueSysex = function ()
+            return CreateReceiveMessageForBranch("PRM-_FPART".. partNr .."-_SNTONE")
+        end
         snaData.name = name
         if partNr==1 then
             snaData.isOpen = true

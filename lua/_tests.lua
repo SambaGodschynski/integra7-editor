@@ -119,11 +119,15 @@ assert(sysexStr == "f0 41 10 00 00 64 12 1a 10 02 0d 00 00 00 00 08 00 07 0f 08 
 local leafNodes = GetLeafNodes("PRM-_FPART1-_SNTONE")
 assert_equal(#leafNodes, 98)
 
-someNode = Get_Node("PRM-_FPART1-_SNTONE-_SNTF-SNTF_MFX_PRM32");
+local someNode = Get_Node("PRM-_FPART1-_SNTONE-_SNTF-SNTF_MFX_PRM32");
+---@diagnostic disable-next-line: undefined-field, need-check-nil
 assert_equal(leafNodes[98].node.id, someNode.node.id);
+---@diagnostic disable-next-line: undefined-field, need-check-nil
 assert_equal(leafNodes[98].addr, someNode.addr);
 
 
 local someNode = Get_Node("PRM-_FPART1-_SNTONE-_SNTC-SNTC_NAME")
+---@diagnostic disable-next-line: undefined-field, need-check-nil
 assert_equal(leafNodes[1].node.id, someNode.node.id);
+---@diagnostic disable-next-line: undefined-field, need-check-nil
 assert_equal(leafNodes[1].addr, someNode.addr)
