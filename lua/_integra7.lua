@@ -63,25 +63,26 @@ end
 
 function GetLeafNodes(id)
     local result = {}
-    local parent = Get_Node(id)
-    if parent == nil or parent.node == nil then
+    local root = Get_Node(id)
+    if root == nil or root.node == nil then
         error("no node found for id:" .. id)
     end
-    local function walk(node)
-        local children = node.children
+    local function walk(node_info)
+        local node = node_info.node
+        local children = node_info.node.children
         for _, child in ipairs(children) do
-            child = DeepCopy(child)
-            child.addr = node.addr + Get_Model_Id_Address(child.id)
             local child_is_leaf = child.children == nil
+            local child_node_info = {
+                addr = node_info.addr + Get_Model_Id_Address(child.id),
+                node = child
+            }
             if child_is_leaf then
-                table.insert(result, child)
+                table.insert(result, child_node_info)
             else
-                walk(child)
+                walk(child_node_info)
             end
         end
     end
-    local root = DeepCopy(parent.node)
-    root.addr = parent.addr
     walk(root)
     return result
 end

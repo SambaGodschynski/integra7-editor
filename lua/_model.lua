@@ -3999,7 +3999,7 @@ function Get_Node(id)
         end
         for _, n in pairs(nodes) do
             if splitted_id_part == n.id then
-                result.addr = result.addr + MODEL_ID_MAP[splitted_id_part];
+                result.addr = result.addr + Get_Model_Id_Address(splitted_id_part);
                 node = n
                 nodes = node.children;
                 break
