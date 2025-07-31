@@ -10,6 +10,8 @@
 #define PARAM_TYPE_SELECTION "select"
 #define PARAM_TYPE_TOGGLE "toggle"
 
+typedef std::vector<unsigned char> Bytes;
+
 struct ParameterDef
 {
     typedef std::list<ParameterDef> Params;
@@ -34,13 +36,8 @@ struct ParameterDef
 struct RequestMessage 
 {
     typedef std::function<bool(std::vector<unsigned char>)> FOnMessageReceived;
-    std::vector<unsigned char> sysex;
+    Bytes sysex;
     FOnMessageReceived onMessageReceived;
-};
-
-struct Pending
-{
-    RequestMessage::FOnMessageReceived onMessageReceived;
 };
 
 struct SectionDef

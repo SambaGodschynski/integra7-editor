@@ -19,6 +19,7 @@
 #include <list>
 #include <tuple>
 #include <mutex>
+#include <thread>
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
 
@@ -38,8 +39,6 @@ struct I7Ed
     RtMidiOut midiOut;
     Args args;
     sol::state lua;
-    std::mutex midiRqMutex;
-    std::list<Pending> pendingRequest;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -128,17 +127,7 @@ void openPort(TMidiIO &port, size_t portNr)
     std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
 }
 
-void midiInCallback(double deltatime, std::vector<unsigned char> *message, void *userData) {
-    I7Ed* ed = static_cast<I7Ed*>(userData);
-    const std::lock_guard<std::mutex> lock(ed->midiRqMutex);
-    auto end = ed->pendingRequest.end();
-    for(auto it = ed->pendingRequest.begin(); it != end; ++it)
-    {
-        it->onMessageReceived(*message);
-    }
-}
-
-void sendMessage(RtMidiOut &midiOut, const std::vector<unsigned char>& message)
+void sendMessage(RtMidiOut &midiOut, const Bytes& message)
 {
     midiOut.sendMessage(&message);
 }
@@ -321,19 +310,36 @@ void renderSection(SectionDef &section, I7Ed &ed)
     return;
 }
 
+Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes)
+{
+    sendMessage(ed.midiOut, bytes);
+    Bytes answer;
+    int idleMillis = 10;
+    int timeOutSeconds = 5;
+    int maxTries = (int(1000 / (double)idleMillis) * timeOutSeconds);
+    while (maxTries-- > 0) {
+        ed.midiIn.getMessage(&answer);
+        if (!answer.empty()) 
+        {
+            return answer;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(idleMillis));
+    }
+    std::cerr << "MIDI receive timed out." << std::endl;
+    return answer;
+}
+
 void performValuesReceive(I7Ed &ed, const SectionDef &section)
 {
     auto requests = section.getReceiveSysex();
     for(const auto& request : requests)
     {
+        auto received = sendAndReceive(ed, request.sysex);
+        if (received.empty())
         {
-            const std::lock_guard<std::mutex> lock(ed.midiRqMutex);
-            Pending pending;
-            pending.onMessageReceived = request.onMessageReceived;
-            pending.onMessageReceived(request.sysex);
-            //ed.pendingRequest.emplace_back(pending);
+            continue;
         }
-        sendMessage(ed.midiOut, request.sysex);
+        request.onMessageReceived(received);
     }
 }
 
@@ -371,7 +377,6 @@ int main(int argc, const char** args)
     {
         openPort(ed.midiIn, (size_t)ed.args.inPortNr);
         ed.midiIn.ignoreTypes(false, false, false);
-        ed.midiIn.setCallback(&midiInCallback, &ed);
     }
     if (ed.args.outPortNr >= 0)
     {
@@ -381,6 +386,11 @@ int main(int argc, const char** args)
     const char *luaFile = ed.args.mainLuaFilePath.empty() 
         ?  "./lua/main.lua" 
         : ed.args.mainLuaFilePath.c_str();
+    
+    ed.lua.new_usertype<RequestMessage>("RequestMessage", 
+        "sysex", &RequestMessage::sysex,
+        "onMessageReceived", &RequestMessage::onMessageReceived
+    );
 
     if (!glfwInit())
     {
