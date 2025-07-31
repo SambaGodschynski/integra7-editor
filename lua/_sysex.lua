@@ -15,7 +15,13 @@ end
 
 function CreateSysexMessage(node_id, value)
     local sysex = Create_Sysex_Message_For_NodeId(node_id, value, default_device_id)
+    print("(S): " .. Bytes_To_String(sysex))
     return sysex
+end
+
+local function onRec(received_msg)
+    print("(R): " .. Bytes_To_String(received_msg))
+    return true
 end
 
 function CreateReceiveMessageForBranch(branch_node_id)
@@ -25,6 +31,7 @@ function CreateReceiveMessageForBranch(branch_node_id)
     local msg = Create_Sysex_Rq1_Message(first_leaf.addr, byteSize)
     local rqmsg = RequestMessage.new()
     rqmsg.sysex = msg
+    rqmsg.onMessageReceived = onRec
     return {
         rqmsg
     }

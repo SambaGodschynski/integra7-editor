@@ -4096,7 +4096,8 @@ end
 
 function Bytes_To_String(bytes)
     local chars = {}
-    for _, value in pairs(bytes) do
+    for i = 1, #bytes, 1 do
+        local value = bytes[i]
         table.insert(chars, string.format("%02x", value))
     end
     return table.concat(chars, " ")

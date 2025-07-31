@@ -16,10 +16,11 @@
 #include <string>
 #include "ParameterDef.h"
 #include <vector>
+#include <list>
 #include <tuple>
+#include <mutex>
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
-
 
 struct Args 
 {
@@ -37,6 +38,8 @@ struct I7Ed
     RtMidiOut midiOut;
     Args args;
     sol::state lua;
+    std::mutex midiRqMutex;
+    std::list<Pending> pendingRequest;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -127,24 +130,17 @@ void openPort(TMidiIO &port, size_t portNr)
 
 void midiInCallback(double deltatime, std::vector<unsigned char> *message, void *userData) {
     I7Ed* ed = static_cast<I7Ed*>(userData);
-    unsigned int nBytes = message->size();
-    std::cout << "(R): ";
-    for (unsigned int i = 0; i < nBytes; i++) 
+    const std::lock_guard<std::mutex> lock(ed->midiRqMutex);
+    auto end = ed->pendingRequest.end();
+    for(auto it = ed->pendingRequest.begin(); it != end; ++it)
     {
-        std::cout << std::hex << static_cast<int>(message->at(i)) << " ";
+        it->onMessageReceived(*message);
     }
-    std::cout << std::endl;
 }
 
 void sendMessage(RtMidiOut &midiOut, const std::vector<unsigned char>& message)
 {
-    unsigned int nBytes = message.size();
-    std::cout << "(S): ";
-    for (unsigned int i = 0; i < nBytes; i++) 
-    {
-        std::cout << std::hex << static_cast<int>(message.at(i)) << " ";
-    }
-    std::cout << std::endl;
+    midiOut.sendMessage(&message);
 }
 // END: MIDI IO
 
@@ -325,11 +321,18 @@ void renderSection(SectionDef &section, I7Ed &ed)
     return;
 }
 
-void performReceive(I7Ed &ed, const SectionDef &section)
+void performValuesReceive(I7Ed &ed, const SectionDef &section)
 {
     auto requests = section.getReceiveSysex();
     for(const auto& request : requests)
     {
+        {
+            const std::lock_guard<std::mutex> lock(ed.midiRqMutex);
+            Pending pending;
+            pending.onMessageReceived = request.onMessageReceived;
+            pending.onMessageReceived(request.sysex);
+            //ed.pendingRequest.emplace_back(pending);
+        }
         sendMessage(ed.midiOut, request.sysex);
     }
 }
@@ -411,9 +414,6 @@ int main(int argc, const char** args)
 	ed.lua.open_libraries();
     ed.lua.script_file(luaFile);
 
-    ed.lua.new_usertype<RequestMessage>("RequestMessage", 
-		"sysex", &RequestMessage::sysex);
-
     auto sections = getDefs(ed.lua);
     bool show_command_palette = false;
 
@@ -433,7 +433,7 @@ int main(int argc, const char** args)
         }
         cmd.Name = std::string("receive ") + section.second.name;
         cmd.InitialCallback = [&ed, &section]() {
-            performReceive(ed, section.second);
+            performValuesReceive(ed, section.second);
         };
         ImCmd::AddCommand(std::move(cmd));
     }

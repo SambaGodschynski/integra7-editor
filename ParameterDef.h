@@ -33,7 +33,14 @@ struct ParameterDef
 
 struct RequestMessage 
 {
+    typedef std::function<bool(std::vector<unsigned char>)> FOnMessageReceived;
     std::vector<unsigned char> sysex;
+    FOnMessageReceived onMessageReceived;
+};
+
+struct Pending
+{
+    RequestMessage::FOnMessageReceived onMessageReceived;
 };
 
 struct SectionDef
