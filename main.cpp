@@ -20,6 +20,8 @@
 #include <tuple>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
+#include <memory>
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
 
@@ -39,6 +41,7 @@ struct I7Ed
     RtMidiOut midiOut;
     Args args;
     sol::state lua;
+    std::unordered_map<std::string, std::shared_ptr<ParameterDef>> parameterDefs;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -162,37 +165,38 @@ std::string getDefaultValue(const ParameterDef::SelectionOptions &options, int d
     return it->second;
 }
 
-SectionDef getSection(const sol::table &lua_table)
+void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
 {
-    SectionDef sectionDef;
-    sectionDef.name = require_key<std::string>(lua_table, "name");
-    sectionDef.getReceiveSysex = optional_key<SectionDef::FGetReceiveSysex>(lua_table, "getReceiveValueSysex", nullptr);
+    outSectionDef.name = require_key<std::string>(lua_table, "name");
+    outSectionDef.getReceiveSysex = optional_key<SectionDef::FGetReceiveSysex>(lua_table, "getReceiveValueSysex", nullptr);
     if (lua_table["params"] != sol::nil) 
     {
         sol::table params = lua_table["params"];
         for(auto &luaParamPair : params)
         {
-            ParameterDef param;
+            auto param = std::make_shared<ParameterDef>();
             auto luaParam = luaParamPair.second.as<sol::table>();
             sol::object paramName = luaParam["name"];
             sol::object paramId = luaParam["id"];
             // TODO: default values with functions seems not to work properly
             // e.g. min and max needs to be set although it is impl. as optional
-            param.name = paramName.as<ParameterDef::FStringGetter>();
-            param.id = paramId.as<std::string>();
-            param.type = require_key<std::string>(luaParam, "type");
-            param.setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
-            param.min = optional_key(luaParam, "min", param.min);
-            param.max = optional_key(luaParam, "max", param.max);
-            param.format = optional_key(luaParam, "format", param.format);
-            param.value = optional_key(luaParam, "default", param.min ? param.min() : 0);
-            param.toI7Value = optional_key<ParameterDef::FToI7Value>(luaParam, "toI7Value", nullptr);
-            param.options = optional_key<ParameterDef::SelectionOptions>(luaParam, "options", ParameterDef::SelectionOptions());
-            if (!param.options.empty())
+            param->name = paramName.as<ParameterDef::FStringGetter>();
+            param->id = paramId.as<std::string>();
+            param->type = require_key<std::string>(luaParam, "type");
+            param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
+            param->min = optional_key(luaParam, "min", param->min);
+            param->max = optional_key(luaParam, "max", param->max);
+            param->format = optional_key(luaParam, "format", param->format);
+            param->value = optional_key(luaParam, "default", param->min ? param->min() : 0);
+            param->toI7Value = optional_key<ParameterDef::FToI7Value>(luaParam, "toI7Value", nullptr);
+            param->toGuiValue = optional_key<ParameterDef::FToGuiValue>(luaParam, "toGuiValue", nullptr);
+            param->options = optional_key<ParameterDef::SelectionOptions>(luaParam, "options", ParameterDef::SelectionOptions());
+            if (!param->options.empty())
             {
-                param.stringValue = getDefaultValue(param.options, param.value);
+                param->stringValue = getDefaultValue(param->options, param->value);
             }
-            sectionDef.params.emplace_back(param);
+            outSectionDef.params.push_back(param.get());
+            ed.parameterDefs[param->id] = param;
         }
     }
     if(lua_table["sub"] != sol::nil)
@@ -201,28 +205,27 @@ SectionDef getSection(const sol::table &lua_table)
         for(const auto& luaSubSectionObj : luaSubSections)
         {
             sol::table luaSubSection = luaSubSectionObj.second;
-            auto subSection = getSection(luaSubSection);
-            sectionDef.subSections.push_back(subSection);
+            SectionDef subSection;
+            getSection(ed, luaSubSection, subSection);
+            outSectionDef.subSections.push_back(subSection);
         }
     }
     if(lua_table["isOpen"] != sol::nil)
     {
-        sectionDef.isOpen = lua_table["isOpen"];
+        outSectionDef.isOpen = lua_table["isOpen"];
     }
-    return sectionDef;
 }
 
-SectionDef::NamedSections getDefs(const sol::state &lua)
+void getDefs(I7Ed &ed, SectionDef::NamedSections &outNamedSections)
 {
-    SectionDef::NamedSections result;
-    sol::table mainSections = lua["Main"];
+    sol::table mainSections = ed.lua["Main"];
     for(auto &luaSectionPair : mainSections)
     {
         sol::table luaSection = luaSectionPair.second.as<sol::table>();
-        auto sectionDef = getSection(luaSection);
-        result.insert({luaSectionPair.first.as<std::string>(), sectionDef});
+        SectionDef sectionDef;
+        getSection(ed, luaSection, sectionDef);
+        outNamedSections.insert({luaSectionPair.first.as<std::string>(), sectionDef});
     }
-    return result;
 }
 // END: Lua to Def
 
@@ -274,36 +277,36 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
 
 void renderSection(SectionDef &section, I7Ed &ed)
 {
-    for(auto &param : section.params)
+    for(auto param : section.params)
     {
-        if (param.name() == HIDDEN_PARAM_NAME)
+        if (param->name() == HIDDEN_PARAM_NAME)
         {
             continue;
         }
-        if (param.type == PARAM_TYPE_RANGE)
+        if (param->type == PARAM_TYPE_RANGE)
         {
-            if (ImGuiKnobs::Knob(param.name().c_str(), &param.value, param.min(), param.max(), 0.0f, param.format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
+            if (ImGuiKnobs::Knob(param->name().c_str(), &param->value, param->min(), param->max(), 0.0f, param->format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
             {
-                valueChanged(ed.lua, ed.midiOut, param);
+                valueChanged(ed.lua, ed.midiOut, *param);
             }
         }
-        else if (param.type == PARAM_TYPE_SELECTION)
+        else if (param->type == PARAM_TYPE_SELECTION)
         {
-            renderCombo(param, ed);
+            renderCombo(*param, ed);
         }
-        else if (param.type == PARAM_TYPE_TOGGLE)
+        else if (param->type == PARAM_TYPE_TOGGLE)
         {
-            auto oldValue = param.value;
-            bool toggleVal = param.value != 0;
-            if (ImGui::Toggle(param.name().c_str(), &toggleVal))
+            auto oldValue = param->value;
+            bool toggleVal = param->value != 0;
+            if (ImGui::Toggle(param->name().c_str(), &toggleVal))
             {
-                param.value = toggleVal ? 1.0f : 0.0f;
-                valueChanged(ed.lua, ed.midiOut, param);
+                param->value = toggleVal ? 1.0f : 0.0f;
+                valueChanged(ed.lua, ed.midiOut, *param);
             }
         }
         else 
         {
-            std::cerr << "unknown param type: '" << param.type << "'" << std::endl; 
+            std::cerr << "unknown param type: '" << param->type << "'" << std::endl; 
         }
 
     }
@@ -329,6 +332,32 @@ Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes)
     return answer;
 }
 
+ParameterDef* getParameterDef(I7Ed &ed, const std::string &id)
+{
+    auto mapIt = ed.parameterDefs.find(id);
+    if (mapIt == ed.parameterDefs.end())
+    {
+        return nullptr;
+    }
+    return mapIt->second.get();
+}
+
+void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage)
+{
+    auto paramDef = getParameterDef(ed, vcMessage.id);
+    if (paramDef == nullptr)
+    {
+        std::cerr << "unknown parameter change received: " << vcMessage.id << std::endl;
+        return;
+    }
+    float guiValue = vcMessage.i7Value;
+    if (paramDef->toGuiValue)
+    {
+        guiValue = paramDef->toGuiValue(vcMessage.i7Value);
+    }
+    paramDef->value = guiValue;
+}
+
 void performValuesReceive(I7Ed &ed, const SectionDef &section)
 {
     auto requests = section.getReceiveSysex();
@@ -339,7 +368,13 @@ void performValuesReceive(I7Ed &ed, const SectionDef &section)
         {
             continue;
         }
-        request.onMessageReceived(received);
+        auto valueChangeMsg = request.onMessageReceived(received);
+        if (valueChangeMsg.id.empty())
+        {
+            std::cerr << "unexpected MIDI response" << std::endl;
+            continue;
+        }
+        valueChanged(ed, valueChangeMsg);
     }
 }
 
@@ -391,6 +426,10 @@ int main(int argc, const char** args)
         "sysex", &RequestMessage::sysex,
         "onMessageReceived", &RequestMessage::onMessageReceived
     );
+    ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage", 
+        "id", &ValueChangedMessage::id,
+        "i7Value", &ValueChangedMessage::i7Value
+    );
 
     if (!glfwInit())
     {
@@ -424,7 +463,8 @@ int main(int argc, const char** args)
 	ed.lua.open_libraries();
     ed.lua.script_file(luaFile);
 
-    auto sections = getDefs(ed.lua);
+    SectionDef::NamedSections sections;
+    getDefs(ed, sections);
     bool show_command_palette = false;
 
     for(auto &section : sections)

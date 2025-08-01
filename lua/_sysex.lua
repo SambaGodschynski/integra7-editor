@@ -19,20 +19,59 @@ function CreateSysexMessage(node_id, value)
     return sysex
 end
 
-local function onRec(received_msg)
-    print("(R): " .. Bytes_To_String(received_msg))
-    return true
+local function getResponseData(msg)
+    local responseOverhead = 11;
+    if #msg - responseOverhead <= 0 then
+        return nil
+    end
+    local response = {}
+    local i = 1
+    local ipp = function ()
+        local tmpi = i
+        i = i + 1
+        return tmpi
+    end
+    ipp() -- 0xF0
+    ipp() -- 0x41
+    response.deviceId = msg[ipp()]
+    response.modelId = (msg[ipp()] << 16) + (msg[ipp()] << 8) + msg[ipp()];
+    response.requestType = msg[ipp()];
+    response.addr = (msg[ipp()] << 24) + (msg[ipp()] << 16) + (msg[ipp()] << 8) + msg[ipp()];
+    response.payload = {}
+    local playload_length = #msg - 1 - 1 -- -f7 -checksum
+    table.move(msg, ipp(), playload_length, 1, response.payload)
+    return response
+end
+
+function BytesToIntValue(bytes)
+    local result = 0
+    for i = 1, #bytes do
+        result = result | (bytes[i] << ((#bytes - i) * 8))
+    end
+    return result
 end
 
 function CreateReceiveMessageForBranch(branch_node_id)
     local leafs = GetLeafNodes(branch_node_id)
-    local first_leaf = leafs[1]
-    local byteSize = Get_Byte_Size(first_leaf.node.valueByteSizeType)
-    local msg = Create_Sysex_Rq1_Message(first_leaf.addr, byteSize)
-    local rqmsg = RequestMessage.new()
-    rqmsg.sysex = msg
-    rqmsg.onMessageReceived = onRec
-    return {
-        rqmsg
-    }
+    local result = {}
+    for _, leaf in ipairs(leafs) do
+        local byteSize = Get_Byte_Size(leaf.node.valueByteSizeType)
+        local msg = Create_Sysex_Rq1_Message(leaf.addr, byteSize)
+        local changeMessage = ValueChangedMessage.new()
+        local function onRec(received_msg)
+            print("(R): " .. Bytes_To_String(received_msg))
+            local response = getResponseData(received_msg)
+            if #response == nil or response.addr ~= leaf.addr then
+                return changeMessage
+            end
+            changeMessage.id = leaf.fullid
+            changeMessage.i7Value = BytesToIntValue(response.payload)
+            return changeMessage
+        end
+        local rqmsg = RequestMessage.new()
+        rqmsg.sysex = msg
+        rqmsg.onMessageReceived = onRec
+        table.insert(result, rqmsg)
+    end
+    return result
 end

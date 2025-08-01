@@ -14,8 +14,9 @@ typedef std::vector<unsigned char> Bytes;
 
 struct ParameterDef
 {
-    typedef std::list<ParameterDef> Params;
+    typedef std::list<ParameterDef*> Params;
     typedef std::function<int(float)> FToI7Value;
+    typedef std::function<int(float)> FToGuiValue;
     typedef std::function<float()> FFloatGetter;
     typedef std::function<std::string()> FStringGetter;
     typedef std::function<std::vector<unsigned char>(float)> FSetValue;
@@ -25,6 +26,7 @@ struct ParameterDef
     std::string format = "%.0f";
     std::string type;
     FToI7Value toI7Value;
+    FToGuiValue toGuiValue;
     SelectionOptions options;
     std::string stringValue;
     float value = 0.0f;
@@ -33,9 +35,15 @@ struct ParameterDef
     FSetValue setValue;
 };
 
+struct ValueChangedMessage
+{
+    std::string id;
+    float i7Value = 0;
+};
+
 struct RequestMessage 
 {
-    typedef std::function<bool(std::vector<unsigned char>)> FOnMessageReceived;
+    typedef std::function<ValueChangedMessage(std::vector<unsigned char>)> FOnMessageReceived;
     Bytes sysex;
     FOnMessageReceived onMessageReceived;
 };

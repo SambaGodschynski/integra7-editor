@@ -13,6 +13,12 @@ local function i7offsetValue(offset)
     end
 end
 
+local function guiOffsetValue(offset)
+    return function (i7Value)
+        return math.tointeger(offset - i7Value)
+    end
+end
+
 local function idTmpl(snaId)
     return "PRM-_FPARTxxx-_SNTONE-_SNTC-SNTC_" .. snaId
 end
@@ -85,14 +91,14 @@ local snaTemplate = {
             params =
             {
               {type="select", id=idTmpl("CATE"), name=get("Tone Category"), default=0, options = ToneCategories},
-              {type="range", id=idTmpl("PHRASE_OCT"), name=get("Phrase Oct Shift"), min=get(-3), max=get(3), default=0, format="%+.0f", toI7Value=i7offsetValue(64)},
+              {type="range", id=idTmpl("PHRASE_OCT"), name=get("Phrase Oct Shift"), min=get(-3), max=get(3), default=0, format="%+.0f", toI7Value=i7offsetValue(64), toGuiValue=guiOffsetValue(64)},
               {type="range", id=idTmpl("TONE_LEVEL"), name=get("Tone Level"), min=get(0), max=get(127), default=127, format="%.0f"},
               {type="select", id=idTmpl("MONO_POLY"), name=get("Mono/Poly"), default=1, options = MonoPoly},
-              {type="range", id=idTmpl("OCTAVE"), name=get("Oct Shift"), min=get(-3), max=get(3), default=0, format="%+.0f", toI7Value=i7offsetValue(64)},
-              {type="range", id=idTmpl("PORT_TIME"), name=get("Portamento Time Offset"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64)},
-              {type="range", id=idTmpl("VIB_RATE"), name=get("Vibrato Rate"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64)},
-              {type="range", id=idTmpl("VIB_DEPTH"), name=get("Vibrato Depth"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64)},
-              {type="range", id=idTmpl("VIB_DELAY"), name=get("Vibrato Delay"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64)},
+              {type="range", id=idTmpl("OCTAVE"), name=get("Oct Shift"), min=get(-3), max=get(3), default=0, format="%+.0f", toI7Value=i7offsetValue(64), toGuiValue=guiOffsetValue(64)},
+              {type="range", id=idTmpl("PORT_TIME"), name=get("Portamento Time Offset"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64), toGuiValue=guiOffsetValue(64)},
+              {type="range", id=idTmpl("VIB_RATE"), name=get("Vibrato Rate"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64), toGuiValue=guiOffsetValue(64)},
+              {type="range", id=idTmpl("VIB_DEPTH"), name=get("Vibrato Depth"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64), toGuiValue=guiOffsetValue(64)},
+              {type="range", id=idTmpl("VIB_DELAY"), name=get("Vibrato Delay"), min=get(-64), max=get(63), default=0, format="%+.0f", toI7Value=i7offsetValue(64), toGuiValue=guiOffsetValue(64)},
             }
         },
         {

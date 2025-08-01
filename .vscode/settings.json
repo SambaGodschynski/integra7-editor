@@ -83,6 +83,7 @@
         "text_encoding": "cpp"
     },
     "Lua.diagnostics.globals": [
-        "RequestMessage"
+        "RequestMessage",
+        "ValueChangedMessage"
     ]
 }

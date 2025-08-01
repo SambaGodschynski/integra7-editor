@@ -74,7 +74,8 @@ function GetLeafNodes(id)
             local child_is_leaf = child.children == nil
             local child_node_info = {
                 addr = node_info.addr + Get_Model_Id_Address(child.id),
-                node = child
+                node = child,
+                fullid = node_info.fullid .. "-" ..child.id
             }
             if child_is_leaf then
                 table.insert(result, child_node_info)
@@ -83,6 +84,7 @@ function GetLeafNodes(id)
             end
         end
     end
+    root.fullid = id
     walk(root)
     return result
 end
