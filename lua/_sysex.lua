@@ -51,7 +51,9 @@ function BytesToIntValue(bytes)
     return result
 end
 
-function CreateReceiveMessageForBranch(branch_node_id)
+EmptyValueChangedMessage = ValueChangedMessage.new()
+
+function CreateReceiveMessageForBranch(branch_node_id, onMsgReceive)
     local leafs = GetLeafNodes(branch_node_id)
     local result = {}
     for _, leaf in ipairs(leafs) do
@@ -59,10 +61,15 @@ function CreateReceiveMessageForBranch(branch_node_id)
         local msg = Create_Sysex_Rq1_Message(leaf.addr, byteSize)
         local changeMessage = ValueChangedMessage.new()
         local function onRec(received_msg)
-            print("(R): " .. Bytes_To_String(received_msg))
             local response = getResponseData(received_msg)
             if #response == nil or response.addr ~= leaf.addr then
-                return changeMessage
+                return EmptyValueChangedMessage
+            end
+            if onMsgReceive ~=nil then
+                local handledMessage = onMsgReceive(leaf, response)
+                if handledMessage~=nil then
+                    return handledMessage
+                end
             end
             changeMessage.id = leaf.fullid
             changeMessage.i7Value = BytesToIntValue(response.payload)

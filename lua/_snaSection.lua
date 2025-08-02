@@ -15,7 +15,7 @@ end
 
 local function guiOffsetValue(offset)
     return function (i7Value)
-        return math.tointeger(offset - i7Value)
+        return math.tointeger(i7Value - offset)
     end
 end
 
@@ -133,13 +133,49 @@ local snaTemplate = {
     }
 }
 
+local function createInstrumentChangeMessage(partNr, instLsb, instPc)
+    local msg = ValueChangedMessage.new()
+    msg.id = CreateId(idInstNr, partNr)
+    for index, preset in ipairs(SnaInstPresetData) do
+        if preset.lsb == instLsb and preset.pc == instPc then
+            instrumentNumberPartMap[partNr] = index
+            msg.i7Value = index
+            return msg
+        end
+    end
+    return EmptyValueChangedMessage
+end
+
 function CreateSnaSections(main)
     for partNr = 1, 16, 1 do
         local k = "Part " .. string.format("%02d", partNr) .. " SNA"
         local name = k
+        local instLsb = nil
+        local instPc = nil
         local snaData = DeepCopy(snaTemplate);
+        local function handleInstrumentChange(instLsb, instPc)
+            if instLsb==nil or instPc==nil then
+                return EmptyValueChangedMessage
+            end
+            local l = instLsb
+            local p = instPc
+            instLsb = nil
+            instPc = nil
+            return createInstrumentChangeMessage(partNr, l, p)
+        end
+        local function instrumentChangeHandler(leafNode, response)
+            if leafNode.node.id == "SNTC_INST_BS_LSB" then
+                instLsb = BytesToIntValue(response.payload)
+                return handleInstrumentChange(instLsb, instPc)
+            end
+            if leafNode.node.id == "SNTC_INST_BS_PC" then
+                instPc = BytesToIntValue(response.payload)
+                return handleInstrumentChange(instLsb, instPc)
+            end
+            return nil
+        end
         snaData.getReceiveValueSysex = function ()
-            return CreateReceiveMessageForBranch("PRM-_FPART".. partNr .."-_SNTONE")
+            return CreateReceiveMessageForBranch("PRM-_FPART".. partNr .."-_SNTONE", instrumentChangeHandler)
         end
         snaData.name = name
         if partNr==1 then

@@ -233,6 +233,7 @@ void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef&
 {
     try 
     {
+        std::cout << paramDef.id << std::endl;
         int i7Value = (int)paramDef.value;
         if (paramDef.toI7Value)
         {
@@ -256,11 +257,10 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
 
             for (const auto& [value, label] : param.options)
             {
-
                 ImSearch::SearchableItem(label.c_str(),
                     [&](const char* name)
                     {
-                        const bool isSelected = name == param.stringValue;
+                        const bool isSelected = value == param.value;
                         if (ImGui::Selectable(name, isSelected))
                         {
                             param.stringValue = name;
@@ -356,6 +356,10 @@ void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage)
         guiValue = paramDef->toGuiValue(vcMessage.i7Value);
     }
     paramDef->value = guiValue;
+    if (!paramDef->options.empty())
+    {
+        paramDef->stringValue = paramDef->options.at((int)paramDef->value);
+    }
 }
 
 void performValuesReceive(I7Ed &ed, const SectionDef &section)
@@ -366,12 +370,11 @@ void performValuesReceive(I7Ed &ed, const SectionDef &section)
         auto received = sendAndReceive(ed, request.sysex);
         if (received.empty())
         {
-            continue;
+            break;
         }
         auto valueChangeMsg = request.onMessageReceived(received);
         if (valueChangeMsg.id.empty())
         {
-            std::cerr << "unexpected MIDI response" << std::endl;
             continue;
         }
         valueChanged(ed, valueChangeMsg);
