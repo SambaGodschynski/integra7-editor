@@ -5,9 +5,12 @@ local default_device_id = 16 -- TODO: make it configurable
 I7Data = {}
 EmptySysex={0xf0, 0xf7}
 
-function ParameterSetValueWrapper(param)
+function ParameterSetValueWrapper(param, visitor)
     param.setValue = function (value)
         I7Data[param.id] = value
+        if visitor ~= nil then
+            visitor(value)
+        end
         return CreateSysexMessage(param.id, value)
     end
     return param

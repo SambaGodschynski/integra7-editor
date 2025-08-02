@@ -6,9 +6,11 @@ require "_snaSection"
 require "_sysex"
 require "_patchesSection"
 require "_partsSection"
+require "_mfxSection"
 
 Main = {}
 
 CreateSnaSections(Main)
 CreatePatchesSections(Main)
 CreatePartsSections(Main)
+CreateMfxSections(Main)

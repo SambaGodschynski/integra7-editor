@@ -51,10 +51,14 @@ local function modMin(part, modNr)
     if instrumentData == nil then
         return 0
     end
-    if instrumentData.modData[modNr] == nil then
+    local mod = instrumentData.modData[modNr]
+    if mod == nil then
         return 0
     end
-    return instrumentData.modData[modNr].min
+    if mod.id == ModVariationId and instrumentData.vari ~= nil then
+        return instrumentData.vari.min
+    end
+    return mod.min
 end
 
 local function modMax(part, modNr)
@@ -62,10 +66,14 @@ local function modMax(part, modNr)
     if instrumentData == nil then
         return 127
     end
-    if instrumentData.modData[modNr] == nil then
+    local mod = instrumentData.modData[modNr]
+    if mod == nil then
         return 127
     end
-    return instrumentData.modData[modNr].max
+    if mod.id == ModVariationId and instrumentData.vari ~= nil then
+        return instrumentData.vari.max
+    end
+    return mod.max
 end
 
 local function instrumentChange(part, index)
@@ -181,8 +189,8 @@ function CreateSnaSections(main)
         if partNr==1 then
             snaData.isOpen = true
         end
-        for key, subSection in ipairs(snaData.sub) do
-            for key, param in ipairs(subSection.params) do
+        for _, subSection in ipairs(snaData.sub) do
+            for _, param in ipairs(subSection.params) do
                 local tmplId = param.id
                 local isInstNr = param.id == idInstNr
                 param.id = CreateId(param.id, partNr)
@@ -193,7 +201,7 @@ function CreateSnaSections(main)
                         return instrumentChange(partNr, value)
                     end
                 end
-                for modNr = 1, 22, 1 do
+                for modNr = 1, 32, 1 do
                     if tmplId == idTmpl("MOD_PRM"..tostring(modNr)) then
                         param.name = function ()
                             return modName(partNr, modNr)
