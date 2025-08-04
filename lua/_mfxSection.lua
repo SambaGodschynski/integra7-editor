@@ -9,9 +9,9 @@ local function idTmpl(mfxId)
     return "PRM-_FPARTxxx-_SNTONE-_SNTF-" .. mfxId
 end
 
-local mfxNumberPartMap = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+local mfxNumberPartMap = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-local mfxTypes = MapArray(Mfx_Table, function (type)
+local mfxTypes = MapDict(Mfx_Table, function (type)
     return type.desc
 end)
 
@@ -21,6 +21,7 @@ local function getMfxData(part)
 end
 
 local function mfxTypeChange(part, index)
+    print("mfx  " ..index )
     mfxNumberPartMap[part] = index
 end
 
@@ -37,7 +38,7 @@ local function mfxMin(part, mfxNr)
     if mfxData == nil then
         return 0
     end
-    return mfxData.min
+    return 0
 end
 
 local function mfxMax(part, mfxNr)
@@ -45,8 +46,29 @@ local function mfxMax(part, mfxNr)
     if mfxData == nil then
         return 127
     end
-    return mfxData.max
+    return mfxData.max - mfxData.min
 end
+
+local function i7offsetValue(part, mfxNr)
+    return function (guiValue)
+        local mfxData = getMfxData(part).leaf[mfxNr]
+        if mfxData == nil then
+            return 0
+        end
+        return math.tointeger(mfxData.min + guiValue)
+    end
+end
+
+local function guiOffsetValue(part, mfxNr)
+    return function (i7Value)
+        local mfxData = getMfxData(part).leaf[mfxNr]
+        if mfxData == nil then
+            return 0
+        end
+        return math.tointeger(mfxData.min - i7Value)
+    end
+end
+
 
 local mfxTemplate = {
     name = "Mfx",
@@ -79,7 +101,6 @@ function CreateMfxSections(main)
         end
         main[k] = mfxData
         for _, param in ipairs(mfxData.params) do
-                local tmplId = param.id
                 local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
                 param.id = CreateId(param.id, partNr)
                 if isMfxChangeType then
@@ -90,10 +111,13 @@ function CreateMfxSections(main)
                     param = ParameterSetValueWrapper(param)
                 end
         end
-        for mfxNr = 1, 32, 1 do
+        for mfxNr = 0, 31, 1 do
             local id = idTmpl("SNTF_MFX_PRM" .. tostring(mfxNr))
             id = CreateId(id, partNr)
-            local p = {type="range", name=get("MFX Parameter 1 "), id=id, default=0}
+            local p = {type="range", id=id, default=0}
+            p = ParameterSetValueWrapper(p)
+            p.toI7Value = i7offsetValue(partNr, mfxNr)
+            p.toGuiValue = guiOffsetValue(partNr, mfxNr)
             p.name = function ()
                 return mfxName(partNr, mfxNr)
             end
