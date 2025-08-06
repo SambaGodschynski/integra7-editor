@@ -2,11 +2,11 @@ Mfx_Table = {
 	[0] = {
 		desc= 'THRU',
 		leaf= {
-			[0] = { desc= 'Control Assign 1', id='MFX_THRU_CTRL_ASGN1', init= 0, min= 0, max=0 },
-			[1] = { desc= 'Control Assign 2', id='MFX_THRU_CTRL_ASGN2', init= 0, min= 0, max=0 },
-			[2] = { desc= 'Control Assign 3', id='MFX_THRU_CTRL_ASGN3', init= 0, min= 0, max=0 },
-			[3] = { desc= 'Control Assign 4', id='MFX_THRU_CTRL_ASGN4', init= 0, min= 0, max=0 },
-			[4] = { desc= '_', id='MFX_THRU_DUMMY', init= 32768, min= 32768, max=32768 },
+			-- [0] = { desc= 'Control Assign 1', id='MFX_THRU_CTRL_ASGN1', init= 0, min= 0, max=0 },
+			-- [1] = { desc= 'Control Assign 2', id='MFX_THRU_CTRL_ASGN2', init= 0, min= 0, max=0 },
+			-- [2] = { desc= 'Control Assign 3', id='MFX_THRU_CTRL_ASGN3', init= 0, min= 0, max=0 },
+			-- [3] = { desc= 'Control Assign 4', id='MFX_THRU_CTRL_ASGN4', init= 0, min= 0, max=0 },
+			-- [4] = { desc= '_', id='MFX_THRU_DUMMY', init= 32768, min= 32768, max=32768 },
 		},
 	},
 	[1] = {

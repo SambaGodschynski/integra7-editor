@@ -21,7 +21,6 @@ local function getMfxData(part)
 end
 
 local function mfxTypeChange(part, index)
-    print("mfx  " ..index )
     mfxNumberPartMap[part] = index
 end
 
@@ -73,19 +72,28 @@ end
 local mfxTemplate = {
     name = "Mfx",
     getReceiveValueSysex = nil,
-    params = {
-        {type="select", id=idTmpl("SNTF_MFX_TYPE"), name=get("MFX Type"), default=0, options=mfxTypes},
-        {type="range", name=get("MFX Dry Send Level"), id=idTmpl("SNTF_MFX_DRY_SEND"), default=127, min=get(0), max=get(127)},
-        {type="range", name=get("MFX Chorus Send Level"), id=idTmpl("SNTF_MFX_CHO_SEND"), default=0, min=get(0), max=get(127)},
-        {type="range", name=get("MFX Reverb Send Level"), id=idTmpl("SNTF_MFX_REV_SEND"), default=0, min=get(0), max=get(127)},
-        {type="range", name=get("MFX Control 1 Source"), id=idTmpl("SNTF_MFX_CTRL1_SRC"), default=0, min=get(0), max=get(101)},
-        {type="range", name=get("MFX Control 1 Sens"), id=idTmpl("SNTF_MFX_CTRL1_SENS"), default=64, min=get(1), max=get(127)},
-        {type="range", name=get("MFX Control 2 Source"), id=idTmpl("SNTF_MFX_CTRL2_SRC"), default=0, min=get(0), max=get(101)},
-        {type="range", name=get("MFX Control 2 Sens"), id=idTmpl("SNTF_MFX_CTRL2_SENS"), default=64, min=get(1), max=get(127)},
-        {type="range", name=get("MFX Control 3 Source"), id=idTmpl("SNTF_MFX_CTRL3_SRC"), default=0, min=get(0), max=get(101)},
-        {type="range", name=get("MFX Control 3 Sens"), id=idTmpl("SNTF_MFX_CTRL3_SENS"), default=64, min=get(1), max=get(127)},
-        {type="range", name=get("MFX Control 4 Source"), id=idTmpl("SNTF_MFX_CTRL4_SRC"), default=0, min=get(0), max=get(101)},
-        {type="range", name=get("MFX Control 4 Sens"), id=idTmpl("SNTF_MFX_CTRL4_SENS"), default=64, min=get(1), max=get(127)},
+    sub = {
+        {
+            name="Mfx Common",
+            params = {
+                {type="select", id=idTmpl("SNTF_MFX_TYPE"), name=get("MFX Type"), default=0, options=mfxTypes},
+                {type="range", name=get("MFX Dry Send Level"), id=idTmpl("SNTF_MFX_DRY_SEND"), default=127, min=get(0), max=get(127)},
+                {type="range", name=get("MFX Chorus Send Level"), id=idTmpl("SNTF_MFX_CHO_SEND"), default=0, min=get(0), max=get(127)},
+                {type="range", name=get("MFX Reverb Send Level"), id=idTmpl("SNTF_MFX_REV_SEND"), default=0, min=get(0), max=get(127)},
+                {type="range", name=get("MFX Control 1 Source"), id=idTmpl("SNTF_MFX_CTRL1_SRC"), default=0, min=get(0), max=get(101)},
+                {type="range", name=get("MFX Control 1 Sens"), id=idTmpl("SNTF_MFX_CTRL1_SENS"), default=64, min=get(1), max=get(127)},
+                {type="range", name=get("MFX Control 2 Source"), id=idTmpl("SNTF_MFX_CTRL2_SRC"), default=0, min=get(0), max=get(101)},
+                {type="range", name=get("MFX Control 2 Sens"), id=idTmpl("SNTF_MFX_CTRL2_SENS"), default=64, min=get(1), max=get(127)},
+                {type="range", name=get("MFX Control 3 Source"), id=idTmpl("SNTF_MFX_CTRL3_SRC"), default=0, min=get(0), max=get(101)},
+                {type="range", name=get("MFX Control 3 Sens"), id=idTmpl("SNTF_MFX_CTRL3_SENS"), default=64, min=get(1), max=get(127)},
+                {type="range", name=get("MFX Control 4 Source"), id=idTmpl("SNTF_MFX_CTRL4_SRC"), default=0, min=get(0), max=get(101)},
+                {type="range", name=get("MFX Control 4 Sens"), id=idTmpl("SNTF_MFX_CTRL4_SENS"), default=64, min=get(1), max=get(127)},
+            }
+        },
+        {
+            name="Mfx",
+            params = {}
+        }
     }
 }
 
@@ -100,7 +108,9 @@ function CreateMfxSections(main)
             mfxData.isOpen = true
         end
         main[k] = mfxData
-        for _, param in ipairs(mfxData.params) do
+        local subCommon = mfxData.sub[1]
+        local subMfx = mfxData.sub[2]
+        for _, param in ipairs(subCommon.params) do
                 local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
                 param.id = CreateId(param.id, partNr)
                 if isMfxChangeType then
@@ -127,7 +137,7 @@ function CreateMfxSections(main)
             p.max = function ()
                 return mfxMax(partNr, mfxNr)
             end
-            table.insert(mfxData.params, p)
+            table.insert(subMfx.params, p)
         end
     end
 end
