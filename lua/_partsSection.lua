@@ -8,7 +8,7 @@ function CreatePartsSections(main)
     local parts = {
         name = "Parts View",
         isOpen = true,
-        sub = {}
+        grp = {}
     }
     for i = 1, 16, 1 do
         local partName = "Part " .. i
@@ -22,7 +22,7 @@ function CreatePartsSections(main)
         table.insert(subSection.params,
             p({type="toggle", id="PRM-_PRF-_FP"..i.."-NEFP_MUTE_SW", name=get(partName ..  " Mute"), min=get(0), max=get(1)})
         )
-        table.insert(parts.sub, subSection)
+        table.insert(parts.grp, subSection)
     end
     main["parts"] = parts
 end

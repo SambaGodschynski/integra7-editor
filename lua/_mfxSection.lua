@@ -72,7 +72,7 @@ end
 local mfxTemplate = {
     name = "Mfx",
     getReceiveValueSysex = nil,
-    sub = {
+    grp = {
         {
             name="Mfx Common",
             params = {
@@ -108,8 +108,8 @@ function CreateMfxSections(main)
             mfxData.isOpen = true
         end
         main[k] = mfxData
-        local subCommon = mfxData.sub[1]
-        local subMfx = mfxData.sub[2]
+        local subCommon = mfxData.grp[1]
+        local subMfx = mfxData.grp[2]
         for _, param in ipairs(subCommon.params) do
                 local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
                 param.id = CreateId(param.id, partNr)

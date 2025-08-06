@@ -199,9 +199,9 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
             ed.parameterDefs[param->id] = param;
         }
     }
-    if(lua_table["sub"] != sol::nil)
+    if(lua_table["grp"] != sol::nil)
     {
-        sol::table luaSubSections = lua_table["sub"];
+        sol::table luaSubSections = lua_table["grp"];
         for(const auto& luaSubSectionObj : luaSubSections)
         {
             sol::table luaSubSection = luaSubSectionObj.second;

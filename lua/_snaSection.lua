@@ -92,7 +92,7 @@ end
 local snaTemplate = {
     name = "SN-A",
     getReceiveValueSysex = nil,
-    sub =
+    grp =
     {
         {
             name = "Common",
@@ -189,7 +189,7 @@ function CreateSnaSections(main)
         if partNr==1 then
             snaData.isOpen = true
         end
-        for _, subSection in ipairs(snaData.sub) do
+        for _, subSection in ipairs(snaData.grp) do
             for _, param in ipairs(subSection.params) do
                 local tmplId = param.id
                 local isInstNr = param.id == idInstNr

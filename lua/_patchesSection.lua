@@ -42,19 +42,19 @@ end
 function CreatePatchesSections(main)
     local section = {
         name = "Presets",
-        sub = {}
+        grp = {}
     }
     for partNr = 1, 16, 1 do
         local onNewValue = function (v)
             return setValue(v, partNr)
         end
-        local sub = {
+        local grp = {
             name = "Part " .. string.format("%02d", partNr) .. " Presets",
             params = {
                 {type="select", id="PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB", name=get("Part " .. partNr), default=0, options = patches, setValue = onNewValue}
             }
         }
-        table.insert(section.sub, sub)
+        table.insert(section.grp, grp)
     end
     main["presets"] = section
 end
