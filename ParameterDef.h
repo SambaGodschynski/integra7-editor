@@ -43,7 +43,7 @@ struct ValueChangedMessage
 
 struct RequestMessage 
 {
-    typedef std::function<ValueChangedMessage(std::vector<unsigned char>)> FOnMessageReceived;
+    typedef std::function<std::vector<ValueChangedMessage>(std::vector<unsigned char>)> FOnMessageReceived;
     Bytes sysex;
     FOnMessageReceived onMessageReceived;
 };

@@ -2,6 +2,10 @@ require "_integra7"
 
 local default_device_id = 16 -- TODO: make it configurable
 
+function GetDeviceId()
+    return default_device_id
+end
+
 I7Data = {}
 EmptySysex={0xf0, 0xf7}
 
@@ -56,7 +60,24 @@ end
 
 EmptyValueChangedMessage = ValueChangedMessage.new()
 
-function CreateReceiveMessageForBranch(branch_node_id, onMsgReceive)
+local receiveHandlers = {}
+
+function AddReceiveHandler(handler)
+    table.insert(receiveHandlers, handler)
+end
+
+local function notifyHandlers(leaf, response)
+    local result = {}
+    for _, handler in ipairs(receiveHandlers) do
+        local valueChangedMsg = handler(leaf, response)
+        if valueChangedMsg ~= nil then
+            table.insert(result, valueChangedMsg)
+        end
+    end
+    return result
+end
+
+function CreateReceiveMessageForBranch(branch_node_id)
     local leafs = GetLeafNodes(branch_node_id)
     local result = {}
     for _, leaf in ipairs(leafs) do
@@ -66,17 +87,15 @@ function CreateReceiveMessageForBranch(branch_node_id, onMsgReceive)
         local function onRec(received_msg)
             local response = getResponseData(received_msg)
             if #response == nil or response.addr ~= leaf.addr then
-                return EmptyValueChangedMessage
+                return {EmptyValueChangedMessage}
             end
-            if onMsgReceive ~=nil then
-                local handledMessage = onMsgReceive(leaf, response)
-                if handledMessage~=nil then
-                    return handledMessage
-                end
+            local handledMessages = notifyHandlers(leaf, response)
+            if handledMessages ~=nil and #handledMessages > 0 then
+                return handledMessages
             end
             changeMessage.id = leaf.fullid
             changeMessage.i7Value = BytesToIntValue(response.payload)
-            return changeMessage
+            return {changeMessage}
         end
         local rqmsg = RequestMessage.new()
         rqmsg.sysex = msg

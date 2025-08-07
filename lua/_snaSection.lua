@@ -182,8 +182,9 @@ function CreateSnaSections(main)
             end
             return nil
         end
+        AddReceiveHandler(instrumentChangeHandler)
         snaData.getReceiveValueSysex = function ()
-            return CreateReceiveMessageForBranch("PRM-_FPART".. partNr .."-_SNTONE", instrumentChangeHandler)
+            return CreateReceiveMessageForBranch("PRM-_FPART".. partNr .."-_SNTONE")
         end
         snaData.name = name
         if partNr==1 then

@@ -372,12 +372,15 @@ void performValuesReceive(I7Ed &ed, const SectionDef &section)
         {
             break;
         }
-        auto valueChangeMsg = request.onMessageReceived(received);
-        if (valueChangeMsg.id.empty())
+        auto valueChangeMsgs = request.onMessageReceived(received);
+        for(const auto &valueChangeMsg : valueChangeMsgs)
         {
-            continue;
+            if (valueChangeMsg.id.empty())
+            {
+                continue;
+            }
+            valueChanged(ed, valueChangeMsg);
         }
-        valueChanged(ed, valueChangeMsg);
     }
 }
 
@@ -449,7 +452,7 @@ int main(int argc, const char** args)
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0); // V-Sync
+    glfwSwapInterval(1); // V-Sync
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

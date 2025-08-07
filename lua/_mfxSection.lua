@@ -15,13 +15,42 @@ local mfxTypes = MapDict(Mfx_Table, function (type)
     return type.desc
 end)
 
+local function get_set_mfx_default_values_sysex(mfxType, part_id, mfx_id)
+    local prm = Mfx_Table[mfx_id + 1]
+    local payload = {}
+    local from = -1
+    local nodes = Mfx_Nodes[mfxType]
+    for i = 1, #nodes, 1 do
+        local node = nodes[i]
+        if node.pos == nil then goto continue end
+        if from < 0 then from = i end
+        local default_value_index = i - from + 1
+        if default_value_index <= #prm.leaf then
+            local default_value = prm.leaf[default_value_index].init
+            local bytesize = Get_Byte_Size(node.valueByteSizeType)
+            local bytes = Value_To_Bytes(default_value, bytesize)
+            payload = ConcatTable(payload, bytes)
+        end
+    ::continue::
+    end
+    local idtemplate = Mfx_Ids[mfxType] .. "-" .. nodes[from].id
+    local id = CreateId(idtemplate, part_id)
+    local addr = Get_Adress(id)
+    local sysex = Create_Sysex_Message_For_Payload(addr, payload, GetDeviceId())
+    return sysex
+end
+
 local function getMfxData(part)
     local idx = mfxNumberPartMap[part]
     return Mfx_Table[idx]
 end
 
-local function mfxTypeChange(part, index)
+local function mfxTypeChange(param, part, index)
     mfxNumberPartMap[part] = index
+    local chgMsg = CreateSysexMessage(param.id, index)
+    local defaultValues = get_set_mfx_default_values_sysex(Mfx_Types.SNA, part, index)
+    local msg = Concat(chgMsg, defaultValues)
+    return msg
 end
 
 local function mfxName(part, mfxNr)
@@ -64,7 +93,7 @@ local function guiOffsetValue(part, mfxNr)
         if mfxData == nil then
             return 0
         end
-        return math.tointeger(mfxData.min - i7Value)
+        return math.tointeger(i7Value - mfxData.min)
     end
 end
 
@@ -97,7 +126,6 @@ local mfxTemplate = {
     }
 }
 
-
 function CreateMfxSections(main)
     for partNr = 1, 16, 1 do
         local k = "Part " .. string.format("%02d", partNr) .. " MFX"
@@ -114,15 +142,15 @@ function CreateMfxSections(main)
                 local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
                 param.id = CreateId(param.id, partNr)
                 if isMfxChangeType then
-                    param = ParameterSetValueWrapper(param, function (value)
-                        mfxTypeChange(partNr, value)
-                    end)
+                    param.setValue = function (value)
+                        return mfxTypeChange(param, partNr, value)
+                    end
                 else
                     param = ParameterSetValueWrapper(param)
                 end
         end
         for mfxNr = 0, 31, 1 do
-            local id = idTmpl("SNTF_MFX_PRM" .. tostring(mfxNr))
+            local id = idTmpl("SNTF_MFX_PRM" .. tostring(mfxNr+1))
             id = CreateId(id, partNr)
             local p = {type="range", id=id, default=0}
             p = ParameterSetValueWrapper(p)
