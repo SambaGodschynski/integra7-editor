@@ -1,4 +1,5 @@
 require "_integra7"
+require "_model"
 
 local default_device_id = 16 -- TODO: make it configurable
 
@@ -50,14 +51,6 @@ local function getResponseData(msg)
     return response
 end
 
-function BytesToIntValue(bytes)
-    local result = 0
-    for i = 1, #bytes do
-        result = result | (bytes[i] << ((#bytes - i) * 8))
-    end
-    return result
-end
-
 EmptyValueChangedMessage = ValueChangedMessage.new()
 
 local receiveHandlers = {}
@@ -94,7 +87,7 @@ function CreateReceiveMessageForBranch(branch_node_id)
                 return handledMessages
             end
             changeMessage.id = leaf.fullid
-            changeMessage.i7Value = BytesToIntValue(response.payload)
+            changeMessage.i7Value = Bytes_To_Value(response.payload)
             return {changeMessage}
         end
         local rqmsg = RequestMessage.new()

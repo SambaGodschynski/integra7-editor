@@ -4054,6 +4054,34 @@ function Value_To_Bytes(v, bytesize)
     return result
 end
 
+function Bytes_To_Value(bytes)
+    -- https://chatgpt.com/share/6896854d-7998-800d-8e15-b68b30f7cf4f
+    local bytesize
+    local count = 0
+    for i = 1, #bytes do
+        local b = bytes[i]
+        if b >= 0 and b <= 0xF then
+            count = count + 1
+        else
+            break
+        end
+    end
+    if count > 0 then
+        bytesize = count
+    else
+        bytesize = #bytes
+    end
+    if bytesize == 1 then
+        return bytes[1] & 0x7f
+    end
+    local v = 0
+    for i = 1, bytesize do
+        local shift = 4 * (bytesize - i)
+        v = v | ((bytes[i] & 0xF) << shift)
+    end
+    return v
+end
+
 function ConcatTable(a, b)
     local res = {table.unpack(a)}
     for _, val in pairs(b) do

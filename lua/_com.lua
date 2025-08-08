@@ -25,6 +25,14 @@ function CreateId(parameter_node_id_template, part_id)
     return string.gsub(parameter_node_id_template, parameter_partId_placeholder, part_id)
 end
 
+function BeginsWith(str, prefix)
+    return string.sub(str, 1, #prefix) == prefix
+end
+
+function IsIdForPart(id, partNr)
+    return BeginsWith(id, "PRM-_FPART"..tostring(partNr))
+end
+
 GetWrapper = function (val)
     return function ()
         return val

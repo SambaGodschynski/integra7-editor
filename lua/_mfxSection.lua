@@ -2,6 +2,7 @@ require "math"
 require "_mfx"
 require "_sysex"
 require "_com"
+require "_model"
 
 local get = GetWrapper
 
@@ -138,6 +139,19 @@ function CreateMfxSections(main)
         main[k] = mfxData
         local subCommon = mfxData.grp[1]
         local subMfx = mfxData.grp[2]
+
+        local function mfxChangedHandler(leafNode, response)
+            if not IsIdForPart(leafNode.fullid, partNr) then
+                return nil
+            end
+            if leafNode.node.id == "SNTF_MFX_TYPE" then
+                local mfxType = Bytes_To_Value(response.payload)
+                mfxNumberPartMap[partNr] = mfxType
+            end
+            return nil
+        end
+        AddReceiveHandler(mfxChangedHandler)
+
         for _, param in ipairs(subCommon.params) do
                 local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
                 param.id = CreateId(param.id, partNr)

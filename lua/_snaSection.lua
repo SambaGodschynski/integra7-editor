@@ -2,6 +2,7 @@ require "math"
 require "_snaData"
 require "_sysex"
 require "_com"
+require "_model"
 
 local idInstNr = "PRM-_FPARTxxx_InstNr"
 local instrumentNumberPartMap = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
@@ -172,12 +173,15 @@ function CreateSnaSections(main)
             return createInstrumentChangeMessage(partNr, l, p)
         end
         local function instrumentChangeHandler(leafNode, response)
+            if not IsIdForPart(leafNode.fullid, partNr) then
+                return nil
+            end
             if leafNode.node.id == "SNTC_INST_BS_LSB" then
-                instLsb = BytesToIntValue(response.payload)
+                instLsb = Bytes_To_Value(response.payload)
                 return handleInstrumentChange(instLsb, instPc)
             end
             if leafNode.node.id == "SNTC_INST_BS_PC" then
-                instPc = BytesToIntValue(response.payload)
+                instPc = Bytes_To_Value(response.payload)
                 return handleInstrumentChange(instLsb, instPc)
             end
             return nil
