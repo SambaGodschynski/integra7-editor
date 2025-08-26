@@ -3,20 +3,13 @@ require "_com"
 require "_sysex"
 
 local get = GetWrapper
-    -- parts = {
-    --     name = "Parts View",
-    --     isOpen = true,
-    --     params = {
-    --         p({type="range", id="PRM-_PRF-_FP1-NEFP_LEVEL", name=get("Part 1 Level"), min=get(0), max=get(127)}),
-    --     }
-    -- },
 
-local function get_patch_key(patch)
-    return patch.type .. " " .. patch.category .. " " .. patch.name
+local function get_patch_key(patch, index)
+    return string.format("%04i", index) .. " " .. patch.type .. " " .. patch.category .. " " .. patch.name
 end
 
-local patches = MapArray(I7Patches, function (patch)
-    local key = get_patch_key(patch)
+local patches = MapArray(I7Patches, function (patch, index)
+    local key = get_patch_key(patch, index)
     return key
 end)
 
