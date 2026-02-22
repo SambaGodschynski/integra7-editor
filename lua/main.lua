@@ -9,6 +9,7 @@ require "_partsSection"
 require "_mfxSection"
 require "_pcmsCommonSection"
 require "_pcmsWaveSection"
+require "_pcmsPmtSection"
 
 Main = {}
 
@@ -18,3 +19,4 @@ CreatePartsSections(Main)
 CreateMfxSections(Main)
 CreatePcmsCommonSections(Main)
 CreatePcmsWaveSections(Main)
+CreatePcmsPmtSections(Main)
