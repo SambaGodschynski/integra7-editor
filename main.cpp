@@ -16,11 +16,14 @@
 #include <string>
 #include "ParameterDef.h"
 #include "imgui_envelope.h"
+#include "imgui_notifications.h"
 #include <vector>
 #include <list>
 #include <tuple>
 #include <mutex>
 #include <thread>
+#include <atomic>
+#include <chrono>
 #include <unordered_map>
 #include <memory>
 
@@ -36,13 +39,26 @@ struct Args
     int outPortNr = -1;
 };
 
-struct I7Ed 
+struct PendingReceive
+{
+    RequestMessage::FOnMessageReceived handler;
+    Bytes data;
+};
+
+struct I7Ed
 {
     RtMidiIn  midiIn;
     RtMidiOut midiOut;
     Args args;
     sol::state lua;
     std::unordered_map<std::string, std::shared_ptr<ParameterDef>> parameterDefs;
+    // async receive
+    std::atomic<bool> isReceiving{false};
+    std::chrono::steady_clock::time_point receiveStartTime;
+    std::mutex pendingMutex;
+    std::vector<PendingReceive> pendingReceives;
+    std::thread receiveThread;
+    NotificationQueue notifications;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -585,7 +601,23 @@ int main(int argc, const char** args)
         }
         cmd.Name = std::string("receive ") + section.second.name;
         cmd.InitialCallback = [&ed, &section]() {
-            performValuesReceive(ed, section.second);
+            if (ed.isReceiving.exchange(true)) return; // already in progress
+            if (ed.receiveThread.joinable()) ed.receiveThread.join();
+            // getReceiveSysex calls Lua — must happen on main thread before the thread starts
+            auto requests = section.second.getReceiveSysex();
+            ed.receiveStartTime = std::chrono::steady_clock::now();
+            ed.receiveThread = std::thread([&ed, requests = std::move(requests)]() {
+                for (const auto& req : requests) {
+                    Bytes received = sendAndReceive(ed, req.sysex);
+                    if (received.empty()) {
+                        ed.notifications.push("MIDI receive timed out");
+                        break;
+                    }
+                    std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                    ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
+                }
+                ed.isReceiving.store(false);
+            });
         };
         ImCmd::AddCommand(std::move(cmd));
     }
@@ -597,6 +629,37 @@ int main(int argc, const char** args)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        // Apply MIDI receive results on the main thread (Lua calls safe here)
+        {
+            std::vector<PendingReceive> toProcess;
+            {
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                toProcess.swap(ed.pendingReceives);
+            }
+            for (auto& item : toProcess) {
+                auto msgs = item.handler(item.data);
+                for (const auto& msg : msgs) {
+                    if (!msg.id.empty()) valueChanged(ed, msg);
+                }
+            }
+        }
+
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+
+        // YouTube-style red progress bar at the top while receiving
+        if (ed.isReceiving.load()) {
+            auto elapsed = std::chrono::duration<float>(
+                std::chrono::steady_clock::now() - ed.receiveStartTime).count();
+            const float progress = std::min(1.f - std::exp(-elapsed * 0.7f), 0.9f);
+            ImGui::GetBackgroundDrawList()->AddRectFilled(
+                ImVec2(0.f, 0.f),
+                ImVec2(progress * (float)display_w, 3.f),
+                IM_COL32(220, 30, 30, 255));
+        }
+
+        ed.notifications.render(display_w, display_h);
 
         if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P)) {
             show_command_palette = !show_command_palette;
@@ -623,8 +686,6 @@ int main(int argc, const char** args)
             ImGui::End();
         }
         ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -633,6 +694,8 @@ int main(int argc, const char** args)
     }
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+
+    if (ed.receiveThread.joinable()) ed.receiveThread.join();
 
     ImCmd::DestroyContext();
     ImSearch::DestroyContext();
