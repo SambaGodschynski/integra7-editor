@@ -249,7 +249,7 @@ void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef&
 
 void renderCombo(ParameterDef& param, I7Ed &ed)
 {
-    if (ImGui::BeginCombo(param.name().c_str(), param.stringValue.c_str()))
+    if (ImGui::BeginCombo((param.name() + "##" + param.id).c_str(), param.stringValue.c_str()))
     {
         if (ImSearch::BeginSearch())
         {
@@ -285,7 +285,7 @@ void renderSection(SectionDef &section, I7Ed &ed)
         }
         if (param->type == PARAM_TYPE_RANGE)
         {
-            if (ImGuiKnobs::Knob(param->name().c_str(), &param->value, param->min(), param->max(), 0.0f, param->format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp)) 
+            if (ImGuiKnobs::Knob((param->name() + "##" + param->id).c_str(), &param->value, param->min(), param->max(), 0.0f, param->format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp))
             {
                 valueChanged(ed.lua, ed.midiOut, *param);
             }
@@ -298,7 +298,7 @@ void renderSection(SectionDef &section, I7Ed &ed)
         {
             auto oldValue = param->value;
             bool toggleVal = param->value != 0;
-            if (ImGui::Toggle(param->name().c_str(), &toggleVal))
+            if (ImGui::Toggle((param->name() + "##" + param->id).c_str(), &toggleVal))
             {
                 param->value = toggleVal ? 1.0f : 0.0f;
                 valueChanged(ed.lua, ed.midiOut, *param);
