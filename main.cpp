@@ -196,6 +196,7 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
                     for (auto& kv : *timeIdsTable)
                         param->timeIds.push_back(kv.second.as<std::string>());
                 }
+                param->sustainSegment = optional_key<bool>(luaParam, "sustainSegment", false);
             } else {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
             }
@@ -381,7 +382,8 @@ void renderSection(SectionDef &section, I7Ed &ed)
                 if (ImEnvelope::EnvelopeWidget(param->id.c_str(),
                         lvlPtrs.data(), nLevels,
                         timPtrs.data(), nTimes,
-                        levelMin, levelMax, timeMax))
+                        levelMin, levelMax, timeMax,
+                        ImVec2(0, 120.f), param->sustainSegment))
                 {
                     for (int i = 0; i < nLevels; ++i) {
                         if (*lvlPtrs[i] != oldLvl[i]) {

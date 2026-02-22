@@ -23,7 +23,8 @@ function CreatePcmsPitchEnvSections(main)
                 -- Interactive envelope widget (reads/writes the hidden L/T params below)
                 {type="envelope", id=kPartial.."-ENV", name=get("Pitch Envelope"),
                  levelIds={p("PENV_L0"),p("PENV_L1"),p("PENV_L2"),p("PENV_L3"),p("PENV_L4")},
-                 timeIds ={p("PENV_T1"),p("PENV_T2"),p("PENV_T3"),p("PENV_T4")}},
+                 timeIds ={p("PENV_T1"),p("PENV_T2"),p("PENV_T3"),p("PENV_T4")},
+                 sustainSegment=true},
 
                 -- Visible knobs
                 {type="range", id=p("PENV_DEPTH"),    name=get("Pitch Env Depth"),    default=0, min=get(-12), max=get(12),  format="%+.0f", toI7Value=i7offset(64), toGuiValue=guiOffset(64)},

@@ -37,6 +37,7 @@ struct ParameterDef
     // PARAM_TYPE_ENVELOPE only
     std::vector<std::string> levelIds;
     std::vector<std::string> timeIds;
+    bool sustainSegment = false;
 };
 
 struct ValueChangedMessage
