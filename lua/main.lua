@@ -10,6 +10,8 @@ require "_mfxSection"
 require "_pcmsCommonSection"
 require "_pcmsWaveSection"
 require "_pcmsPmtSection"
+require "_pcmsPitchSection"
+require "_pcmsPitchEnvSection"
 
 Main = {}
 
@@ -20,3 +22,5 @@ CreateMfxSections(Main)
 CreatePcmsCommonSections(Main)
 CreatePcmsWaveSections(Main)
 CreatePcmsPmtSections(Main)
+CreatePcmsPitchSections(Main)
+CreatePcmsPitchEnvSections(Main)
