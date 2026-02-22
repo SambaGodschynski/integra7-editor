@@ -206,6 +206,25 @@ inline bool EnvelopeWidget(
         dl->AddCircle      (nodePos[i], r, ring);
     }
 
+    // ── Drag label (bottom-left, small) ─────────────────────────────────────
+    if (isActive && drag.nodeIdx >= 0) {
+        const int idx = drag.nodeIdx;
+        char label[64];
+        if (idx > 0) {
+            const int tIdx = (sustainSegment && idx == nLevels - 1)
+                                 ? nTimes - 1 : idx - 1;
+            snprintf(label, sizeof(label), "L%d: %.0f  T%d: %.0f",
+                     idx, *levels[idx], tIdx + 1, *times[tIdx]);
+        } else {
+            snprintf(label, sizeof(label), "L0: %.0f", *levels[0]);
+        }
+        const float  fontSize = ImGui::GetFontSize() * 0.9f;
+        const ImVec2 textPos(origin.x + 4.f,
+                             origin.y + size.y - fontSize - 4.f);
+        dl->AddText(ImGui::GetFont(), fontSize, textPos,
+                    IM_COL32(200, 200, 200, 200), label);
+    }
+
     ImGui::PopID();
     return changed;
 }
