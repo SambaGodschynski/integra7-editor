@@ -15,6 +15,7 @@
 #include <rtmidi/RtMidi.h>
 #include <string>
 #include "ParameterDef.h"
+#include "imgui_envelope.h"
 #include <vector>
 #include <list>
 #include <tuple>
@@ -183,7 +184,21 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
             param->name = paramName.as<ParameterDef::FStringGetter>();
             param->id = paramId.as<std::string>();
             param->type = require_key<std::string>(luaParam, "type");
-            param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
+            if (param->type == PARAM_TYPE_ENVELOPE) {
+                param->setValue = optional_key<ParameterDef::FSetValue>(luaParam, "setValue", nullptr);
+                sol::optional<sol::table> levelIdsTable = luaParam["levelIds"];
+                if (levelIdsTable) {
+                    for (auto& kv : *levelIdsTable)
+                        param->levelIds.push_back(kv.second.as<std::string>());
+                }
+                sol::optional<sol::table> timeIdsTable = luaParam["timeIds"];
+                if (timeIdsTable) {
+                    for (auto& kv : *timeIdsTable)
+                        param->timeIds.push_back(kv.second.as<std::string>());
+                }
+            } else {
+                param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
+            }
             param->min = optional_key(luaParam, "min", param->min);
             param->max = optional_key(luaParam, "max", param->max);
             param->format = optional_key(luaParam, "format", param->format);
@@ -247,6 +262,8 @@ void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef&
     }
 }
 
+ParameterDef* getParameterDef(I7Ed &ed, const std::string &id); // forward declaration
+
 void renderCombo(ParameterDef& param, I7Ed &ed)
 {
     if (ImGui::BeginCombo(param.name().c_str(), param.stringValue.c_str()))
@@ -287,7 +304,9 @@ void renderSection(SectionDef &section, I7Ed &ed)
         {
             continue;
         }
-        bool isBlock = param->type == PARAM_TYPE_SELECTION || param->type == PARAM_TYPE_TOGGLE;
+        bool isBlock = param->type == PARAM_TYPE_SELECTION
+                    || param->type == PARAM_TYPE_TOGGLE
+                    || param->type == PARAM_TYPE_ENVELOPE;
         bool doSameLine = false;
         if (prevWasInline && !isBlock)
         {
@@ -326,6 +345,57 @@ void renderSection(SectionDef &section, I7Ed &ed)
             {
                 param->value = toggleVal ? 1.0f : 0.0f;
                 valueChanged(ed.lua, ed.midiOut, *param);
+            }
+            prevWasInline = false;
+        }
+        else if (param->type == PARAM_TYPE_ENVELOPE)
+        {
+            const int nLevels = (int)param->levelIds.size();
+            const int nTimes  = (int)param->timeIds.size();
+            std::vector<float*> lvlPtrs(nLevels, nullptr);
+            std::vector<float*> timPtrs(nTimes,  nullptr);
+            for (int i = 0; i < nLevels; ++i) {
+                auto* p = getParameterDef(ed, param->levelIds[i]);
+                if (p) lvlPtrs[i] = &p->value;
+            }
+            for (int i = 0; i < nTimes; ++i) {
+                auto* p = getParameterDef(ed, param->timeIds[i]);
+                if (p) timPtrs[i] = &p->value;
+            }
+            bool allValid = true;
+            for (auto* lp : lvlPtrs) if (!lp) { allValid = false; break; }
+            for (auto* tp : timPtrs) if (!tp) { allValid = false; break; }
+
+            if (allValid) {
+                auto* firstLevel = getParameterDef(ed, param->levelIds[0]);
+                auto* firstTime  = getParameterDef(ed, param->timeIds[0]);
+                const float levelMin = firstLevel->min();
+                const float levelMax = firstLevel->max();
+                const float timeMax  = firstTime->max();
+
+                // snapshot values to detect changes
+                std::vector<float> oldLvl(nLevels), oldTim(nTimes);
+                for (int i = 0; i < nLevels; ++i) oldLvl[i] = *lvlPtrs[i];
+                for (int i = 0; i < nTimes;  ++i) oldTim[i] = *timPtrs[i];
+
+                if (ImEnvelope::EnvelopeWidget(param->id.c_str(),
+                        lvlPtrs.data(), nLevels,
+                        timPtrs.data(), nTimes,
+                        levelMin, levelMax, timeMax))
+                {
+                    for (int i = 0; i < nLevels; ++i) {
+                        if (*lvlPtrs[i] != oldLvl[i]) {
+                            auto* p = getParameterDef(ed, param->levelIds[i]);
+                            if (p) valueChanged(ed.lua, ed.midiOut, *p);
+                        }
+                    }
+                    for (int i = 0; i < nTimes; ++i) {
+                        if (*timPtrs[i] != oldTim[i]) {
+                            auto* p = getParameterDef(ed, param->timeIds[i]);
+                            if (p) valueChanged(ed.lua, ed.midiOut, *p);
+                        }
+                    }
+                }
             }
             prevWasInline = false;
         }

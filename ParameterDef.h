@@ -6,9 +6,10 @@
 #include <vector>
 #include <functional>
 
-#define PARAM_TYPE_RANGE "range"
+#define PARAM_TYPE_RANGE     "range"
 #define PARAM_TYPE_SELECTION "select"
-#define PARAM_TYPE_TOGGLE "toggle"
+#define PARAM_TYPE_TOGGLE    "toggle"
+#define PARAM_TYPE_ENVELOPE  "envelope"
 
 typedef std::vector<unsigned char> Bytes;
 
@@ -33,6 +34,9 @@ struct ParameterDef
     FFloatGetter min = [](){ return 0; };
     FFloatGetter max = [](){ return 127; };
     FSetValue setValue;
+    // PARAM_TYPE_ENVELOPE only
+    std::vector<std::string> levelIds;
+    std::vector<std::string> timeIds;
 };
 
 struct ValueChangedMessage
