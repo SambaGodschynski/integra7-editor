@@ -277,22 +277,46 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
 
 void renderSection(SectionDef &section, I7Ed &ed)
 {
+    constexpr float kRowSpacing = 15.0f;
+    float lastKnobWidth = 0.0f;
+    bool prevWasInline = false;
+    bool isFirst = true;
     for(auto param : section.params)
     {
         if (param->name() == HIDDEN_PARAM_NAME)
         {
             continue;
         }
+        bool isBlock = param->type == PARAM_TYPE_SELECTION || param->type == PARAM_TYPE_TOGGLE;
+        bool doSameLine = false;
+        if (prevWasInline && !isBlock)
+        {
+            float nextX = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x;
+            float rightEdge = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
+            doSameLine = (nextX + lastKnobWidth) <= rightEdge;
+        }
+        if (doSameLine)
+        {
+            ImGui::SameLine();
+        }
+        else if (!isFirst)
+        {
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + kRowSpacing);
+        }
+        isFirst = false;
         if (param->type == PARAM_TYPE_RANGE)
         {
             if (ImGuiKnobs::Knob(param->name().c_str(), &param->value, param->min(), param->max(), 0.0f, param->format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp))
             {
                 valueChanged(ed.lua, ed.midiOut, *param);
             }
+            lastKnobWidth = ImGui::GetItemRectSize().x;
+            prevWasInline = true;
         }
         else if (param->type == PARAM_TYPE_SELECTION)
         {
             renderCombo(*param, ed);
+            prevWasInline = false;
         }
         else if (param->type == PARAM_TYPE_TOGGLE)
         {
@@ -303,14 +327,14 @@ void renderSection(SectionDef &section, I7Ed &ed)
                 param->value = toggleVal ? 1.0f : 0.0f;
                 valueChanged(ed.lua, ed.midiOut, *param);
             }
+            prevWasInline = false;
         }
-        else 
+        else
         {
-            std::cerr << "unknown param type: '" << param->type << "'" << std::endl; 
+            std::cerr << "unknown param type: '" << param->type << "'" << std::endl;
+            prevWasInline = false;
         }
-
     }
-    return;
 }
 
 Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes)
