@@ -1,0 +1,15 @@
+{
+  "name": "ImGui Dev",
+  "build": { "dockerfile": "Dockerfile" },
+  "runArgs": [
+    "--env=DISPLAY=${env:DISPLAY}"
+  ],
+  "mounts": [
+    "source=/home/samba/workspace/INTEGRA-7 Editor Ver.2,target=/workspaces/js-origin,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "twxs.cmake"]
+    }
+  }
+}

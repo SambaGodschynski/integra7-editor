@@ -7,6 +7,7 @@ require "_sysex"
 require "_patchesSection"
 require "_partsSection"
 require "_mfxSection"
+require "_pcmsCommonSection"
 
 Main = {}
 
@@ -14,3 +15,4 @@ CreateSnaSections(Main)
 CreatePatchesSections(Main)
 CreatePartsSections(Main)
 CreateMfxSections(Main)
+CreatePcmsCommonSections(Main)
