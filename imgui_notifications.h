@@ -50,7 +50,8 @@ struct NotificationQueue
             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
 
         float offsetY = 10.f;
-        for (auto& n : queue_) {
+        for (auto& n : queue_) 
+        {
             const float a = alpha(n);
 
             ImGui::SetNextWindowBgAlpha(0.8f * a);
@@ -61,7 +62,8 @@ struct NotificationQueue
             char wndId[32];
             std::snprintf(wndId, sizeof(wndId), "##notif_%d", n.id);
 
-            if (ImGui::Begin(wndId, nullptr, kFlags)) {
+            if (ImGui::Begin(wndId, nullptr, kFlags)) 
+            {
                 ImGui::TextColored(
                     ImVec4(n.color.x, n.color.y, n.color.z, a),
                     "%s", n.message.c_str());
@@ -72,13 +74,18 @@ struct NotificationQueue
     }
 
 private:
-    static float age(const Notification& n) {
+    static float age(const Notification& n) 
+    {
         return std::chrono::duration<float>(
             std::chrono::steady_clock::now() - n.createdAt).count();
     }
-    static float alpha(const Notification& n) {
+    static float alpha(const Notification& n) 
+    {
         const float e = age(n);
-        if (e < n.fadeAt) return 1.0f;
+        if (e < n.fadeAt) 
+        {
+            return 1.0f;
+        }
         return std::max(0.f, 1.f - (e - n.fadeAt) / (n.duration - n.fadeAt));
     }
 

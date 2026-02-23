@@ -21,7 +21,8 @@ inline void renderMidiActivityLeds(
 
     ImDrawList* dl = ImGui::GetForegroundDrawList();
 
-    auto brightness = [](const std::atomic<int64_t>& ns) -> float {
+    auto brightness = [](const std::atomic<int64_t>& ns) -> float 
+    {
         const int64_t t = ns.load(std::memory_order_relaxed);
         if (t == 0) return 0.f;
         using namespace std::chrono;
@@ -37,9 +38,11 @@ inline void renderMidiActivityLeds(
     const ImVec2 rxPos((float)displayW - kMargin - kSpacing, (float)displayH - kMargin);
     const ImVec2 txPos((float)displayW - kMargin,             (float)displayH - kMargin);
 
-    auto drawLed = [&](ImVec2 pos, float b, ImVec4 active, ImVec4 dim) {
+    auto drawLed = [&](ImVec2 pos, float b, ImVec4 active, ImVec4 dim) 
+    {
         // soft glow halo when active
-        if (b > 0.01f) {
+        if (b > 0.01f) 
+        {
             dl->AddCircleFilled(pos, kRadius * 2.5f,
                 IM_COL32((int)(active.x * 255), (int)(active.y * 255),
                          (int)(active.z * 255), (int)(b * 55)));
