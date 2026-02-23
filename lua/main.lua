@@ -16,6 +16,8 @@ require "_pcmsTvfSection"
 require "_pcmsTvfEnvSection"
 require "_pcmsTvaSection"
 require "_pcmsTvaEnvSection"
+require "_pcmsOutputSection"
+require "_pcmsLfoSection"
 
 Main = {}
 
@@ -32,3 +34,5 @@ CreatePcmsTvfSections(Main)
 CreatePcmsTvfEnvSections(Main)
 CreatePcmsTvaSections(Main)
 CreatePcmsTvaEnvSections(Main)
+CreatePcmsOutputSections(Main)
+CreatePcmsLfoSections(Main)
