@@ -621,7 +621,7 @@ int main(int argc, const char** args)
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // V-Sync
+    glfwSwapInterval(0); // no blocking swap — idle throttling done manually below
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -749,6 +749,20 @@ int main(int argc, const char** args)
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
+
+        // Throttle when idle: avoids spinning while keeping the app
+        // immediately responsive on any input event.
+        {
+            const bool imguiActive = ImGui::IsAnyItemActive() || ImGui::IsAnyItemHovered();
+            const int64_t nowNs    = std::chrono::steady_clock::now().time_since_epoch().count();
+            constexpr int64_t kLedFadeNs = 200'000'000LL; // slightly longer than kFade (0.15 s)
+            const bool ledsActive  = (nowNs - ed.midiSendTimeNs.load(std::memory_order_relaxed)) < kLedFadeNs
+                                  || (nowNs - ed.midiRecvTimeNs.load(std::memory_order_relaxed)) < kLedFadeNs;
+            if (!imguiActive && !ledsActive && !ed.isReceiving.load())
+            {
+                glfwWaitEventsTimeout(1.0 / 30.0);
+            }
+        }
     }
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
