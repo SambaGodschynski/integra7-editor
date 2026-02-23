@@ -18,6 +18,8 @@ require "_pcmsTvaSection"
 require "_pcmsTvaEnvSection"
 require "_pcmsOutputSection"
 require "_pcmsLfoSection"
+require "_pcmsCtrlSection"
+require "_pcmsMtrxCtrlSection"
 
 Main = {}
 
@@ -36,3 +38,5 @@ CreatePcmsTvaSections(Main)
 CreatePcmsTvaEnvSections(Main)
 CreatePcmsOutputSections(Main)
 CreatePcmsLfoSections(Main)
+CreatePcmsCtrlSections(Main)
+CreatePcmsMtrxCtrlSections(Main)
