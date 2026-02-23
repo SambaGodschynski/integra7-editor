@@ -152,6 +152,7 @@ void openPort(TMidiIO &port, size_t portNr)
 
 void sendMessage(I7Ed &ed, const Bytes& message)
 {
+    if (message.empty()) return;
     ed.midiOut.sendMessage(&message);
     ed.midiSendTimeNs.store(
         std::chrono::steady_clock::now().time_since_epoch().count(),

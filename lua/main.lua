@@ -14,6 +14,8 @@ require "_pcmsPitchSection"
 require "_pcmsPitchEnvSection"
 require "_pcmsTvfSection"
 require "_pcmsTvfEnvSection"
+require "_pcmsTvaSection"
+require "_pcmsTvaEnvSection"
 
 Main = {}
 
@@ -28,3 +30,5 @@ CreatePcmsPitchSections(Main)
 CreatePcmsPitchEnvSections(Main)
 CreatePcmsTvfSections(Main)
 CreatePcmsTvfEnvSections(Main)
+CreatePcmsTvaSections(Main)
+CreatePcmsTvaEnvSections(Main)
