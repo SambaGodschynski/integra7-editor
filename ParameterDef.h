@@ -10,6 +10,7 @@
 #define PARAM_TYPE_SELECTION "select"
 #define PARAM_TYPE_TOGGLE    "toggle"
 #define PARAM_TYPE_ENVELOPE  "envelope"
+#define PARAM_TYPE_STEP_LFO  "steplfo"
 
 typedef std::vector<unsigned char> Bytes;
 
@@ -38,6 +39,9 @@ struct ParameterDef
     std::vector<std::string> levelIds;
     std::vector<std::string> timeIds;
     bool sustainSegment = false;
+    // PARAM_TYPE_STEP_LFO only
+    std::string stepTypeId;
+    std::vector<std::string> stepIds;
 };
 
 struct ValueChangedMessage

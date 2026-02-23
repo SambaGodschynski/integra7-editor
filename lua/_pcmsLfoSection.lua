@@ -71,17 +71,27 @@ function CreatePcmsLfoSections(main)
 
             -- Step LFO
             local kStep = "Part " .. string.format("%02d", partNr) .. " PCM-S Step LFO Partial " .. partialNr
+            local stepIds = {}
+            for i = 1, 16 do stepIds[i] = p("LFO_STEP"..i) end
+
             local stepsParams = {
+                -- Step Type select (visible — also drives widget visualisation)
                 {type="select", id=p("LFO_STEP_TYPE"), name=get("Step Type"), default=0, options=StepType},
+                -- Widget: reads stepTypeId for shape, owns stepIds for bar values
+                {type="steplfo", id=kStep.."-STEPLFO", name=get("Step LFO"),
+                 stepTypeId=p("LFO_STEP_TYPE"), stepIds=stepIds},
             }
+            -- Hidden step params (MIDI send/receive)
             for i = 1, 16 do
                 stepsParams[#stepsParams + 1] = {
-                    type="range", id=p("LFO_STEP"..i), name=get("Step "..i),
+                    type="range", id=p("LFO_STEP"..i), name=get(HideParam),
                     default=0, min=get(-36), max=get(36), format="%+.0f",
                     toI7Value=i7offset(64), toGuiValue=guiOffset(64),
                 }
             end
-            for _, param in ipairs(stepsParams) do ParameterSetValueWrapper(param) end
+            for _, param in ipairs(stepsParams) do
+                if param.type ~= "steplfo" then ParameterSetValueWrapper(param) end
+            end
             main[kStep] = {
                 name   = "Part " .. partNr .. " PCM-S Step LFO Partial " .. partialNr,
                 params = stepsParams,

@@ -17,6 +17,7 @@
 #include "ParameterDef.h"
 #include "imgui_envelope.h"
 #include "imgui_midi_leds.h"
+#include "imgui_step_lfo.h"
 #include "imgui_notifications.h"
 #include <vector>
 #include <list>
@@ -220,6 +221,14 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
                         param->timeIds.push_back(kv.second.as<std::string>());
                 }
                 param->sustainSegment = optional_key<bool>(luaParam, "sustainSegment", false);
+            } else if (param->type == PARAM_TYPE_STEP_LFO) {
+                param->setValue = optional_key<ParameterDef::FSetValue>(luaParam, "setValue", nullptr);
+                param->stepTypeId = optional_key<std::string>(luaParam, "stepTypeId", "");
+                sol::optional<sol::table> stepIdsTable = luaParam["stepIds"];
+                if (stepIdsTable) {
+                    for (auto& kv : *stepIdsTable)
+                        param->stepIds.push_back(kv.second.as<std::string>());
+                }
             } else {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
             }
@@ -330,7 +339,8 @@ void renderSection(SectionDef &section, I7Ed &ed)
         }
         bool isBlock = param->type == PARAM_TYPE_SELECTION
                     || param->type == PARAM_TYPE_TOGGLE
-                    || param->type == PARAM_TYPE_ENVELOPE;
+                    || param->type == PARAM_TYPE_ENVELOPE
+                    || param->type == PARAM_TYPE_STEP_LFO;
         bool doSameLine = false;
         if (prevWasInline && !isBlock)
         {
@@ -417,6 +427,43 @@ void renderSection(SectionDef &section, I7Ed &ed)
                     for (int i = 0; i < nTimes; ++i) {
                         if (*timPtrs[i] != oldTim[i]) {
                             auto* p = getParameterDef(ed, param->timeIds[i]);
+                            if (p) valueChanged(ed, *p);
+                        }
+                    }
+                }
+            }
+            prevWasInline = false;
+        }
+        else if (param->type == PARAM_TYPE_STEP_LFO)
+        {
+            const int nSteps = (int)param->stepIds.size();
+            std::vector<float*> stepPtrs(nSteps, nullptr);
+            for (int i = 0; i < nSteps; ++i) {
+                auto* p = getParameterDef(ed, param->stepIds[i]);
+                if (p) stepPtrs[i] = &p->value;
+            }
+            bool allValid = true;
+            for (auto* sp : stepPtrs) if (!sp) { allValid = false; break; }
+
+            if (allValid) {
+                auto* firstStep = getParameterDef(ed, param->stepIds[0]);
+                const float valMin = firstStep->min();
+                const float valMax = firstStep->max();
+
+                float stepType = 0.f;
+                auto* typeParam = getParameterDef(ed, param->stepTypeId);
+                if (typeParam) stepType = typeParam->value;
+
+                std::vector<float> oldVals(nSteps);
+                for (int i = 0; i < nSteps; ++i) oldVals[i] = *stepPtrs[i];
+
+                if (ImStepLfo::StepLfoWidget(param->id.c_str(),
+                        stepPtrs.data(), nSteps, stepType,
+                        valMin, valMax, ImVec2(0, 80.f)))
+                {
+                    for (int i = 0; i < nSteps; ++i) {
+                        if (*stepPtrs[i] != oldVals[i]) {
+                            auto* p = getParameterDef(ed, param->stepIds[i]);
                             if (p) valueChanged(ed, *p);
                         }
                     }
