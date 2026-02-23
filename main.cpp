@@ -16,6 +16,7 @@
 #include <string>
 #include "ParameterDef.h"
 #include "imgui_envelope.h"
+#include "imgui_midi_leds.h"
 #include "imgui_notifications.h"
 #include <vector>
 #include <list>
@@ -59,6 +60,8 @@ struct I7Ed
     std::vector<PendingReceive> pendingReceives;
     std::thread receiveThread;
     NotificationQueue notifications;
+    std::atomic<int64_t> midiSendTimeNs{0};
+    std::atomic<int64_t> midiRecvTimeNs{0};
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -147,9 +150,12 @@ void openPort(TMidiIO &port, size_t portNr)
     std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
 }
 
-void sendMessage(RtMidiOut &midiOut, const Bytes& message)
+void sendMessage(I7Ed &ed, const Bytes& message)
 {
-    midiOut.sendMessage(&message);
+    ed.midiOut.sendMessage(&message);
+    ed.midiSendTimeNs.store(
+        std::chrono::steady_clock::now().time_since_epoch().count(),
+        std::memory_order_relaxed);
 }
 // END: MIDI IO
 
@@ -261,9 +267,9 @@ void getDefs(I7Ed &ed, SectionDef::NamedSections &outNamedSections)
 }
 // END: Lua to Def
 
-void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef& paramDef)
+void valueChanged(I7Ed &ed, const ParameterDef& paramDef)
 {
-    try 
+    try
     {
         std::cout << paramDef.id << std::endl;
         int i7Value = (int)paramDef.value;
@@ -272,7 +278,7 @@ void valueChanged(const sol::state &lua, RtMidiOut &midiOut, const ParameterDef&
             i7Value = paramDef.toI7Value(paramDef.value);
         }
         auto sysex = paramDef.setValue(i7Value);
-        sendMessage(midiOut, sysex);
+        sendMessage(ed, sysex);
     } catch(const sol::error error)
     {
         std::cerr << error.what() << std::endl;
@@ -299,7 +305,7 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
                         {
                             param.stringValue = name;
                             param.value = value;
-                            valueChanged(ed.lua, ed.midiOut, param);
+                            valueChanged(ed, param);
                         }
                     });
             }
@@ -344,7 +350,7 @@ void renderSection(SectionDef &section, I7Ed &ed)
         {
             if (ImGuiKnobs::Knob(param->name().c_str(), &param->value, param->min(), param->max(), 0.0f, param->format.c_str(), ImGuiKnobVariant_Tick, 0 , ImGuiKnobFlags_AlwaysClamp))
             {
-                valueChanged(ed.lua, ed.midiOut, *param);
+                valueChanged(ed, *param);
             }
             lastKnobWidth = ImGui::GetItemRectSize().x;
             prevWasInline = true;
@@ -361,7 +367,7 @@ void renderSection(SectionDef &section, I7Ed &ed)
             if (ImGui::Toggle(param->name().c_str(), &toggleVal))
             {
                 param->value = toggleVal ? 1.0f : 0.0f;
-                valueChanged(ed.lua, ed.midiOut, *param);
+                valueChanged(ed, *param);
             }
             prevWasInline = false;
         }
@@ -404,13 +410,13 @@ void renderSection(SectionDef &section, I7Ed &ed)
                     for (int i = 0; i < nLevels; ++i) {
                         if (*lvlPtrs[i] != oldLvl[i]) {
                             auto* p = getParameterDef(ed, param->levelIds[i]);
-                            if (p) valueChanged(ed.lua, ed.midiOut, *p);
+                            if (p) valueChanged(ed, *p);
                         }
                     }
                     for (int i = 0; i < nTimes; ++i) {
                         if (*timPtrs[i] != oldTim[i]) {
                             auto* p = getParameterDef(ed, param->timeIds[i]);
-                            if (p) valueChanged(ed.lua, ed.midiOut, *p);
+                            if (p) valueChanged(ed, *p);
                         }
                     }
                 }
@@ -427,15 +433,18 @@ void renderSection(SectionDef &section, I7Ed &ed)
 
 Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes)
 {
-    sendMessage(ed.midiOut, bytes);
+    sendMessage(ed, bytes);
     Bytes answer;
     int idleMillis = 10;
     int timeOutSeconds = 5;
     int maxTries = (int(1000 / (double)idleMillis) * timeOutSeconds);
     while (maxTries-- > 0) {
         ed.midiIn.getMessage(&answer);
-        if (!answer.empty()) 
+        if (!answer.empty())
         {
+            ed.midiRecvTimeNs.store(
+                std::chrono::steady_clock::now().time_since_epoch().count(),
+                std::memory_order_relaxed);
             return answer;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(idleMillis));
@@ -685,6 +694,7 @@ int main(int argc, const char** args)
             }
             ImGui::End();
         }
+        renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs);
         ImGui::Render();
         glViewport(0, 0, display_w, display_h);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
