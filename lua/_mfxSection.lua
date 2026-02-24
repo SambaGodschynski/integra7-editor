@@ -133,9 +133,6 @@ function CreateMfxSections(main)
         local name = k
         local mfxData = DeepCopy(mfxTemplate)
         mfxData.name = name
-        if partNr==1 then
-            mfxData.isOpen = true
-        end
         main[k] = mfxData
         local subCommon = mfxData.grp[1]
         local subMfx = mfxData.grp[2]

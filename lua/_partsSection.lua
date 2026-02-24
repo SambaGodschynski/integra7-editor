@@ -33,7 +33,6 @@ end
 function CreatePartsSections(main)
     local parts = {
         name = "Parts View",
-        isOpen = true,
         grp = {}
     }
     for i = 1, 16, 1 do

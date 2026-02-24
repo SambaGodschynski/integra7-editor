@@ -350,6 +350,41 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
 }
 
 void renderSection(SectionDef &section, I7Ed &ed); // forward declaration
+Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes); // forward declaration
+
+void triggerReceive(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
+{
+    if (ed.isReceiving.exchange(true)) return;
+    if (ed.receiveThread.joinable()) ed.receiveThread.join();
+    // Collect all requests on main thread (Lua calls must happen here)
+    std::vector<RequestMessage> allRequests;
+    for (auto &getter : getters)
+        if (getter) {
+            auto reqs = getter();
+            allRequests.insert(allRequests.end(), reqs.begin(), reqs.end());
+        }
+    ed.receiveStartTime = std::chrono::steady_clock::now();
+    ed.receiveThread = std::thread([&ed, allRequests = std::move(allRequests)]() {
+        for (const auto& req : allRequests) {
+            Bytes received = sendAndReceive(ed, req.sysex);
+            if (received.empty()) {
+                ed.notifications.push("MIDI receive timed out");
+                break;
+            }
+            std::lock_guard<std::mutex> lock(ed.pendingMutex);
+            ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
+        }
+        ed.isReceiving.store(false);
+    });
+}
+
+static void drawReceiveButton(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
+{
+    float btnW = ImGui::CalcTextSize("recv").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - btnW);
+    if (ImGui::SmallButton("recv"))
+        triggerReceive(ed, std::move(getters));
+}
 
 void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &sections, I7Ed &ed)
 {
@@ -358,6 +393,21 @@ void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &section
         ImGui::End();
         return;
     }
+    // Collect receive getters from all referenced sections
+    std::vector<SectionDef::FGetReceiveSysex> getters;
+    auto collectGetter = [&](const std::string &key) {
+        auto it = sections.find(key);
+        if (it != sections.end() && it->second.getReceiveSysex)
+            getters.push_back(it->second.getReceiveSysex);
+    };
+    if (!section.tabCommonKey.empty()) collectGetter(section.tabCommonKey);
+    for (const auto &tab : section.tabs)
+        for (const auto &key : tab.sectionKeys)
+            collectGetter(key);
+
+    if (!getters.empty())
+        drawReceiveButton(ed, std::move(getters));
+
     // Optional common section rendered above the tab bar
     if (!section.tabCommonKey.empty())
     {
@@ -723,32 +773,6 @@ int main(int argc, const char** args)
             section.second.isOpen = true;
         };
         ImCmd::AddCommand(std::move(cmd));
-        // receive
-        if (!section.second.getReceiveSysex)
-        {
-            continue;
-        }
-        cmd.Name = std::string("receive ") + section.second.name;
-        cmd.InitialCallback = [&ed, &section]() {
-            if (ed.isReceiving.exchange(true)) return; // already in progress
-            if (ed.receiveThread.joinable()) ed.receiveThread.join();
-            // getReceiveSysex calls Lua — must happen on main thread before the thread starts
-            auto requests = section.second.getReceiveSysex();
-            ed.receiveStartTime = std::chrono::steady_clock::now();
-            ed.receiveThread = std::thread([&ed, requests = std::move(requests)]() {
-                for (const auto& req : requests) {
-                    Bytes received = sendAndReceive(ed, req.sysex);
-                    if (received.empty()) {
-                        ed.notifications.push("MIDI receive timed out");
-                        break;
-                    }
-                    std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                    ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
-                }
-                ed.isReceiving.store(false);
-            });
-        };
-        ImCmd::AddCommand(std::move(cmd));
     }
 
     while (!glfwWindowShouldClose(window))
@@ -812,6 +836,8 @@ int main(int argc, const char** args)
             {
                 if (ImGui::Begin(section.name.c_str(), &section.isOpen))
                 {
+                    if (section.getReceiveSysex)
+                        drawReceiveButton(ed, {section.getReceiveSysex});
                     renderSection(section, ed);
                     for(auto &subSection : section.subSections)
                     {

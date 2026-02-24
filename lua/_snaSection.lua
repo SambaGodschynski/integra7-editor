@@ -191,9 +191,6 @@ function CreateSnaSections(main)
             return CreateReceiveMessageForBranch("PRM-_FPART".. partNr .."-_SNTONE")
         end
         snaData.name = name
-        if partNr==1 then
-            snaData.isOpen = true
-        end
         for _, subSection in ipairs(snaData.grp) do
             for _, param in ipairs(subSection.params) do
                 local tmplId = param.id
