@@ -7,6 +7,7 @@ require "_sysex"
 require "_patchesSection"
 require "_partsSection"
 require "_mfxSection"
+require "_mfxPcmSSection"
 require "_pcmsCommonSection"
 require "_pcmsWaveSection"
 require "_pcmsPmtSection"
@@ -27,6 +28,7 @@ CreateSnaSections(Main)
 CreatePatchesSections(Main)
 CreatePartsSections(Main)
 CreateMfxSections(Main)
+CreateMfxPcmSSections(Main)
 CreatePcmsCommonSections(Main)
 CreatePcmsWaveSections(Main)
 CreatePcmsPmtSections(Main)
