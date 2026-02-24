@@ -21,6 +21,7 @@ require "_pcmsOutputSection"
 require "_pcmsLfoSection"
 require "_pcmsCtrlSection"
 require "_pcmsMtrxCtrlSection"
+require "_pcmsTabsSection"
 
 Main = {}
 
@@ -42,3 +43,4 @@ CreatePcmsOutputSections(Main)
 CreatePcmsLfoSections(Main)
 CreatePcmsCtrlSections(Main)
 CreatePcmsMtrxCtrlSections(Main)
+CreatePcmsTabSections(Main)

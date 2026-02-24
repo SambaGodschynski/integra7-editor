@@ -67,4 +67,13 @@ struct SectionDef
     ParameterDef::Params params;
     FGetReceiveSysex getReceiveSysex;
     bool isOpen = false;
+    // Tab-group section (tabs over per-partial sections)
+    struct TabEntry
+    {
+        std::string              label;
+        std::vector<std::string> sectionKeys;
+    };
+    std::string            tabCommonKey;    // optional section rendered above the tab bar
+    std::vector<TabEntry>  tabs;            // non-empty → render as tab bar
+    bool                   hideFromPalette = false; // true for sections embedded in a tab view
 };

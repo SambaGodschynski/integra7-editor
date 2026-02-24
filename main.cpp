@@ -262,6 +262,26 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
     {
         outSectionDef.isOpen = lua_table["isOpen"];
     }
+    if(lua_table["tabs"] != sol::nil)
+    {
+        if(lua_table["tabCommonKey"] != sol::nil)
+        {
+            outSectionDef.tabCommonKey = lua_table["tabCommonKey"].get<std::string>();
+        }
+        sol::table luaTabs = lua_table["tabs"];
+        for(const auto& tabPair : luaTabs)
+        {
+            sol::table luaTab = tabPair.second.as<sol::table>();
+            SectionDef::TabEntry entry;
+            entry.label = luaTab["label"].get<std::string>();
+            sol::table keys = luaTab["keys"];
+            for(const auto& kp : keys)
+            {
+                entry.sectionKeys.push_back(kp.second.as<std::string>());
+            }
+            outSectionDef.tabs.push_back(entry);
+        }
+    }
 }
 
 void getDefs(I7Ed &ed, SectionDef::NamedSections &outNamedSections)
@@ -323,6 +343,52 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
         }
         ImGui::EndCombo();
     }
+}
+
+void renderSection(SectionDef &section, I7Ed &ed); // forward declaration
+
+void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &sections, I7Ed &ed)
+{
+    if (!ImGui::Begin(section.name.c_str(), &section.isOpen))
+    {
+        ImGui::End();
+        return;
+    }
+    // Optional common section rendered above the tab bar
+    if (!section.tabCommonKey.empty())
+    {
+        auto it = sections.find(section.tabCommonKey);
+        if (it != sections.end())
+        {
+            renderSection(it->second, ed);
+            ImGui::Separator();
+        }
+    }
+    if (ImGui::BeginTabBar("##tabs"))
+    {
+        for (int ti = 0; ti < (int)section.tabs.size(); ++ti)
+        {
+            const auto &tab = section.tabs[ti];
+            if (ImGui::BeginTabItem(tab.label.c_str()))
+            {
+                ImGui::PushID(ti);
+                for (const auto &key : tab.sectionKeys)
+                {
+                    auto it = sections.find(key);
+                    if (it != sections.end())
+                    {
+                        renderSection(it->second, ed);
+                        for (auto &sub : it->second.subSections)
+                            renderSection(sub, ed);
+                    }
+                }
+                ImGui::PopID();
+                ImGui::EndTabItem();
+            }
+        }
+        ImGui::EndTabBar();
+    }
+    ImGui::End();
 }
 
 void renderSection(SectionDef &section, I7Ed &ed)
@@ -640,10 +706,28 @@ int main(int argc, const char** args)
 
     SectionDef::NamedSections sections;
     getDefs(ed, sections);
+
+    // Mark every section that is embedded inside a tab wrapper so it can be
+    // hidden from the command palette (the tab view is the intended entry point).
+    for (auto &pair : sections)
+    {
+        const auto &sec = pair.second;
+        if (sec.tabs.empty()) continue;
+        auto markHidden = [&](const std::string &key) {
+            auto it = sections.find(key);
+            if (it != sections.end()) it->second.hideFromPalette = true;
+        };
+        if (!sec.tabCommonKey.empty()) markHidden(sec.tabCommonKey);
+        for (const auto &tab : sec.tabs)
+            for (const auto &key : tab.sectionKeys)
+                markHidden(key);
+    }
+
     bool show_command_palette = false;
 
     for(auto &section : sections)
     {
+        if (section.second.hideFromPalette) continue;
         // open section
         ImCmd::Command cmd;
         cmd.Name = std::string("open ") + section.second.name;
@@ -732,15 +816,22 @@ int main(int argc, const char** args)
             {
                 continue;
             }
-            if (ImGui::Begin(section.name.c_str(), &section.isOpen))
+            if (!section.tabs.empty())
             {
-                renderSection(section, ed);
-                for(auto &subSection : section.subSections)
-                {
-                    renderSection(subSection, ed);
-                }
+                renderTabbedSection(section, sections, ed);
             }
-            ImGui::End();
+            else
+            {
+                if (ImGui::Begin(section.name.c_str(), &section.isOpen))
+                {
+                    renderSection(section, ed);
+                    for(auto &subSection : section.subSections)
+                    {
+                        renderSection(subSection, ed);
+                    }
+                }
+                ImGui::End();
+            }
         }
         renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs);
         ImGui::Render();
