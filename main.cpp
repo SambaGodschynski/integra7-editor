@@ -262,6 +262,10 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
     {
         outSectionDef.isOpen = lua_table["isOpen"];
     }
+    if(lua_table["hideFromPalette"] != sol::nil)
+    {
+        outSectionDef.hideFromPalette = lua_table["hideFromPalette"];
+    }
     if(lua_table["tabs"] != sol::nil)
     {
         if(lua_table["tabCommonKey"] != sol::nil)
@@ -706,22 +710,6 @@ int main(int argc, const char** args)
 
     SectionDef::NamedSections sections;
     getDefs(ed, sections);
-
-    // Mark every section that is embedded inside a tab wrapper so it can be
-    // hidden from the command palette (the tab view is the intended entry point).
-    for (auto &pair : sections)
-    {
-        const auto &sec = pair.second;
-        if (sec.tabs.empty()) continue;
-        auto markHidden = [&](const std::string &key) {
-            auto it = sections.find(key);
-            if (it != sections.end()) it->second.hideFromPalette = true;
-        };
-        if (!sec.tabCommonKey.empty()) markHidden(sec.tabCommonKey);
-        for (const auto &tab : sec.tabs)
-            for (const auto &key : tab.sectionKeys)
-                markHidden(key);
-    }
 
     bool show_command_palette = false;
 
