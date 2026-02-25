@@ -5,10 +5,10 @@
 #include <cmath>
 #include <algorithm>
 
-namespace ImStepLfo 
+namespace ImStepLfo
 {
 
-struct DragState 
+struct DragState
 {
     int   stepIdx  = -1;
     float startVal = 0.f;
@@ -28,11 +28,14 @@ inline bool StepLfoWidget(
     float       valMin,
     float       valMax,
     ImVec2      size = ImVec2(0.f, 80.f))
-    {
+{
     bool changed = false;
     ImGui::PushID(strId);
 
-    if (size.x <= 0.f) size.x = ImGui::GetContentRegionAvail().x;
+    if (size.x <= 0.f)
+    {
+        size.x = ImGui::GetContentRegionAvail().x;
+    }
 
     ImVec2 origin = ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("canvas", size);
@@ -45,12 +48,12 @@ inline bool StepLfoWidget(
     const float barW    = size.x / (float)nSteps;
     const float zeroY   = origin.y + (1.f - (-valMin) / range) * size.y;
 
-    // ── Background ──────────────────────────────────────────────────────────
+    // Background
     dl->AddRectFilled(origin, rectMax, IM_COL32(25, 25, 25, 255));
     dl->AddRect      (origin, rectMax, IM_COL32(80, 80, 80, 255));
 
-    // Faint grid lines at ±half, ±max
-    auto gridLine = [&](float val) 
+    // Faint grid lines at +/-half, +/-max
+    auto gridLine = [&](float val)
     {
         float y = origin.y + (1.f - (val - valMin) / range) * size.y;
         dl->AddLine(ImVec2(origin.x, y), ImVec2(rectMax.x, y),
@@ -63,7 +66,7 @@ inline bool StepLfoWidget(
     dl->AddLine(ImVec2(origin.x, zeroY), ImVec2(rectMax.x, zeroY),
                 IM_COL32(70, 70, 70, 255));
 
-    // ── Drag state ───────────────────────────────────────────────────────────
+    // Drag state
     static std::map<ImGuiID, DragState> sDragStates;
     DragState& drag = sDragStates[wid];
 
@@ -74,14 +77,14 @@ inline bool StepLfoWidget(
 
     // Which bar is under the mouse?
     int barUnderMouse = -1;
-    if (mouseInWidget) 
+    if (mouseInWidget)
     {
         int b = (int)((mousePos.x - origin.x) / barW);
         barUnderMouse = std::clamp(b, 0, nSteps - 1);
     }
 
     // On first active frame: latch the bar
-    if (ImGui::IsItemActivated()) 
+    if (ImGui::IsItemActivated())
     {
         drag.stepIdx  = barUnderMouse;
         drag.startVal = (drag.stepIdx >= 0) ? *steps[drag.stepIdx] : 0.f;
@@ -89,21 +92,21 @@ inline bool StepLfoWidget(
     }
 
     // While dragging: update value
-    if (isActive && drag.stepIdx >= 0) 
+    if (isActive && drag.stepIdx >= 0)
     {
         float dy = mousePos.y - drag.startY;
         float newVal = std::round(std::clamp(
             drag.startVal - (dy / size.y) * range,
             valMin, valMax));
-        if (newVal != *steps[drag.stepIdx]) 
+        if (newVal != *steps[drag.stepIdx])
         {
             *steps[drag.stepIdx] = newVal;
             changed = true;
         }
     }
 
-    // ── Draw bars ────────────────────────────────────────────────────────────
-    for (int i = 0; i < nSteps; ++i) 
+    // Draw bars
+    for (int i = 0; i < nSteps; ++i)
     {
         const float val   = *steps[i];
         const float barX  = origin.x + i * barW;
@@ -113,14 +116,16 @@ inline bool StepLfoWidget(
 
         // Fill colour: positive = blue, negative = orange; brighter when active
         ImU32 fillCol;
-        if (isDragging) 
+        if (isDragging)
         {
             fillCol = IM_COL32(255, 200, 0, 200);
-        } else if (isHovered) 
+        }
+        else if (isHovered)
         {
             fillCol = (val >= 0.f) ? IM_COL32(80, 160, 255, 200)
                                    : IM_COL32(255, 140, 60, 200);
-        } else 
+        }
+        else
         {
             fillCol = (val >= 0.f) ? IM_COL32(50, 120, 220, 180)
                                    : IM_COL32(220, 100, 40, 180);
@@ -130,18 +135,21 @@ inline bool StepLfoWidget(
         float barRight = barX + barW - 1.f;
         float top      = std::min(valY, zeroY);
         float bot      = std::max(valY, zeroY);
-        if (bot - top < 1.f) bot = top + 1.f;  // always at least 1px visible
+        if (bot - top < 1.f)
+        {
+            bot = top + 1.f;  // always at least 1px visible
+        }
         dl->AddRectFilled(ImVec2(barLeft, top), ImVec2(barRight, bot), fillCol);
     }
 
-    // ── Waveform overlay polyline ─────────────────────────────────────────────
+    // Waveform overlay polyline
     {
         std::vector<ImVec2> poly;
-        if ((int)stepType == 0) 
+        if ((int)stepType == 0)
         {
             // TYPE1: staircase (square/hold)
             poly.reserve(nSteps * 2);
-            for (int i = 0; i < nSteps; ++i) 
+            for (int i = 0; i < nSteps; ++i)
             {
                 float y  = origin.y + (1.f - (*steps[i] - valMin) / range) * size.y;
                 float x0 = origin.x + i * barW;
@@ -149,11 +157,12 @@ inline bool StepLfoWidget(
                 poly.push_back(ImVec2(x0, y));
                 poly.push_back(ImVec2(x1, y));
             }
-        } else 
+        }
+        else
         {
             // TYPE2: linear ramp between bar centres
             poly.reserve(nSteps);
-            for (int i = 0; i < nSteps; ++i) 
+            for (int i = 0; i < nSteps; ++i)
             {
                 float y = origin.y + (1.f - (*steps[i] - valMin) / range) * size.y;
                 float x = origin.x + (i + 0.5f) * barW;
@@ -164,11 +173,11 @@ inline bool StepLfoWidget(
                         IM_COL32(0, 200, 255, 220), 0, 1.5f);
     }
 
-    // ── Node circles (centre of each bar at value height) ────────────────────
+    // Node circles (centre of each bar at value height)
     {
         const float nodeRadius    = 4.f;
         const float nodeHitRadius = nodeRadius * 2.5f;
-        for (int i = 0; i < nSteps; ++i) 
+        for (int i = 0; i < nSteps; ++i)
         {
             const float cx = origin.x + (i + 0.5f) * barW;
             const float cy = origin.y + (1.f - (*steps[i] - valMin) / range) * size.y;
@@ -189,7 +198,7 @@ inline bool StepLfoWidget(
         }
     }
 
-    // ── Cursor feedback ──────────────────────────────────────────────────────
+    // Cursor feedback
     if (mouseInWidget && !isActive)
     {
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
@@ -201,8 +210,8 @@ inline bool StepLfoWidget(
         dl->AddRect(origin, rectMax, IM_COL32(140, 140, 140, 255));
     }
 
-    // ── Drag label ───────────────────────────────────────────────────────────
-    if (isActive && drag.stepIdx >= 0) 
+    // Drag label
+    if (isActive && drag.stepIdx >= 0)
     {
         char label[32];
         snprintf(label, sizeof(label), "S%d: %+.0f",

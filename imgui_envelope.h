@@ -5,12 +5,12 @@
 #include <cmath>
 #include <algorithm>
 
-namespace ImEnvelope 
+namespace ImEnvelope
 {
-struct DragState 
+struct DragState
 {
     int    nodeIdx   = -1;
-    ImVec2 startMouse = 
+    ImVec2 startMouse =
     {0.f, 0.f};
     float  startLevel = 0.f;
     float  startTime  = 0.f;
@@ -38,7 +38,7 @@ inline bool EnvelopeWidget(
     bool changed = false;
     ImGui::PushID(strId);
 
-    if (size.x <= 0.f) 
+    if (size.x <= 0.f)
     {
         size.x = ImGui::GetContentRegionAvail().x;
     }
@@ -59,7 +59,7 @@ inline bool EnvelopeWidget(
     const float scale = (effectiveTotalTime > 0.f)
                             ? size.x / effectiveTotalTime : 0.f;
 
-    // ── Background ──────────────────────────────────────────────────────────
+    // Background
     dl->AddRectFilled(origin, rectMax, IM_COL32(25, 25, 25, 255));
     dl->AddRect      (origin, rectMax, IM_COL32(80, 80, 80, 255));
 
@@ -68,16 +68,18 @@ inline bool EnvelopeWidget(
     dl->AddLine(ImVec2(origin.x, zeroY), ImVec2(rectMax.x, zeroY),
                 IM_COL32(60, 60, 60, 255));
 
-    // ── Active node screen positions ─────────────────────────────────────────
+    // Active node screen positions
     // When sustainSegment is true, the last node (L4) is shifted right by
     // one timeMax slot relative to the second-to-last node (L3).
     std::vector<ImVec2> nodePos(nLevels);
     {
         float accum = 0.f;
-        for (int i = 0; i < nLevels; ++i) 
+        for (int i = 0; i < nLevels; ++i)
         {
             if (sustainSegment && i == nLevels - 1)
+            {
                 accum += timeMax;   // skip over the sustain slot
+            }
             float yNorm = 1.f - (*levels[i] - levelMin) / levelRange;
             nodePos[i] = ImVec2(origin.x + accum * scale,
                                 origin.y + yNorm * size.y);
@@ -88,21 +90,24 @@ inline bool EnvelopeWidget(
         }
     }
 
-    // ── Sustain node (display-only) ──────────────────────────────────────────
+    // Sustain node (display-only)
     // Sits between nodePos[nLevels-2] and nodePos[nLevels-1],
     // always at the same height as nodePos[nLevels-2].
     ImVec2 sustainPos = {};
-    if (sustainSegment) 
+    if (sustainSegment)
     {
         sustainPos = ImVec2(nodePos[nLevels - 2].x + timeMax * scale,
                             nodePos[nLevels - 2].y);
     }
 
-    // ── Polyline ─────────────────────────────────────────────────────────────
+    // Polyline
     {
         std::vector<ImVec2> poly;
         poly.reserve(nLevels + 1);
-        for (int i = 0; i < nLevels - 1; ++i) poly.push_back(nodePos[i]);
+        for (int i = 0; i < nLevels - 1; ++i)
+        {
+            poly.push_back(nodePos[i]);
+        }
         if (sustainSegment)
         {
             poly.push_back(sustainPos);
@@ -112,7 +117,7 @@ inline bool EnvelopeWidget(
                         IM_COL32(0, 180, 255, 200), 0, 2.f);
     }
 
-    // ── Drag state (keyed by widget ID) ─────────────────────────────────────
+    // Drag state (keyed by widget ID)
     static std::map<ImGuiID, DragState> sDragStates;
     DragState& drag = sDragStates[wid];
 
@@ -121,16 +126,16 @@ inline bool EnvelopeWidget(
     const float  nodeHitRadius = nodeRadius * 2.5f;
 
     // On first active frame: find nearest active node (sustain node excluded)
-    if (ImGui::IsItemActivated()) 
+    if (ImGui::IsItemActivated())
     {
         float minDist2 = nodeHitRadius * nodeHitRadius;
         drag.nodeIdx   = -1;
-        for (int i = 0; i < nLevels; ++i) 
+        for (int i = 0; i < nLevels; ++i)
         {
             float dx = mousePos.x - nodePos[i].x;
             float dy = mousePos.y - nodePos[i].y;
             float d2 = dx * dx + dy * dy;
-            if (d2 < minDist2) 
+            if (d2 < minDist2)
             {
                 minDist2        = d2;
                 drag.nodeIdx    = i;
@@ -147,23 +152,23 @@ inline bool EnvelopeWidget(
     }
 
     // While active: update the dragged node
-    if (isActive && drag.nodeIdx >= 0) 
+    if (isActive && drag.nodeIdx >= 0)
     {
         const ImVec2 delta(mousePos.x - drag.startMouse.x,
                            mousePos.y - drag.startMouse.y);
 
-        // Vertical → level
+        // Vertical -> level
         float newLevel = std::round(std::clamp(
             drag.startLevel - (delta.y / size.y) * levelRange,
             levelMin, levelMax));
-        if (newLevel != *levels[drag.nodeIdx]) 
+        if (newLevel != *levels[drag.nodeIdx])
         {
             *levels[drag.nodeIdx] = newLevel;
             changed = true;
         }
 
-        // Horizontal → preceding time (not for node 0)
-        if (drag.nodeIdx > 0) 
+        // Horizontal -> preceding time (not for node 0)
+        if (drag.nodeIdx > 0)
         {
             int timeIdx = drag.nodeIdx - 1;
             // Last node's horizontal drag controls times[nTimes-1] (= T4)
@@ -174,7 +179,7 @@ inline bool EnvelopeWidget(
             float newTime = std::round(std::clamp(
                 drag.startTime + (delta.x / size.x) * effectiveTotalTime,
                 0.f, timeMax));
-            if (newTime != *times[timeIdx]) 
+            if (newTime != *times[timeIdx])
             {
                 *times[timeIdx] = newTime;
                 changed = true;
@@ -182,23 +187,23 @@ inline bool EnvelopeWidget(
         }
     }
 
-    // ── Hover / cursor feedback ──────────────────────────────────────────────
+    // Hover / cursor feedback
     const bool mouseInWidget =
         mousePos.x >= origin.x && mousePos.x <= rectMax.x &&
         mousePos.y >= origin.y && mousePos.y <= rectMax.y;
 
     bool anyNodeHovered = false;
-    for (int i = 0; i < nLevels; ++i) 
+    for (int i = 0; i < nLevels; ++i)
     {
         float dx = mousePos.x - nodePos[i].x;
         float dy = mousePos.y - nodePos[i].y;
-        if ((dx * dx + dy * dy) < nodeHitRadius * nodeHitRadius) 
+        if ((dx * dx + dy * dy) < nodeHitRadius * nodeHitRadius)
         {
             anyNodeHovered = true;
             break;
         }
     }
-    if (mouseInWidget && !isActive) 
+    if (mouseInWidget && !isActive)
     {
         ImGui::SetMouseCursor(anyNodeHovered ? ImGuiMouseCursor_ResizeAll
                                              : ImGuiMouseCursor_Hand);
@@ -209,18 +214,18 @@ inline bool EnvelopeWidget(
     {
         dl->AddRect(origin, rectMax, IM_COL32(140, 140, 140, 255));
     }
-    // ── Draw sustain node first (below active nodes) ─────────────────────────
-    if (sustainSegment) 
+    // Draw sustain node first (below active nodes)
+    if (sustainSegment)
     {
         dl->AddCircle(sustainPos, nodeRadius, IM_COL32(120, 120, 120, 180));
     }
 
-    // ── Draw active nodes (on top of sustain) ────────────────────────────────
-    for (int i = 0; i < nLevels; ++i) 
+    // Draw active nodes (on top of sustain)
+    for (int i = 0; i < nLevels; ++i)
     {
         const bool nodeActive  = isActive && drag.nodeIdx == i;
         bool       nodeHovered = false;
-        if (!isActive && mouseInWidget) 
+        if (!isActive && mouseInWidget)
         {
             float dx = mousePos.x - nodePos[i].x;
             float dy = mousePos.y - nodePos[i].y;
@@ -238,18 +243,19 @@ inline bool EnvelopeWidget(
         dl->AddCircle      (nodePos[i], r, ring);
     }
 
-    // ── Drag label (bottom-left, small) ─────────────────────────────────────
-    if (isActive && drag.nodeIdx >= 0) 
+    // Drag label (bottom-left, small)
+    if (isActive && drag.nodeIdx >= 0)
     {
         const int idx = drag.nodeIdx;
         char label[64];
-        if (idx > 0) 
+        if (idx > 0)
         {
             const int tIdx = (sustainSegment && idx == nLevels - 1)
                                  ? nTimes - 1 : idx - 1;
             snprintf(label, sizeof(label), "L%d: %.0f  T%d: %.0f",
                      idx, *levels[idx], tIdx + 1, *times[tIdx]);
-        } else 
+        }
+        else
         {
             snprintf(label, sizeof(label), "L0: %.0f", *levels[0]);
         }

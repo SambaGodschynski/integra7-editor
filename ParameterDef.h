@@ -32,8 +32,14 @@ struct ParameterDef
     SelectionOptions options;
     std::string stringValue;
     float value = 0.0f;
-    FFloatGetter min = [](){ return 0; };
-    FFloatGetter max = [](){ return 127; };
+    FFloatGetter min = []()
+    {
+        return 0;
+    };
+    FFloatGetter max = []()
+    {
+        return 127;
+    };
     FSetValue setValue;
     // PARAM_TYPE_ENVELOPE only
     std::vector<std::string> levelIds;

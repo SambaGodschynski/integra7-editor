@@ -24,7 +24,10 @@ inline void renderMidiActivityLeds(
     auto brightness = [](const std::atomic<int64_t>& ns) -> float 
     {
         const int64_t t = ns.load(std::memory_order_relaxed);
-        if (t == 0) return 0.f;
+        if (t == 0)
+        {
+            return 0.f;
+        }
         using namespace std::chrono;
         const auto tp  = Clock::time_point(nanoseconds(t));
         const float age = duration<float>(Clock::now() - tp).count();

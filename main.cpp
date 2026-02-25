@@ -1,5 +1,5 @@
 /*
-    TODO: Man in the middle mode,  midi through, handles i7 sysex 
+    TODO: Man in the middle mode,  midi through, handles i7 sysex
 */
 
 #include "imgui.h"
@@ -31,7 +31,7 @@
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
 
-struct Args 
+struct Args
 {
     bool listOutputs = false;
     bool listInputs = false;
@@ -116,7 +116,7 @@ Args parseArguments(int argc, const char **argv)
         {
             result.printHelp = true;
         }
-        else 
+        else
         {
             std::cout << "unkown argument: " << arg << std::endl;
             exit(-1);
@@ -146,14 +146,17 @@ void openPort(TMidiIO &port, size_t portNr)
     {
         std::cerr << "invalid port number: " << portNr << std::endl;
         exit(1);
-    } 
+    }
     port.openPort(portNr);
     std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
 }
 
 void sendMessage(I7Ed &ed, const Bytes& message)
 {
-    if (message.empty()) return;
+    if (message.empty())
+    {
+        return;
+    }
     ed.midiOut.sendMessage(&message);
     ed.midiSendTimeNs.store(
         std::chrono::steady_clock::now().time_since_epoch().count(),
@@ -163,18 +166,22 @@ void sendMessage(I7Ed &ed, const Bytes& message)
 
 // BEGIN: LUA to DEF. TODO Refactor into separate file
 template<typename T>
-T require_key(sol::table tbl, const std::string& key) {
+T require_key(sol::table tbl, const std::string& key)
+{
     sol::optional<T> val = tbl[key];
-    if (!val) {
+    if (!val)
+    {
         throw std::runtime_error("Lua table is missing required key: " + key);
     }
     return val.value();
 }
 
 template<typename T>
-T optional_key(sol::table tbl, const std::string& key, const T& defaultValue) {
+T optional_key(sol::table tbl, const std::string& key, const T& defaultValue)
+{
     sol::optional<T> val = tbl[key];
-    if (!val.has_value()) {
+    if (!val.has_value())
+    {
        return defaultValue;
     }
     return val.value();
@@ -194,7 +201,7 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
 {
     outSectionDef.name = require_key<std::string>(lua_table, "name");
     outSectionDef.getReceiveSysex = optional_key<SectionDef::FGetReceiveSysex>(lua_table, "getReceiveValueSysex", nullptr);
-    if (lua_table["params"] != sol::nil) 
+    if (lua_table["params"] != sol::nil)
     {
         sol::table params = lua_table["params"];
         for(auto &luaParamPair : params)
@@ -208,28 +215,42 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
             param->name = paramName.as<ParameterDef::FStringGetter>();
             param->id = paramId.as<std::string>();
             param->type = require_key<std::string>(luaParam, "type");
-            if (param->type == PARAM_TYPE_ENVELOPE) {
+            if (param->type == PARAM_TYPE_ENVELOPE)
+            {
                 param->setValue = optional_key<ParameterDef::FSetValue>(luaParam, "setValue", nullptr);
                 sol::optional<sol::table> levelIdsTable = luaParam["levelIds"];
-                if (levelIdsTable) {
+                if (levelIdsTable)
+                {
                     for (auto& kv : *levelIdsTable)
+                    {
                         param->levelIds.push_back(kv.second.as<std::string>());
+                    }
                 }
                 sol::optional<sol::table> timeIdsTable = luaParam["timeIds"];
-                if (timeIdsTable) {
+                if (timeIdsTable)
+                {
                     for (auto& kv : *timeIdsTable)
+                    {
                         param->timeIds.push_back(kv.second.as<std::string>());
+                    }
                 }
                 param->sustainSegment = optional_key<bool>(luaParam, "sustainSegment", false);
-            } else if (param->type == PARAM_TYPE_STEP_LFO) {
+            }
+            else if (param->type == PARAM_TYPE_STEP_LFO)
+            {
                 param->setValue = optional_key<ParameterDef::FSetValue>(luaParam, "setValue", nullptr);
                 param->stepTypeId = optional_key<std::string>(luaParam, "stepTypeId", "");
                 sol::optional<sol::table> stepIdsTable = luaParam["stepIds"];
-                if (stepIdsTable) {
+                if (stepIdsTable)
+                {
                     for (auto& kv : *stepIdsTable)
+                    {
                         param->stepIds.push_back(kv.second.as<std::string>());
+                    }
                 }
-            } else {
+            }
+            else
+            {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
             }
             param->min = optional_key(luaParam, "min", param->min);
@@ -354,20 +375,32 @@ Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes); // forward declaration
 
 void triggerReceive(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
 {
-    if (ed.isReceiving.exchange(true)) return;
-    if (ed.receiveThread.joinable()) ed.receiveThread.join();
+    if (ed.isReceiving.exchange(true))
+    {
+        return;
+    }
+    if (ed.receiveThread.joinable())
+    {
+        ed.receiveThread.join();
+    }
     // Collect all requests on main thread (Lua calls must happen here)
     std::vector<RequestMessage> allRequests;
     for (auto &getter : getters)
-        if (getter) {
+    {
+        if (getter)
+        {
             auto reqs = getter();
             allRequests.insert(allRequests.end(), reqs.begin(), reqs.end());
         }
+    }
     ed.receiveStartTime = std::chrono::steady_clock::now();
-    ed.receiveThread = std::thread([&ed, allRequests = std::move(allRequests)]() {
-        for (const auto& req : allRequests) {
+    ed.receiveThread = std::thread([&ed, allRequests = std::move(allRequests)]()
+    {
+        for (const auto& req : allRequests)
+        {
             Bytes received = sendAndReceive(ed, req.sysex);
-            if (received.empty()) {
+            if (received.empty())
+            {
                 ed.notifications.push("MIDI receive timed out");
                 break;
             }
@@ -383,30 +416,49 @@ static void drawReceiveButton(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex
     float btnW = ImGui::CalcTextSize("recv").x + ImGui::GetStyle().FramePadding.x * 2.0f;
     ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - btnW);
     if (ImGui::SmallButton("recv"))
+    {
         triggerReceive(ed, std::move(getters));
+    }
 }
 
-void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &sections, I7Ed &ed)
+void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &sections, I7Ed &ed, ImVec2 &canvasMax)
 {
     if (!ImGui::Begin(section.name.c_str(), &section.isOpen))
     {
         ImGui::End();
         return;
     }
+    {
+        ImVec2 wp = ImGui::GetWindowPos(), ws = ImGui::GetWindowSize();
+        canvasMax.x = std::max(canvasMax.x, wp.x + ws.x);
+        canvasMax.y = std::max(canvasMax.y, wp.y + ws.y);
+    }
     // Collect receive getters from all referenced sections
     std::vector<SectionDef::FGetReceiveSysex> getters;
-    auto collectGetter = [&](const std::string &key) {
+    auto collectGetter = [&](const std::string &key)
+    {
         auto it = sections.find(key);
         if (it != sections.end() && it->second.getReceiveSysex)
+        {
             getters.push_back(it->second.getReceiveSysex);
+        }
     };
-    if (!section.tabCommonKey.empty()) collectGetter(section.tabCommonKey);
+    if (!section.tabCommonKey.empty())
+    {
+        collectGetter(section.tabCommonKey);
+    }
     for (const auto &tab : section.tabs)
+    {
         for (const auto &key : tab.sectionKeys)
+        {
             collectGetter(key);
+        }
+    }
 
     if (!getters.empty())
+    {
         drawReceiveButton(ed, std::move(getters));
+    }
 
     // Optional common section rendered above the tab bar
     if (!section.tabCommonKey.empty())
@@ -433,7 +485,9 @@ void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &section
                     {
                         renderSection(it->second, ed);
                         for (auto &sub : it->second.subSections)
+                        {
                             renderSection(sub, ed);
+                        }
                     }
                 }
                 ImGui::PopID();
@@ -508,19 +562,42 @@ void renderSection(SectionDef &section, I7Ed &ed)
             const int nTimes  = (int)param->timeIds.size();
             std::vector<float*> lvlPtrs(nLevels, nullptr);
             std::vector<float*> timPtrs(nTimes,  nullptr);
-            for (int i = 0; i < nLevels; ++i) {
+            for (int i = 0; i < nLevels; ++i)
+            {
                 auto* p = getParameterDef(ed, param->levelIds[i]);
-                if (p) lvlPtrs[i] = &p->value;
+                if (p)
+                {
+                    lvlPtrs[i] = &p->value;
+                }
             }
-            for (int i = 0; i < nTimes; ++i) {
+            for (int i = 0; i < nTimes; ++i)
+            {
                 auto* p = getParameterDef(ed, param->timeIds[i]);
-                if (p) timPtrs[i] = &p->value;
+                if (p)
+                {
+                    timPtrs[i] = &p->value;
+                }
             }
             bool allValid = true;
-            for (auto* lp : lvlPtrs) if (!lp) { allValid = false; break; }
-            for (auto* tp : timPtrs) if (!tp) { allValid = false; break; }
+            for (auto* lp : lvlPtrs)
+            {
+                if (!lp)
+                {
+                    allValid = false;
+                    break;
+                }
+            }
+            for (auto* tp : timPtrs)
+            {
+                if (!tp)
+                {
+                    allValid = false;
+                    break;
+                }
+            }
 
-            if (allValid) {
+            if (allValid)
+            {
                 auto* firstLevel = getParameterDef(ed, param->levelIds[0]);
                 auto* firstTime  = getParameterDef(ed, param->timeIds[0]);
                 const float levelMin = firstLevel->min();
@@ -529,8 +606,14 @@ void renderSection(SectionDef &section, I7Ed &ed)
 
                 // snapshot values to detect changes
                 std::vector<float> oldLvl(nLevels), oldTim(nTimes);
-                for (int i = 0; i < nLevels; ++i) oldLvl[i] = *lvlPtrs[i];
-                for (int i = 0; i < nTimes;  ++i) oldTim[i] = *timPtrs[i];
+                for (int i = 0; i < nLevels; ++i)
+                {
+                    oldLvl[i] = *lvlPtrs[i];
+                }
+                for (int i = 0; i < nTimes; ++i)
+                {
+                    oldTim[i] = *timPtrs[i];
+                }
 
                 if (ImEnvelope::EnvelopeWidget(param->id.c_str(),
                         lvlPtrs.data(), nLevels,
@@ -538,16 +621,26 @@ void renderSection(SectionDef &section, I7Ed &ed)
                         levelMin, levelMax, timeMax,
                         ImVec2(0, 120.f), param->sustainSegment))
                 {
-                    for (int i = 0; i < nLevels; ++i) {
-                        if (*lvlPtrs[i] != oldLvl[i]) {
+                    for (int i = 0; i < nLevels; ++i)
+                    {
+                        if (*lvlPtrs[i] != oldLvl[i])
+                        {
                             auto* p = getParameterDef(ed, param->levelIds[i]);
-                            if (p) valueChanged(ed, *p);
+                            if (p)
+                            {
+                                valueChanged(ed, *p);
+                            }
                         }
                     }
-                    for (int i = 0; i < nTimes; ++i) {
-                        if (*timPtrs[i] != oldTim[i]) {
+                    for (int i = 0; i < nTimes; ++i)
+                    {
+                        if (*timPtrs[i] != oldTim[i])
+                        {
                             auto* p = getParameterDef(ed, param->timeIds[i]);
-                            if (p) valueChanged(ed, *p);
+                            if (p)
+                            {
+                                valueChanged(ed, *p);
+                            }
                         }
                     }
                 }
@@ -558,33 +651,56 @@ void renderSection(SectionDef &section, I7Ed &ed)
         {
             const int nSteps = (int)param->stepIds.size();
             std::vector<float*> stepPtrs(nSteps, nullptr);
-            for (int i = 0; i < nSteps; ++i) {
+            for (int i = 0; i < nSteps; ++i)
+            {
                 auto* p = getParameterDef(ed, param->stepIds[i]);
-                if (p) stepPtrs[i] = &p->value;
+                if (p)
+                {
+                    stepPtrs[i] = &p->value;
+                }
             }
             bool allValid = true;
-            for (auto* sp : stepPtrs) if (!sp) { allValid = false; break; }
+            for (auto* sp : stepPtrs)
+            {
+                if (!sp)
+                {
+                    allValid = false;
+                    break;
+                }
+            }
 
-            if (allValid) {
+            if (allValid)
+            {
                 auto* firstStep = getParameterDef(ed, param->stepIds[0]);
                 const float valMin = firstStep->min();
                 const float valMax = firstStep->max();
 
                 float stepType = 0.f;
                 auto* typeParam = getParameterDef(ed, param->stepTypeId);
-                if (typeParam) stepType = typeParam->value;
+                if (typeParam)
+                {
+                    stepType = typeParam->value;
+                }
 
                 std::vector<float> oldVals(nSteps);
-                for (int i = 0; i < nSteps; ++i) oldVals[i] = *stepPtrs[i];
+                for (int i = 0; i < nSteps; ++i)
+                {
+                    oldVals[i] = *stepPtrs[i];
+                }
 
                 if (ImStepLfo::StepLfoWidget(param->id.c_str(),
                         stepPtrs.data(), nSteps, stepType,
                         valMin, valMax, ImVec2(0, 80.f)))
                 {
-                    for (int i = 0; i < nSteps; ++i) {
-                        if (*stepPtrs[i] != oldVals[i]) {
+                    for (int i = 0; i < nSteps; ++i)
+                    {
+                        if (*stepPtrs[i] != oldVals[i])
+                        {
                             auto* p = getParameterDef(ed, param->stepIds[i]);
-                            if (p) valueChanged(ed, *p);
+                            if (p)
+                            {
+                                valueChanged(ed, *p);
+                            }
                         }
                     }
                 }
@@ -606,7 +722,8 @@ Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes)
     int idleMillis = 10;
     int timeOutSeconds = 5;
     int maxTries = (int(1000 / (double)idleMillis) * timeOutSeconds);
-    while (maxTries-- > 0) {
+    while (maxTries-- > 0)
+    {
         ed.midiIn.getMessage(&answer);
         if (!answer.empty())
         {
@@ -679,7 +796,7 @@ int main(int argc, const char** args)
     ed.args = parseArguments(argc, args);
     if (ed.args.printHelp)
     {
-        std::cout << "Allowed options:\n" 
+        std::cout << "Allowed options:\n"
                   << "\t--inputs\n"
                   << "\t--outputs\n"
                   << "\t--lua-main\n"
@@ -712,16 +829,16 @@ int main(int argc, const char** args)
     {
         openPort(ed.midiOut, (size_t)ed.args.outPortNr);
     }
-    
-    const char *luaFile = ed.args.mainLuaFilePath.empty() 
-        ?  "./lua/main.lua" 
+
+    const char *luaFile = ed.args.mainLuaFilePath.empty()
+        ?  "./lua/main.lua"
         : ed.args.mainLuaFilePath.c_str();
-    
-    ed.lua.new_usertype<RequestMessage>("RequestMessage", 
+
+    ed.lua.new_usertype<RequestMessage>("RequestMessage",
         "sysex", &RequestMessage::sysex,
         "onMessageReceived", &RequestMessage::onMessageReceived
     );
-    ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage", 
+    ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
         "id", &ValueChangedMessage::id,
         "i7Value", &ValueChangedMessage::i7Value
     );
@@ -741,14 +858,14 @@ int main(int argc, const char** args)
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0); // no blocking swap — idle throttling done manually below
+    glfwSwapInterval(0); // no blocking swap - idle throttling done manually below
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImCmd::CreateContext();
     ImSearch::CreateContext();
 
-    ImGuiIO& io = ImGui::GetIO(); 
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui::StyleColorsDark();
 
@@ -765,23 +882,74 @@ int main(int argc, const char** args)
 
     for(auto &section : sections)
     {
-        if (section.second.hideFromPalette) continue;
+        if (section.second.hideFromPalette)
+        {
+            continue;
+        }
         // open section
         ImCmd::Command cmd;
         cmd.Name = std::string("open ") + section.second.name;
-        cmd.InitialCallback = [&section]() {
+        cmd.InitialCallback = [&section]()
+        {
             section.second.isOpen = true;
         };
         ImCmd::AddCommand(std::move(cmd));
     }
 
+    // Scrollable canvas state
+    ImVec2 scrollOfs  = {0.0f, 0.0f};  // canvas scroll (pixels)
+    ImVec2 canvasMax  = {0.0f, 0.0f};  // running bounding box of open windows
+    struct DragState { bool active = false; float mouseAnchor = 0, scrollAnchor = 0; };
+    DragState vDrag, hDrag;
+    constexpr float kSbW = 13.0f;       // scrollbar thickness
+
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
 
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+
+        // Mouse / scrollbar setup
+        // These are computed from last-frame canvasMax (1-frame lag is fine).
+        const float fw = (float)display_w, fh = (float)display_h;
+        const bool needV = canvasMax.y > fh;
+        const bool needH = canvasMax.x > fw;
+        const float maxScrollX = std::max(0.0f, canvasMax.x - fw);
+        const float maxScrollY = std::max(0.0f, canvasMax.y - fh);
+        const float vTrackLen  = fh - (needH ? kSbW : 0.0f);
+        const float hTrackLen  = fw - (needV ? kSbW : 0.0f);
+        const float vThumbLen  = needV ? vTrackLen * std::min(1.0f, fh / canvasMax.y) : 0.0f;
+        const float hThumbLen  = needH ? hTrackLen * std::min(1.0f, fw / canvasMax.x) : 0.0f;
+        const float vThumbTop  = (needV && maxScrollY > 0.0f)
+                                 ? (vTrackLen - vThumbLen) * scrollOfs.y / maxScrollY : 0.0f;
+        const float hThumbLeft = (needH && maxScrollX > 0.0f)
+                                 ? (hTrackLen - hThumbLen) * scrollOfs.x / maxScrollX : 0.0f;
+
         ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        ImGui_ImplGlfw_NewFrame();   // sets io.MousePos from GLFW state
+
+        ImVec2 rawMouse = ImGui::GetIO().MousePos;
+        const bool rawValid = rawMouse.x > -FLT_MAX;
+
+        const bool overVSb = needV && rawValid && rawMouse.x >= fw - kSbW;
+        const bool overHSb = needH && rawValid && rawMouse.y >= fh - kSbW;
+        {
+            auto &io = ImGui::GetIO();
+            if ((overVSb || overHSb || vDrag.active || hDrag.active) && rawValid)
+            {
+                io.MousePos = {-FLT_MAX, -FLT_MAX};  // block ImGui from scrollbar area
+            }
+            else if (rawValid)
+            {
+                io.MousePos.x += scrollOfs.x;
+                io.MousePos.y += scrollOfs.y;
+            }
+        }
+
         ImGui::NewFrame();
+        canvasMax = {fw, fh};   // reset; grows during section rendering below
 
         // Apply MIDI receive results on the main thread (Lua calls safe here)
         {
@@ -790,19 +958,22 @@ int main(int argc, const char** args)
                 std::lock_guard<std::mutex> lock(ed.pendingMutex);
                 toProcess.swap(ed.pendingReceives);
             }
-            for (auto& item : toProcess) {
+            for (auto& item : toProcess)
+            {
                 auto msgs = item.handler(item.data);
-                for (const auto& msg : msgs) {
-                    if (!msg.id.empty()) valueChanged(ed, msg);
+                for (const auto& msg : msgs)
+                {
+                    if (!msg.id.empty())
+                    {
+                        valueChanged(ed, msg);
+                    }
                 }
             }
         }
 
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-
         // YouTube-style red progress bar at the top while receiving
-        if (ed.isReceiving.load()) {
+        if (ed.isReceiving.load())
+        {
             auto elapsed = std::chrono::duration<float>(
                 std::chrono::steady_clock::now() - ed.receiveStartTime).count();
             const float progress = std::min(1.f - std::exp(-elapsed * 0.7f), 0.9f);
@@ -814,10 +985,12 @@ int main(int argc, const char** args)
 
         ed.notifications.render(display_w, display_h);
 
-        if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P)) {
+        if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P))
+        {
             show_command_palette = !show_command_palette;
         }
-        if (show_command_palette) {
+        if (show_command_palette)
+        {
             ImCmd::CommandPaletteWindow("CommandPalette", &show_command_palette);
         }
 
@@ -830,14 +1003,21 @@ int main(int argc, const char** args)
             }
             if (!section.tabs.empty())
             {
-                renderTabbedSection(section, sections, ed);
+                renderTabbedSection(section, sections, ed, canvasMax);
             }
             else
             {
                 if (ImGui::Begin(section.name.c_str(), &section.isOpen))
                 {
+                    {
+                        ImVec2 wp = ImGui::GetWindowPos(), ws = ImGui::GetWindowSize();
+                        canvasMax.x = std::max(canvasMax.x, wp.x + ws.x);
+                        canvasMax.y = std::max(canvasMax.y, wp.y + ws.y);
+                    }
                     if (section.getReceiveSysex)
+                    {
                         drawReceiveButton(ed, {section.getReceiveSysex});
+                    }
                     renderSection(section, ed);
                     for(auto &subSection : section.subSections)
                     {
@@ -847,8 +1027,104 @@ int main(int argc, const char** args)
                 ImGui::End();
             }
         }
+
+        // Mouse-wheel scroll (only when not hovering any ImGui window)
+        if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
+        {
+            const auto &io2 = ImGui::GetIO();
+            scrollOfs.x -= io2.MouseWheelH * 30.0f;
+            scrollOfs.y -= io2.MouseWheel  * 30.0f;
+        }
+
+        const bool lmb = ImGui::GetIO().MouseDown[0];
+
+        if (needV)
+        {
+            if (vDrag.active)
+            {
+                if (!lmb)
+                {
+                    vDrag.active = false;
+                }
+                else
+                {
+                    float scrollPerPx = maxScrollY / std::max(1.0f, vTrackLen - vThumbLen);
+                    scrollOfs.y = std::clamp(vDrag.scrollAnchor + (rawMouse.y - vDrag.mouseAnchor) * scrollPerPx,
+                                             0.0f, maxScrollY);
+                }
+            }
+            else if (lmb && rawValid && overVSb
+                     && rawMouse.y >= vThumbTop && rawMouse.y < vThumbTop + vThumbLen)
+            {
+                vDrag = {true, rawMouse.y, scrollOfs.y};
+            }
+        }
+        else
+        {
+            vDrag.active = false;
+            scrollOfs.y = 0.0f;
+        }
+
+        if (needH)
+        {
+            if (hDrag.active)
+            {
+                if (!lmb)
+                {
+                    hDrag.active = false;
+                }
+                else
+                {
+                    float scrollPerPx = maxScrollX / std::max(1.0f, hTrackLen - hThumbLen);
+                    scrollOfs.x = std::clamp(hDrag.scrollAnchor + (rawMouse.x - hDrag.mouseAnchor) * scrollPerPx,
+                                             0.0f, maxScrollX);
+                }
+            }
+            else if (lmb && rawValid && overHSb
+                     && rawMouse.x >= hThumbLeft && rawMouse.x < hThumbLeft + hThumbLen)
+            {
+                hDrag = {true, rawMouse.x, scrollOfs.x};
+            }
+        }
+        else
+        {
+            hDrag.active = false;
+            scrollOfs.x = 0.0f;
+        }
+
+        scrollOfs.x = std::clamp(scrollOfs.x, 0.0f, maxScrollX);
+        scrollOfs.y = std::clamp(scrollOfs.y, 0.0f, maxScrollY);
+
+        // Draw scrollbars (recompute thumb positions from final scrollOfs)
+        if(false)
+        {
+            const float vtl2 = (needV && maxScrollY > 0.0f)
+                                ? (vTrackLen - vThumbLen) * scrollOfs.y / maxScrollY : 0.0f;
+            const float htl2 = (needH && maxScrollX > 0.0f)
+                                ? (hTrackLen - hThumbLen) * scrollOfs.x / maxScrollX : 0.0f;
+            constexpr ImU32 kTrack = IM_COL32( 30, 30, 30, 220);
+            constexpr ImU32 kThumb = IM_COL32(120,120,120, 220);
+            constexpr ImU32 kDrag  = IM_COL32(200,200,200, 255);
+            auto *dl = ImGui::GetForegroundDrawList();
+            if (needV)
+            {
+                dl->AddRectFilled({fw - kSbW, 0},    {fw, fh - (needH ? kSbW : 0)}, kTrack);
+                dl->AddRectFilled({fw - kSbW, vtl2}, {fw, vtl2 + vThumbLen}, vDrag.active ? kDrag : kThumb);
+            }
+            if (needH)
+            {
+                dl->AddRectFilled({0, fh - kSbW},    {fw - (needV ? kSbW : 0), fh}, kTrack);
+                dl->AddRectFilled({htl2, fh - kSbW}, {htl2 + hThumbLen, fh},        hDrag.active ? kDrag : kThumb);
+            }
+            if (needV && needH)
+            {
+                dl->AddRectFilled({fw - kSbW, fh - kSbW}, {fw, fh}, kTrack);
+            }
+        }
+
         renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs);
         ImGui::Render();
+        ImGui::GetDrawData()->DisplayPos = {scrollOfs.x, scrollOfs.y};
         glViewport(0, 0, display_w, display_h);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -872,7 +1148,10 @@ int main(int argc, const char** args)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 
-    if (ed.receiveThread.joinable()) ed.receiveThread.join();
+    if (ed.receiveThread.joinable())
+    {
+        ed.receiveThread.join();
+    }
 
     ImCmd::DestroyContext();
     ImSearch::DestroyContext();

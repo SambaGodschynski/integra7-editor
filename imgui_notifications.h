@@ -39,7 +39,8 @@ struct NotificationQueue
 
         // Remove fully expired entries
         queue_.erase(
-            std::remove_if(queue_.begin(), queue_.end(), [](const Notification& n) {
+            std::remove_if(queue_.begin(), queue_.end(), [](const Notification& n)
+            {
                 return age(n) >= n.duration;
             }),
             queue_.end());
