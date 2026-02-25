@@ -26,6 +26,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <set>
 #include <unordered_map>
 #include <memory>
 
@@ -894,6 +895,58 @@ int main(int argc, const char** args)
             section.second.isOpen = true;
         };
         ImCmd::AddCommand(std::move(cmd));
+    }
+
+    // Parameter search: "? ParamName (Section)" commands
+    // Typing "?" in the command palette filters to these and opens the containing view.
+    {
+        // Build reverse map: hidden section key → pointer to the tabbed parent that owns it.
+        // std::map references are stable so raw pointers are safe here.
+        std::unordered_map<std::string, SectionDef*> hiddenToParent;
+        for (auto& [tKey, tSec] : sections)
+        {
+            if (tSec.tabs.empty()) continue;
+            if (!tSec.tabCommonKey.empty())
+                hiddenToParent[tSec.tabCommonKey] = &sections.at(tKey);
+            for (const auto& tab : tSec.tabs)
+                for (const auto& sKey : tab.sectionKeys)
+                    hiddenToParent[sKey] = &sections.at(tKey);
+        }
+
+        // Register one ImCmd command per visible parameter.
+        // Name format: "? ParamName (opener->name)" — opener carries the part number
+        // for tab-embedded sections.  A set prevents any remaining duplicates.
+        std::set<std::string> seen;
+
+        auto addParamCmds = [&](const SectionDef& sec, SectionDef* opener)
+        {
+            for (auto* param : sec.params)
+            {
+                if (!param) continue;
+                const std::string pname = param->name();
+                if (pname == HIDDEN_PARAM_NAME) continue;
+                std::string cmdName = "? " + pname + " (" + opener->name + ")";
+                if (!seen.insert(cmdName).second) continue;  // skip duplicate
+                ImCmd::Command cmd;
+                cmd.Name = std::move(cmdName);
+                cmd.InitialCallback = [opener]() { opener->isOpen = true; };
+                ImCmd::AddCommand(std::move(cmd));
+            }
+        };
+
+        for (auto& [key, section] : sections)
+        {
+            SectionDef* opener = &section;
+            if (section.hideFromPalette)
+            {
+                auto it = hiddenToParent.find(key);
+                if (it != hiddenToParent.end())
+                    opener = it->second;
+            }
+            addParamCmds(section, opener);
+            for (auto& sub : section.subSections)
+                addParamCmds(sub, opener);
+        }
     }
 
     // Scrollable canvas state
