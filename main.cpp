@@ -32,6 +32,11 @@
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
 
+namespace
+{
+    const float HighlightSeconds = 15.0f;
+}
+
 struct Args
 {
     bool listOutputs = false;
@@ -64,6 +69,9 @@ struct I7Ed
     NotificationQueue notifications;
     std::atomic<int64_t> midiSendTimeNs{0};
     std::atomic<int64_t> midiRecvTimeNs{0};
+    // param search highlight
+    std::string highlightParamId;
+    float       highlightTimer = 0.f;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -713,6 +721,20 @@ void renderSection(SectionDef &section, I7Ed &ed)
             std::cerr << "unknown param type: '" << param->type << "'" << std::endl;
             prevWasInline = false;
         }
+
+        // Yellow highlight for the parameter found via "?" search
+        if (!ed.highlightParamId.empty()
+            && param->id == ed.highlightParamId
+            && ed.highlightTimer > 0.f)
+        {
+            const float alpha = std::min(1.f, ed.highlightTimer);
+            constexpr float pad = 4.f;
+            const ImVec2 r0 = ImGui::GetItemRectMin();
+            const ImVec2 r1 = ImGui::GetItemRectMax();
+            ImGui::GetWindowDrawList()->AddRect(
+                {r0.x - pad, r0.y - pad}, {r1.x + pad, r1.y + pad},
+                IM_COL32(255, 220, 0, (int)(alpha * 220)), 4.f, 0, 2.f);
+        }
     }
 }
 
@@ -902,15 +924,24 @@ int main(int argc, const char** args)
     {
         // Build reverse map: hidden section key → pointer to the tabbed parent that owns it.
         // std::map references are stable so raw pointers are safe here.
-        std::unordered_map<std::string, SectionDef*> hiddenToParent;
-        for (auto& [tKey, tSec] : sections)
+        std::unordered_map<std::string, SectionDef *> hiddenToParent;
+        for(auto &[tKey, tSec] : sections)
         {
-            if (tSec.tabs.empty()) continue;
+            if (tSec.tabs.empty())
+            {
+                continue;
+            }
             if (!tSec.tabCommonKey.empty())
+            {
                 hiddenToParent[tSec.tabCommonKey] = &sections.at(tKey);
-            for (const auto& tab : tSec.tabs)
-                for (const auto& sKey : tab.sectionKeys)
+            }
+            for(const auto &tab : tSec.tabs)
+            {
+                for(const auto &sKey : tab.sectionKeys)
+                {
                     hiddenToParent[sKey] = &sections.at(tKey);
+                }
+            }
         }
 
         // Register one ImCmd command per visible parameter.
@@ -918,34 +949,53 @@ int main(int argc, const char** args)
         // for tab-embedded sections.  A set prevents any remaining duplicates.
         std::set<std::string> seen;
 
-        auto addParamCmds = [&](const SectionDef& sec, SectionDef* opener)
+        auto addParamCmds = [&](const SectionDef &sec, SectionDef *opener)
         {
-            for (auto* param : sec.params)
+            for(auto *param : sec.params)
             {
-                if (!param) continue;
+                if (!param)
+                {
+                    continue;
+                }
                 const std::string pname = param->name();
-                if (pname == HIDDEN_PARAM_NAME) continue;
+                if (pname == HIDDEN_PARAM_NAME)
+                {
+                    continue;
+                }
                 std::string cmdName = "? " + pname + " (" + opener->name + ")";
-                if (!seen.insert(cmdName).second) continue;  // skip duplicate
+                if (!seen.insert(cmdName).second)
+                {
+                    continue;
+                }
                 ImCmd::Command cmd;
                 cmd.Name = std::move(cmdName);
-                cmd.InitialCallback = [opener]() { opener->isOpen = true; };
+                const std::string paramId = param->id;
+                cmd.InitialCallback = [opener, paramId, &ed]()
+                {
+                    opener->isOpen = true;
+                    ed.highlightParamId = paramId;
+                    ed.highlightTimer   = HighlightSeconds;
+                };
                 ImCmd::AddCommand(std::move(cmd));
             }
         };
 
-        for (auto& [key, section] : sections)
+        for(auto &[key, section] : sections)
         {
-            SectionDef* opener = &section;
+            SectionDef *opener = &section;
             if (section.hideFromPalette)
             {
                 auto it = hiddenToParent.find(key);
                 if (it != hiddenToParent.end())
+                {
                     opener = it->second;
+                }
             }
             addParamCmds(section, opener);
-            for (auto& sub : section.subSections)
+            for(auto &sub : section.subSections)
+            {
                 addParamCmds(sub, opener);
+            }
         }
     }
 
@@ -1002,6 +1052,10 @@ int main(int argc, const char** args)
         }
 
         ImGui::NewFrame();
+        if (ed.highlightTimer > 0.f)
+        {
+            ed.highlightTimer -= ImGui::GetIO().DeltaTime;
+        }
         canvasMax = {fw, fh};   // reset; grows during section rendering below
 
         // Apply MIDI receive results on the main thread (Lua calls safe here)
