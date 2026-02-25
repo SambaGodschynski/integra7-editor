@@ -33,7 +33,7 @@ struct NotificationQueue
 
     // Draws all active notifications stacked in the bottom-right corner.
     // Call between ImGui::NewFrame() and ImGui::Render().
-    void render(int displayW, int displayH)
+    void render(int displayW, int displayH, ImVec2 scrollOfs = {0.f, 0.f})
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -57,7 +57,7 @@ struct NotificationQueue
 
             ImGui::SetNextWindowBgAlpha(0.8f * a);
             ImGui::SetNextWindowPos(
-                ImVec2((float)displayW - 10.f, offsetY),
+                ImVec2((float)displayW - 10.f + scrollOfs.x, offsetY + scrollOfs.y),
                 ImGuiCond_Always, ImVec2(1.f, 0.f));
 
             char wndId[32];

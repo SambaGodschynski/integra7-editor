@@ -11,7 +11,8 @@
 inline void renderMidiActivityLeds(
     int displayW, int displayH,
     const std::atomic<int64_t>& sendTimeNs,
-    const std::atomic<int64_t>& recvTimeNs)
+    const std::atomic<int64_t>& recvTimeNs,
+    ImVec2 scrollOfs = {0.f, 0.f})
 {
     using Clock = std::chrono::steady_clock;
     constexpr float kFade    = 0.15f;  // fade-out duration in seconds
@@ -38,8 +39,8 @@ inline void renderMidiActivityLeds(
     const float recvB = brightness(recvTimeNs);
 
     // RX (red) left of TX (green)
-    const ImVec2 rxPos((float)displayW - kMargin - kSpacing, (float)displayH - kMargin);
-    const ImVec2 txPos((float)displayW - kMargin,             (float)displayH - kMargin);
+    const ImVec2 rxPos((float)displayW - kMargin - kSpacing + scrollOfs.x, (float)displayH - kMargin + scrollOfs.y);
+    const ImVec2 txPos((float)displayW - kMargin             + scrollOfs.x, (float)displayH - kMargin + scrollOfs.y);
 
     auto drawLed = [&](ImVec2 pos, float b, ImVec4 active, ImVec4 dim) 
     {
@@ -71,7 +72,7 @@ inline void renderMidiActivityLeds(
     // small labels above the LEDs
     ImFont* font      = ImGui::GetFont();
     const float fsz   = ImGui::GetFontSize() * 0.7f;
-    const float labelY = rxPos.y - kRadius - fsz - 2.f;
+    const float labelY = rxPos.y - kRadius - fsz - 2.f;  // rxPos already includes scrollOfs.y
     const ImU32 labelColor = IM_COL32(130, 130, 130, 200);
 
     dl->AddText(font, fsz, ImVec2(rxPos.x - fsz * 0.75f, labelY), labelColor, "RX");

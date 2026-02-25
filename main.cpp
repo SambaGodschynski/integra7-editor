@@ -978,12 +978,12 @@ int main(int argc, const char** args)
                 std::chrono::steady_clock::now() - ed.receiveStartTime).count();
             const float progress = std::min(1.f - std::exp(-elapsed * 0.7f), 0.9f);
             ImGui::GetBackgroundDrawList()->AddRectFilled(
-                ImVec2(0.f, 0.f),
-                ImVec2(progress * (float)display_w, 3.f),
+                ImVec2(scrollOfs.x, scrollOfs.y),
+                ImVec2(progress * (float)display_w + scrollOfs.x, 3.f + scrollOfs.y),
                 IM_COL32(220, 30, 30, 255));
         }
 
-        ed.notifications.render(display_w, display_h);
+        ed.notifications.render(display_w, display_h, {scrollOfs.x, scrollOfs.y});
 
         if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P))
         {
@@ -1062,7 +1062,6 @@ int main(int argc, const char** args)
         else
         {
             vDrag.active = false;
-            scrollOfs.y = 0.0f;
         }
 
         if (needH)
@@ -1089,14 +1088,12 @@ int main(int argc, const char** args)
         else
         {
             hDrag.active = false;
-            scrollOfs.x = 0.0f;
         }
 
         scrollOfs.x = std::clamp(scrollOfs.x, 0.0f, maxScrollX);
         scrollOfs.y = std::clamp(scrollOfs.y, 0.0f, maxScrollY);
 
         // Draw scrollbars (recompute thumb positions from final scrollOfs)
-        if(false)
         {
             const float vtl2 = (needV && maxScrollY > 0.0f)
                                 ? (vTrackLen - vThumbLen) * scrollOfs.y / maxScrollY : 0.0f;
@@ -1108,21 +1105,27 @@ int main(int argc, const char** args)
             auto *dl = ImGui::GetForegroundDrawList();
             if (needV)
             {
-                dl->AddRectFilled({fw - kSbW, 0},    {fw, fh - (needH ? kSbW : 0)}, kTrack);
-                dl->AddRectFilled({fw - kSbW, vtl2}, {fw, vtl2 + vThumbLen}, vDrag.active ? kDrag : kThumb);
+                dl->AddRectFilled({fw - kSbW + scrollOfs.x,        scrollOfs.y},
+                                  {fw        + scrollOfs.x, fh - (needH ? kSbW : 0.f) + scrollOfs.y}, kTrack);
+                dl->AddRectFilled({fw - kSbW + scrollOfs.x, vtl2        + scrollOfs.y},
+                                  {fw        + scrollOfs.x, vtl2 + vThumbLen + scrollOfs.y}, vDrag.active ? kDrag : kThumb);
             }
             if (needH)
             {
-                dl->AddRectFilled({0, fh - kSbW},    {fw - (needV ? kSbW : 0), fh}, kTrack);
-                dl->AddRectFilled({htl2, fh - kSbW}, {htl2 + hThumbLen, fh},        hDrag.active ? kDrag : kThumb);
+                dl->AddRectFilled({       scrollOfs.x, fh - kSbW + scrollOfs.y},
+                                  {fw - (needV ? kSbW : 0.f) + scrollOfs.x, fh + scrollOfs.y}, kTrack);
+                dl->AddRectFilled({htl2        + scrollOfs.x, fh - kSbW + scrollOfs.y},
+                                  {htl2 + hThumbLen + scrollOfs.x, fh   + scrollOfs.y}, hDrag.active ? kDrag : kThumb);
             }
             if (needV && needH)
             {
-                dl->AddRectFilled({fw - kSbW, fh - kSbW}, {fw, fh}, kTrack);
+                dl->AddRectFilled({fw - kSbW + scrollOfs.x, fh - kSbW + scrollOfs.y},
+                                  {fw        + scrollOfs.x, fh        + scrollOfs.y}, kTrack);
             }
         }
 
-        renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs);
+        renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs,
+                               {scrollOfs.x, scrollOfs.y});
         ImGui::Render();
         ImGui::GetDrawData()->DisplayPos = {scrollOfs.x, scrollOfs.y};
         glViewport(0, 0, display_w, display_h);
