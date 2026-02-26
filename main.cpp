@@ -1058,6 +1058,10 @@ int main(int argc, const char** args)
         {
             ed.highlightTimer -= ImGui::GetIO().DeltaTime;
         }
+        // Inflate work area so windows can auto-size beyond the visible screen region.
+        // GetMainViewport()->Size (used by command palette) is unchanged; only WorkSize
+        // (used for window auto-resize clamping) is expanded.
+        ImGui::GetMainViewport()->WorkSize = {10000.f, 10000.f};
         canvasMax = {fw, fh};   // reset; grows during section rendering below
 
         // Apply MIDI receive results on the main thread (Lua calls safe here)
@@ -1147,56 +1151,45 @@ int main(int argc, const char** args)
 
         const bool lmb = ImGui::GetIO().MouseDown[0];
 
-        if (needV)
+        // Active drags end only when the mouse button is released, regardless of
+        // whether needV/needH is currently true (canvasMax can oscillate by 1px).
+        // New drags only start when needV/needH is confirmed.
+        if (vDrag.active)
         {
-            if (vDrag.active)
+            if (!lmb)
             {
-                if (!lmb)
-                {
-                    vDrag.active = false;
-                }
-                else
-                {
-                    float scrollPerPx = maxScrollY / std::max(1.0f, vTrackLen - vThumbLen);
-                    scrollOfs.y = std::clamp(vDrag.scrollAnchor + (rawMouse.y - vDrag.mouseAnchor) * scrollPerPx,
-                                             0.0f, maxScrollY);
-                }
+                vDrag.active = false;
             }
-            else if (lmb && rawValid && overVSb
-                     && rawMouse.y >= vThumbTop && rawMouse.y < vThumbTop + vThumbLen)
+            else
             {
-                vDrag = {true, rawMouse.y, scrollOfs.y};
+                float scrollPerPx = maxScrollY / std::max(1.0f, vTrackLen - vThumbLen);
+                scrollOfs.y = std::clamp(vDrag.scrollAnchor + (rawMouse.y - vDrag.mouseAnchor) * scrollPerPx,
+                                         0.0f, maxScrollY);
             }
         }
-        else
+        else if (needV && lmb && rawValid && overVSb
+                 && rawMouse.y >= vThumbTop && rawMouse.y < vThumbTop + vThumbLen)
         {
-            vDrag.active = false;
+            vDrag = {true, rawMouse.y, scrollOfs.y};
         }
 
-        if (needH)
+        if (hDrag.active)
         {
-            if (hDrag.active)
+            if (!lmb)
             {
-                if (!lmb)
-                {
-                    hDrag.active = false;
-                }
-                else
-                {
-                    float scrollPerPx = maxScrollX / std::max(1.0f, hTrackLen - hThumbLen);
-                    scrollOfs.x = std::clamp(hDrag.scrollAnchor + (rawMouse.x - hDrag.mouseAnchor) * scrollPerPx,
-                                             0.0f, maxScrollX);
-                }
+                hDrag.active = false;
             }
-            else if (lmb && rawValid && overHSb
-                     && rawMouse.x >= hThumbLeft && rawMouse.x < hThumbLeft + hThumbLen)
+            else
             {
-                hDrag = {true, rawMouse.x, scrollOfs.x};
+                float scrollPerPx = maxScrollX / std::max(1.0f, hTrackLen - hThumbLen);
+                scrollOfs.x = std::clamp(hDrag.scrollAnchor + (rawMouse.x - hDrag.mouseAnchor) * scrollPerPx,
+                                         0.0f, maxScrollX);
             }
         }
-        else
+        else if (needH && lmb && rawValid && overHSb
+                 && rawMouse.x >= hThumbLeft && rawMouse.x < hThumbLeft + hThumbLen)
         {
-            hDrag.active = false;
+            hDrag = {true, rawMouse.x, scrollOfs.x};
         }
 
         scrollOfs.x = std::clamp(scrollOfs.x, 0.0f, maxScrollX);
