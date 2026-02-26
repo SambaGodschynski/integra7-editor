@@ -1007,14 +1007,17 @@ int main(int argc, const char** args)
 
         // Apply MIDI receive results on the main thread (Lua calls safe here)
         {
-            std::lock_guard<std::mutex> lock(ed.pendingMutex);
-            for (auto& item : ed.pendingReceives)
+            for (auto it = ed.pendingReceives.begin(); it != ed.pendingReceives.end();)
             {
-                if (item.data.empty())
                 {
-                    continue;
+                    std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                    if (it->data.empty())
+                    {
+                        ++it;
+                        continue;
+                    }
                 }
-                auto msgs = item.handler(item.data);
+                auto msgs = it->handler(it->data);
                 for (const auto& msg : msgs)
                 {
                     if (!msg.id.empty())
@@ -1022,7 +1025,7 @@ int main(int argc, const char** args)
                         valueChanged(ed, msg);
                     }
                 }
-                item.data.clear(); // TODO: remove item
+                it = ed.pendingReceives.erase(it);
             }
         }
 
