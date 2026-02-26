@@ -63,7 +63,7 @@ struct I7Ed
     // async receive
     std::atomic<bool> isReceiving{false};
     std::chrono::steady_clock::time_point receiveStartTime;
-    std::vector<PendingReceive> pendingReceives;
+    std::list<PendingReceive> pendingReceives;
     std::mutex pendingMutex;
     NotificationQueue notifications;
     std::atomic<int64_t> midiSendTimeNs{0};
@@ -299,9 +299,6 @@ void sendMessage(I7Ed &ed, const Bytes& message)
         return;
     }
     ed.midi.sendMessage(message);
-    ed.midiSendTimeNs.store(
-        std::chrono::steady_clock::now().time_since_epoch().count(),
-        std::memory_order_relaxed);
 }
 
 void valueChanged(I7Ed &ed, const ParameterDef& paramDef)
@@ -378,16 +375,23 @@ void triggerReceive(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &g
             {
                 break;
             }
-            ed.midi.sendAndReceive(req.sysex, [&ed, &req, &break_](Bytes received)
+            ed.pendingReceives.push_back({
+                .handler = req.onMessageReceived
+            });
+            ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(), [&ed, &req, &break_](Bytes received, void* userData)
             {
                 if (received.empty())
                 {
                     break_ = true;
                     return;
                 }
-                ed.midiRecvTimeNs.store(std::chrono::steady_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
                 std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
+                if (userData == nullptr)
+                {
+                    return;
+                }
+                PendingReceive *pData = (PendingReceive*)userData;
+                pData->data.swap(received);
             });
         }
     }
@@ -782,6 +786,16 @@ int main(int argc, const char** args)
          ed.midi.openOutput((size_t)ed.args.inPortNr);
     }
 
+    ed.midi.start();
+    ed.midi.onReceive = [&ed]()
+    {
+        ed.midiRecvTimeNs.store(std::chrono::steady_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
+    };
+    ed.midi.onSend = [&ed]()
+    {
+        ed.midiSendTimeNs.store(std::chrono::steady_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
+    };
+
     const char *luaFile = ed.args.mainLuaFilePath.empty()
         ?  "./lua/main.lua"
         : ed.args.mainLuaFilePath.c_str();
@@ -993,13 +1007,13 @@ int main(int argc, const char** args)
 
         // Apply MIDI receive results on the main thread (Lua calls safe here)
         {
-            std::vector<PendingReceive> toProcess;
+            std::lock_guard<std::mutex> lock(ed.pendingMutex);
+            for (auto& item : ed.pendingReceives)
             {
-                std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                toProcess.swap(ed.pendingReceives);
-            }
-            for (auto& item : toProcess)
-            {
+                if (item.data.empty())
+                {
+                    continue;
+                }
                 auto msgs = item.handler(item.data);
                 for (const auto& msg : msgs)
                 {
@@ -1008,6 +1022,7 @@ int main(int argc, const char** args)
                         valueChanged(ed, msg);
                     }
                 }
+                item.data.clear(); // TODO: remove item
             }
         }
 
