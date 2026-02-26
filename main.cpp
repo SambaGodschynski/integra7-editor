@@ -382,7 +382,7 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
 void renderSection(SectionDef &section, I7Ed &ed); // forward declaration
 Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes); // forward declaration
 
-void triggerReceive(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
+void triggerReceive(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &getters)
 {
     if (ed.isReceiving.exchange(true))
     {
@@ -394,7 +394,7 @@ void triggerReceive(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
     }
     // Collect all requests on main thread (Lua calls must happen here)
     std::vector<RequestMessage> allRequests;
-    for (auto &getter : getters)
+    for (const auto &getter : getters)
     {
         if (getter)
         {
@@ -403,9 +403,7 @@ void triggerReceive(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
         }
     }
     ed.receiveStartTime = std::chrono::steady_clock::now();
-    ed.receiveThread = std::thread([&ed, allRequests = std::move(allRequests)]()
-    {
-        for (const auto& req : allRequests)
+            for (const auto& req : allRequests)
         {
             Bytes received = sendAndReceive(ed, req.sysex);
             if (received.empty())
@@ -416,17 +414,21 @@ void triggerReceive(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
             std::lock_guard<std::mutex> lock(ed.pendingMutex);
             ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
         }
-        ed.isReceiving.store(false);
-    });
+    // ed.receiveThread = std::thread([&ed, &allRequests]()
+    // {
+
+    //     ed.isReceiving.store(false);
+    // });
+     ed.isReceiving.store(false);
 }
 
-static void drawReceiveButton(I7Ed &ed, std::vector<SectionDef::FGetReceiveSysex> getters)
+static void drawReceiveButton(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &getters)
 {
     float btnW = ImGui::CalcTextSize("recv").x + ImGui::GetStyle().FramePadding.x * 2.0f;
     ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - btnW);
     if (ImGui::SmallButton("recv"))
     {
-        triggerReceive(ed, std::move(getters));
+        triggerReceive(ed, getters);
     }
 }
 
@@ -466,7 +468,7 @@ void renderTabbedSection(SectionDef &section, SectionDef::NamedSections &section
 
     if (!getters.empty())
     {
-        drawReceiveButton(ed, std::move(getters));
+        drawReceiveButton(ed, getters);
     }
 
     // Optional common section rendered above the tab bar
@@ -791,7 +793,7 @@ void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage)
     }
 }
 
-void performValuesReceive(I7Ed &ed, const SectionDef &section)
+void UNUSED_performValuesReceive(I7Ed &ed, const SectionDef &section)
 {
     auto requests = section.getReceiveSysex();
     for(const auto& request : requests)
