@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include "Com.h"
 
 #define PARAM_TYPE_RANGE     "range"
 #define PARAM_TYPE_SELECTION "select"
@@ -12,7 +13,7 @@
 #define PARAM_TYPE_ENVELOPE  "envelope"
 #define PARAM_TYPE_STEP_LFO  "steplfo"
 
-typedef std::vector<unsigned char> Bytes;
+
 
 struct ParameterDef
 {

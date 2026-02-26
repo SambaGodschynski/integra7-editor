@@ -89,7 +89,7 @@ include_directories(
 
 add_subdirectory(${RTMIDI_DIR})
 
-add_executable(i7ed main.cpp)
+add_executable(i7ed main.cpp Midi.cpp)
 target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
 
 

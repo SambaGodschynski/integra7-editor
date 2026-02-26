@@ -12,7 +12,6 @@
 #include <GLFW/glfw3.h>
 #include <sol/sol.hpp>
 #include <iostream>
-#include <rtmidi/RtMidi.h>
 #include <string>
 #include "ParameterDef.h"
 #include "imgui_envelope.h"
@@ -29,6 +28,8 @@
 #include <set>
 #include <unordered_map>
 #include <memory>
+#include "Com.h"
+#include "Midi.h"
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
 
@@ -55,17 +56,15 @@ struct PendingReceive
 
 struct I7Ed
 {
-    RtMidiIn  midiIn;
-    RtMidiOut midiOut;
     Args args;
+    Midi midi;
     sol::state lua;
     std::unordered_map<std::string, std::shared_ptr<ParameterDef>> parameterDefs;
     // async receive
     std::atomic<bool> isReceiving{false};
     std::chrono::steady_clock::time_point receiveStartTime;
-    std::mutex pendingMutex;
     std::vector<PendingReceive> pendingReceives;
-    std::thread receiveThread;
+    std::mutex pendingMutex;
     NotificationQueue notifications;
     std::atomic<int64_t> midiSendTimeNs{0};
     std::atomic<int64_t> midiRecvTimeNs{0};
@@ -134,44 +133,6 @@ Args parseArguments(int argc, const char **argv)
     return result;
 }
 
-
-// BEGIN: MIDI IO
-template<class TMidiIO>
-void printMidiIo()
-{
-    TMidiIO midiIo;
-    auto nIos = midiIo.getPortCount();
-    for (size_t idx = 0; idx < nIos; ++idx)
-    {
-        std::cout << (idx) << ": " << midiIo.getPortName(idx) << std::endl;
-    }
-}
-
-template<class TMidiIO>
-void openPort(TMidiIO &port, size_t portNr)
-{
-    auto nIos = port.getPortCount();
-    if (portNr >= nIos)
-    {
-        std::cerr << "invalid port number: " << portNr << std::endl;
-        exit(1);
-    }
-    port.openPort(portNr);
-    std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
-}
-
-void sendMessage(I7Ed &ed, const Bytes& message)
-{
-    if (message.empty())
-    {
-        return;
-    }
-    ed.midiOut.sendMessage(&message);
-    ed.midiSendTimeNs.store(
-        std::chrono::steady_clock::now().time_since_epoch().count(),
-        std::memory_order_relaxed);
-}
-// END: MIDI IO
 
 // BEGIN: LUA to DEF. TODO Refactor into separate file
 template<typename T>
@@ -331,6 +292,18 @@ void getDefs(I7Ed &ed, SectionDef::NamedSections &outNamedSections)
 }
 // END: Lua to Def
 
+void sendMessage(I7Ed &ed, const Bytes& message)
+{
+    if (message.empty())
+    {
+        return;
+    }
+    ed.midi.sendMessage(message);
+    ed.midiSendTimeNs.store(
+        std::chrono::steady_clock::now().time_since_epoch().count(),
+        std::memory_order_relaxed);
+}
+
 void valueChanged(I7Ed &ed, const ParameterDef& paramDef)
 {
     try
@@ -379,8 +352,7 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
     }
 }
 
-void renderSection(SectionDef &section, I7Ed &ed); // forward declaration
-Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes); // forward declaration
+void renderSection(SectionDef &section, I7Ed &ed);
 
 void triggerReceive(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &getters)
 {
@@ -388,37 +360,37 @@ void triggerReceive(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &g
     {
         return;
     }
-    if (ed.receiveThread.joinable())
-    {
-        ed.receiveThread.join();
-    }
     // Collect all requests on main thread (Lua calls must happen here)
-    std::vector<RequestMessage> allRequests;
+
+    ed.receiveStartTime = std::chrono::steady_clock::now();
+    
+    bool break_ = false;
     for (const auto &getter : getters)
     {
-        if (getter)
+        if (!getter)
         {
-            auto reqs = getter();
-            allRequests.insert(allRequests.end(), reqs.begin(), reqs.end());
+            continue;
         }
-    }
-    ed.receiveStartTime = std::chrono::steady_clock::now();
-            for (const auto& req : allRequests)
+        std::vector<RequestMessage> reqs = getter();
+        for(const RequestMessage &req : reqs)
         {
-            Bytes received = sendAndReceive(ed, req.sysex);
-            if (received.empty())
+            if (break_)
             {
-                ed.notifications.push("MIDI receive timed out");
                 break;
             }
-            std::lock_guard<std::mutex> lock(ed.pendingMutex);
-            ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
+            ed.midi.sendAndReceive(req.sysex, [&ed, &req, &break_](Bytes received)
+            {
+                if (received.empty())
+                {
+                    break_ = true;
+                    return;
+                }
+                ed.midiRecvTimeNs.store(std::chrono::steady_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                ed.pendingReceives.push_back({req.onMessageReceived, std::move(received)});
+            });
         }
-    // ed.receiveThread = std::thread([&ed, &allRequests]()
-    // {
-
-    //     ed.isReceiving.store(false);
-    // });
+    }
      ed.isReceiving.store(false);
 }
 
@@ -740,28 +712,6 @@ void renderSection(SectionDef &section, I7Ed &ed)
     }
 }
 
-Bytes sendAndReceive(I7Ed &ed, const Bytes &bytes)
-{
-    sendMessage(ed, bytes);
-    Bytes answer;
-    int idleMillis = 10;
-    int timeOutSeconds = 5;
-    int maxTries = (int(1000 / (double)idleMillis) * timeOutSeconds);
-    while (maxTries-- > 0)
-    {
-        ed.midiIn.getMessage(&answer);
-        if (!answer.empty())
-        {
-            ed.midiRecvTimeNs.store(
-                std::chrono::steady_clock::now().time_since_epoch().count(),
-                std::memory_order_relaxed);
-            return answer;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(idleMillis));
-    }
-    std::cerr << "MIDI receive timed out." << std::endl;
-    return answer;
-}
 
 ParameterDef* getParameterDef(I7Ed &ed, const std::string &id)
 {
@@ -793,28 +743,6 @@ void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage)
     }
 }
 
-void UNUSED_performValuesReceive(I7Ed &ed, const SectionDef &section)
-{
-    auto requests = section.getReceiveSysex();
-    for(const auto& request : requests)
-    {
-        auto received = sendAndReceive(ed, request.sysex);
-        if (received.empty())
-        {
-            break;
-        }
-        auto valueChangeMsgs = request.onMessageReceived(received);
-        for(const auto &valueChangeMsg : valueChangeMsgs)
-        {
-            if (valueChangeMsg.id.empty())
-            {
-                continue;
-            }
-            valueChanged(ed, valueChangeMsg);
-        }
-    }
-}
-
 int main(int argc, const char** args)
 {
     I7Ed ed;
@@ -833,12 +761,12 @@ int main(int argc, const char** args)
     if (ed.args.listInputs)
     {
         std::cout << "Inputs:"  << std::endl;
-        printMidiIo<RtMidiIn>();
+        ed.midi.printInputs(std::cout);
     }
     if (ed.args.listOutputs)
     {
         std::cout << "Outputs:"  << std::endl;
-        printMidiIo<RtMidiOut>();
+        ed.midi.printOutputs(std::cout);
     }
     if (ed.args.listOutputs || ed.args.listInputs)
     {
@@ -847,12 +775,11 @@ int main(int argc, const char** args)
 
     if (ed.args.inPortNr >= 0)
     {
-        openPort(ed.midiIn, (size_t)ed.args.inPortNr);
-        ed.midiIn.ignoreTypes(false, false, false);
+        ed.midi.openInput((size_t)ed.args.inPortNr);
     }
     if (ed.args.outPortNr >= 0)
     {
-        openPort(ed.midiOut, (size_t)ed.args.outPortNr);
+         ed.midi.openOutput((size_t)ed.args.inPortNr);
     }
 
     const char *luaFile = ed.args.mainLuaFilePath.empty()
@@ -1253,23 +1180,11 @@ int main(int argc, const char** args)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 
-    if (ed.receiveThread.joinable())
-    {
-        ed.receiveThread.join();
-    }
 
     ImCmd::DestroyContext();
     ImSearch::DestroyContext();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
-    if (ed.midiIn.isPortOpen())
-    {
-         ed.midiIn.closePort();
-    }
-    if (ed.midiOut.isPortOpen())
-    {
-        ed.midiOut.closePort();
-    }
     return 0;
 }
