@@ -22,6 +22,14 @@ require "_pcmsLfoSection"
 require "_pcmsCtrlSection"
 require "_pcmsMtrxCtrlSection"
 require "_pcmsTabsSection"
+require "_snsCommonSection"
+require "_snsMiscSection"
+require "_snsOscSection"
+require "_snsPitchSection"
+require "_snsFilterSection"
+require "_snsAmpSection"
+require "_snsLfoSection"
+require "_snsTabsSection"
 
 Main = {}
 
@@ -44,3 +52,11 @@ CreatePcmsLfoSections(Main)
 CreatePcmsCtrlSections(Main)
 CreatePcmsMtrxCtrlSections(Main)
 CreatePcmsTabSections(Main)
+CreateSnsCommonSections(Main)
+CreateSnsMiscSections(Main)
+CreateSnsOscSections(Main)
+CreateSnsPitchSections(Main)
+CreateSnsFilterSections(Main)
+CreateSnsAmpSections(Main)
+CreateSnsLfoSections(Main)
+CreateSnsTabSections(Main)
