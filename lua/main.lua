@@ -29,6 +29,7 @@ require "_snsPitchSection"
 require "_snsFilterSection"
 require "_snsAmpSection"
 require "_snsLfoSection"
+require "_snsMfxSection"
 require "_snsTabsSection"
 
 Main = {}
@@ -59,4 +60,5 @@ CreateSnsPitchSections(Main)
 CreateSnsFilterSections(Main)
 CreateSnsAmpSections(Main)
 CreateSnsLfoSections(Main)
+CreateMfxSnsSections(Main)
 CreateSnsTabSections(Main)

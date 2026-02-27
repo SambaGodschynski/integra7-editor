@@ -133,6 +133,9 @@ function CreateMfxSections(main)
         local name = k
         local mfxData = DeepCopy(mfxTemplate)
         mfxData.name = name
+        mfxData.getReceiveValueSysex = function()
+            return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SNTONE-_SNTF")
+        end
         main[k] = mfxData
         local subCommon = mfxData.grp[1]
         local subMfx = mfxData.grp[2]

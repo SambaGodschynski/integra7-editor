@@ -7,7 +7,7 @@ require "_model"
 local get = GetWrapper
 
 local function idTmpl(mfxId)
-    return "PRM-_FPARTxxx-_PAT-_PF-" .. mfxId
+    return "PRM-_FPARTxxx-_SHPAT-_SHPF-" .. mfxId
 end
 
 local mfxNumberPartMap = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -49,7 +49,7 @@ end
 local function mfxTypeChange(param, part, index)
     mfxNumberPartMap[part] = index
     local chgMsg = CreateSysexMessage(param.id, index)
-    local defaultValues = get_set_mfx_default_values_sysex(Mfx_Types.PCMS, part, index)
+    local defaultValues = get_set_mfx_default_values_sysex(Mfx_Types.SNS, part, index)
     local msg = Concat(chgMsg, defaultValues)
     return msg
 end
@@ -99,24 +99,24 @@ local function guiOffsetValue(part, mfxNr)
 end
 
 local mfxTemplate = {
-    name = "PCM-S Mfx",
+    name = "SN-S Mfx",
     getReceiveValueSysex = nil,
     grp = {
         {
             name = "Mfx Common",
             params = {
-                {type="select", id=idTmpl("RFPF_MFX_TYPE"),      name=get("MFX Type"),             default=0,   options=mfxTypes},
-                {type="range",  id=idTmpl("RFPF_MFX_DRY_SEND"),  name=get("MFX Dry Send Level"),   default=127, min=get(0), max=get(127)},
-                {type="range",  id=idTmpl("RFPF_MFX_CHO_SEND"),  name=get("MFX Chorus Send Level"),default=0,   min=get(0), max=get(127)},
-                {type="range",  id=idTmpl("RFPF_MFX_REV_SEND"),  name=get("MFX Reverb Send Level"),default=0,   min=get(0), max=get(127)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL1_SRC"), name=get("MFX Control 1 Source"), default=0,   min=get(0), max=get(101)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL1_SENS"),name=get("MFX Control 1 Sens"),   default=64,  min=get(1), max=get(127)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL2_SRC"), name=get("MFX Control 2 Source"), default=0,   min=get(0), max=get(101)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL2_SENS"),name=get("MFX Control 2 Sens"),   default=64,  min=get(1), max=get(127)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL3_SRC"), name=get("MFX Control 3 Source"), default=0,   min=get(0), max=get(101)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL3_SENS"),name=get("MFX Control 3 Sens"),   default=64,  min=get(1), max=get(127)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL4_SRC"), name=get("MFX Control 4 Source"), default=0,   min=get(0), max=get(101)},
-                {type="range",  id=idTmpl("RFPF_MFX_CTRL4_SENS"),name=get("MFX Control 4 Sens"),   default=64,  min=get(1), max=get(127)},
+                {type="select", id=idTmpl("SHPF_MFX_TYPE"),      name=get("MFX Type"),              default=0,   options=mfxTypes},
+                {type="range",  id=idTmpl("SHPF_MFX_DRY_SEND"),  name=get("MFX Dry Send Level"),    default=127, min=get(0), max=get(127)},
+                {type="range",  id=idTmpl("SHPF_MFX_CHO_SEND"),  name=get("MFX Chorus Send Level"), default=0,   min=get(0), max=get(127)},
+                {type="range",  id=idTmpl("SHPF_MFX_REV_SEND"),  name=get("MFX Reverb Send Level"), default=0,   min=get(0), max=get(127)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL1_SRC"), name=get("MFX Control 1 Source"),  default=0,   min=get(0), max=get(101)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL1_SENS"),name=get("MFX Control 1 Sens"),    default=64,  min=get(1), max=get(127)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL2_SRC"), name=get("MFX Control 2 Source"),  default=0,   min=get(0), max=get(101)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL2_SENS"),name=get("MFX Control 2 Sens"),    default=64,  min=get(1), max=get(127)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL3_SRC"), name=get("MFX Control 3 Source"),  default=0,   min=get(0), max=get(101)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL3_SENS"),name=get("MFX Control 3 Sens"),    default=64,  min=get(1), max=get(127)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL4_SRC"), name=get("MFX Control 4 Source"),  default=0,   min=get(0), max=get(101)},
+                {type="range",  id=idTmpl("SHPF_MFX_CTRL4_SENS"),name=get("MFX Control 4 Sens"),    default=64,  min=get(1), max=get(127)},
             }
         },
         {
@@ -126,14 +126,13 @@ local mfxTemplate = {
     }
 }
 
-function CreateMfxPcmSSections(main)
+function CreateMfxSnsSections(main)
     for partNr = 1, 16, 1 do
-        local k = "Part " .. string.format("%02d", partNr) .. " PCM-S MFX"
-        local name = k
+        local k = "Part " .. string.format("%02d", partNr) .. " SN-S MFX"
         local mfxData = DeepCopy(mfxTemplate)
-        mfxData.name = name
+        mfxData.name = k
         mfxData.getReceiveValueSysex = function()
-            return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_PAT-_PF")
+            return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SHPAT-_SHPF")
         end
         main[k] = mfxData
         local subCommon = mfxData.grp[1]
@@ -143,7 +142,7 @@ function CreateMfxPcmSSections(main)
             if not IsIdForPart(leafNode.fullid, partNr) then
                 return nil
             end
-            if leafNode.node.id == "RFPF_MFX_TYPE" then
+            if leafNode.node.id == "SHPF_MFX_TYPE" then
                 local mfxType = Bytes_To_Value(response.payload)
                 mfxNumberPartMap[partNr] = mfxType
             end
@@ -152,7 +151,7 @@ function CreateMfxPcmSSections(main)
         AddReceiveHandler(mfxChangedHandler)
 
         for _, param in ipairs(subCommon.params) do
-            local isMfxChangeType = param.id == idTmpl("RFPF_MFX_TYPE")
+            local isMfxChangeType = param.id == idTmpl("SHPF_MFX_TYPE")
             param.id = CreateId(param.id, partNr)
             if isMfxChangeType then
                 param.setValue = function(value)
@@ -163,7 +162,7 @@ function CreateMfxPcmSSections(main)
             end
         end
         for mfxNr = 0, 31, 1 do
-            local id = idTmpl("RFPF_MFX_PRM" .. tostring(mfxNr + 1))
+            local id = idTmpl("SHPF_MFX_PRM" .. tostring(mfxNr + 1))
             id = CreateId(id, partNr)
             local p = {type="range", id=id, default=0}
             p = ParameterSetValueWrapper(p)
