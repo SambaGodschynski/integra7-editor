@@ -18,6 +18,7 @@
 #include "imgui_midi_leds.h"
 #include "imgui_step_lfo.h"
 #include "imgui_notifications.h"
+#include "imgui_internal.h"
 #include <vector>
 #include <list>
 #include <tuple>
@@ -833,6 +834,56 @@ int main(int argc, const char** args)
 
     ImGuiIO& io = ImGui::GetIO();
 
+    // Persist which sections are open across sessions, stored in imgui.ini
+    // under the custom [I7EdOpenSections] block.
+    struct OpenSectionsData
+    {
+        std::vector<std::string> pending;   // section keys read from ini
+        SectionDef::NamedSections* pSections = nullptr;
+    };
+    SectionDef::NamedSections sections;
+    OpenSectionsData openData;
+    openData.pSections = &sections;
+
+    {
+        ImGuiSettingsHandler h = {};
+        h.TypeName    = "I7EdOpenSections";
+        h.TypeHash    = ImHashStr("I7EdOpenSections");
+        h.UserData    = &openData;
+        h.ReadOpenFn  = [](ImGuiContext*, ImGuiSettingsHandler*, const char*) -> void*
+        {
+            return (void*)1;    // non-null signals "recognised section, read it"
+        };
+        h.ReadLineFn  = [](ImGuiContext*, ImGuiSettingsHandler* handler, void*, const char* line)
+        {
+            auto* d = static_cast<OpenSectionsData*>(handler->UserData);
+            if (line[0] != '\0')
+            {
+                d->pending.push_back(line);
+            }
+        };
+        h.WriteAllFn  = [](ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
+        {
+            auto* d = static_cast<OpenSectionsData*>(handler->UserData);
+            buf->appendf("[%s][]\n", handler->TypeName);
+            for (const auto& [key, sec] : *d->pSections)
+            {
+                if (sec.isOpen)
+                {
+                    buf->appendf("%s\n", key.c_str());
+                }
+            }
+            buf->appendf("\n");
+        };
+        ImGui::AddSettingsHandler(&h);
+    }
+
+    // Explicitly load ini now so pending open-sections are known before getDefs.
+    if (io.IniFilename)
+    {
+        ImGui::LoadIniSettingsFromDisk(io.IniFilename);
+    }
+
     ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -841,8 +892,20 @@ int main(int argc, const char** args)
 	ed.lua.open_libraries();
     ed.lua.script_file(luaFile);
 
-    SectionDef::NamedSections sections;
     getDefs(ed, sections);
+
+    // Restore sections that were open in the previous session.
+    for (auto& [key, section] : sections)
+    {
+        for (const auto& saved : openData.pending)
+        {
+            if (saved == key)
+            {
+                section.isOpen = true;
+                break;
+            }
+        }
+    }
 
     bool show_command_palette = false;
 
