@@ -111,12 +111,14 @@ void Midi::runThread()
     while (running)
     {
         {
-            std::lock_guard<Lock> _lock(lock);
             while(!queue.empty())
             {
                 const QueueItem &item = queue.back();
                 handle(item, midiIn, midiOut);
-                queue.pop_back();
+                {
+                    std::lock_guard<Lock> _lock(lock);
+                    queue.pop_back();
+                }
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(ThreadIdleMillis));

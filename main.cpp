@@ -396,8 +396,8 @@ void triggerReceive(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &g
             });
         }
     }
-     ed.isReceiving.store(false);
 }
+
 
 static void drawReceiveButton(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &getters)
 {
@@ -1090,17 +1090,32 @@ int main(int argc, const char** args)
                 }
                 it = ed.pendingReceives.erase(it);
             }
+            if (ed.pendingReceives.empty())
+            {
+                ed.isReceiving.store(false);
+            }
         }
 
-        // YouTube-style red progress bar at the top while receiving
+        // Indeterminate sweep bar at the top while receiving
         if (ed.isReceiving.load())
         {
-            auto elapsed = std::chrono::duration<float>(
+            const float elapsed = std::chrono::duration<float>(
                 std::chrono::steady_clock::now() - ed.receiveStartTime).count();
-            const float progress = std::min(1.f - std::exp(-elapsed * 0.7f), 0.9f);
-            ImGui::GetBackgroundDrawList()->AddRectFilled(
-                ImVec2(scrollOfs.x, scrollOfs.y),
-                ImVec2(progress * (float)display_w + scrollOfs.x, 3.f + scrollOfs.y),
+            constexpr float kBarH   = 3.f;
+            constexpr float kSegLen = 0.25f;   // segment width as fraction of bar
+            constexpr float kPeriod = 1.5f;    // seconds per full sweep
+            const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
+            const float lFrac = std::clamp(pos,           0.0f, 1.0f);
+            const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
+            const float W     = static_cast<float>(display_w);
+            auto* dl = ImGui::GetBackgroundDrawList();
+            dl->AddRectFilled(
+                {scrollOfs.x,               scrollOfs.y},
+                {scrollOfs.x + W,           scrollOfs.y + kBarH},
+                IM_COL32(80, 10, 10, 200));
+            dl->AddRectFilled(
+                {scrollOfs.x + lFrac * W,   scrollOfs.y},
+                {scrollOfs.x + rFrac * W,   scrollOfs.y + kBarH},
                 IM_COL32(220, 30, 30, 255));
         }
 
