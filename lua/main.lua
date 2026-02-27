@@ -31,6 +31,11 @@ require "_snsAmpSection"
 require "_snsLfoSection"
 require "_snsMfxSection"
 require "_snsTabsSection"
+require "_sndCommonSection"
+require "_sndInstSection"
+require "_sndCompEqSection"
+require "_sndMfxSection"
+require "_sndTabsSection"
 
 Main = {}
 
@@ -62,3 +67,8 @@ CreateSnsAmpSections(Main)
 CreateSnsLfoSections(Main)
 CreateMfxSnsSections(Main)
 CreateSnsTabSections(Main)
+CreateSndCommonSections(Main)
+CreateSndInstSections(Main)
+CreateSndCompEqSections(Main)
+CreateMfxSndSections(Main)
+CreateSndTabSections(Main)
