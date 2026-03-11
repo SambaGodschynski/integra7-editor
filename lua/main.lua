@@ -36,6 +36,11 @@ require "_sndInstSection"
 require "_sndCompEqSection"
 require "_sndMfxSection"
 require "_sndTabsSection"
+require "_pcmdCommonSection"
+require "_pcmdPitchSection"
+require "_pcmdCompEqSection"
+require "_pcmdMfxSection"
+require "_pcmdTabsSection"
 
 Main = {}
 
@@ -72,3 +77,8 @@ CreateSndInstSections(Main)
 CreateSndCompEqSections(Main)
 CreateMfxSndSections(Main)
 CreateSndTabSections(Main)
+CreatePcmdCommonSections(Main)
+CreatePcmdPitchSections(Main)
+CreatePcmdCompEqSections(Main)
+CreateMfxPcmdSections(Main)
+CreatePcmdTabSections(Main)

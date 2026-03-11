@@ -2,7 +2,7 @@
 #include <ostream>
 #include "Com.h"
 #include <functional>
-#include <list>
+#include <list> // TODO: use queue
 #include <mutex>
 #include <thread>
 

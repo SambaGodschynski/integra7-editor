@@ -20,7 +20,7 @@
 #include "imgui_notifications.h"
 #include "imgui_internal.h"
 #include <vector>
-#include <list>
+#include <list> // TODO: use queue
 #include <tuple>
 #include <mutex>
 #include <thread>

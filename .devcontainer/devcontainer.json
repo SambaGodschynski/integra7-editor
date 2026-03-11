@@ -5,7 +5,8 @@
     "--env=DISPLAY=${env:DISPLAY}"
   ],
   "mounts": [
-    "source=/home/samba/workspace/INTEGRA-7 Editor Ver.2,target=/workspaces/js-origin,type=bind"
+    "source=/home/samba/workspace/INTEGRA-7 Editor Ver.2,target=/workspaces/js-origin,type=bind",
+    "source=/home/samba/workspace/werckmeister,target=/workspaces/werckmeister,type=bind"
   ],
   "customizations": {
     "vscode": {
