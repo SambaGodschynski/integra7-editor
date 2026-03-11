@@ -220,6 +220,10 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
                     }
                 }
             }
+            else if (param->type == PARAM_TYPE_ACTION)
+            {
+                param->getAction = require_key<ParameterDef::FGetAction>(luaParam, "getAction");
+            }
             else
             {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
@@ -692,6 +696,14 @@ void renderSection(SectionDef &section, I7Ed &ed)
                         }
                     }
                 }
+            }
+            prevWasInline = false;
+        }
+        else if (param->type == PARAM_TYPE_ACTION)
+        {
+            if (ImGui::Button(param->name().c_str()))
+            {
+                triggerReceive(ed, {param->getAction});
             }
             prevWasInline = false;
         }

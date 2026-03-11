@@ -12,8 +12,9 @@
 #define PARAM_TYPE_TOGGLE    "toggle"
 #define PARAM_TYPE_ENVELOPE  "envelope"
 #define PARAM_TYPE_STEP_LFO  "steplfo"
+#define PARAM_TYPE_ACTION    "action"
 
-
+struct RequestMessage; // forward declaration for FGetAction
 
 struct ParameterDef
 {
@@ -24,6 +25,7 @@ struct ParameterDef
     typedef std::function<std::string()> FStringGetter;
     typedef std::function<std::vector<unsigned char>(float)> FSetValue;
     typedef std::map<int, std::string> SelectionOptions;
+    typedef std::function<std::vector<RequestMessage>()> FGetAction;
     std::string id;
     FStringGetter name;
     std::string format = "%.0f";
@@ -42,6 +44,8 @@ struct ParameterDef
         return 127;
     };
     FSetValue setValue;
+    // PARAM_TYPE_ACTION only
+    FGetAction getAction;
     // PARAM_TYPE_ENVELOPE only
     std::vector<std::string> levelIds;
     std::vector<std::string> timeIds;

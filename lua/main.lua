@@ -41,6 +41,7 @@ require "_pcmdPitchSection"
 require "_pcmdCompEqSection"
 require "_pcmdMfxSection"
 require "_pcmdTabsSection"
+require "_expansionSection"
 
 Main = {}
 
@@ -82,3 +83,4 @@ CreatePcmdPitchSections(Main)
 CreatePcmdCompEqSections(Main)
 CreateMfxPcmdSections(Main)
 CreatePcmdTabSections(Main)
+CreateExpansionSection(Main)

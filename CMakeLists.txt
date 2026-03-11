@@ -84,7 +84,7 @@ include_directories(
     ${SUBMOD}/imgui-command-palette
     ${SUBMOD}/imsearch
     ${SUBMOD}/imgui_toggle
-    ${RTMIDI_DIR}
+    ${SUBMOD}
 )
 
 add_subdirectory(${RTMIDI_DIR})
