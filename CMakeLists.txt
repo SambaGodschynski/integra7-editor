@@ -8,6 +8,7 @@ find_package(glfw3 REQUIRED)
 
 set(SUBMOD "${CMAKE_SOURCE_DIR}/submodules")
 set(IMGUI_DIR "${SUBMOD}/imgui")
+set(IMGUI_FILE_DIALOG_DIR "${SUBMOD}/ImGuiFileDialog")
 set(SOL_DIR "${SUBMOD}/sol2")
 set(LUA_DIR "${SUBMOD}/lua")
 set(RTMIDI_DIR "${SUBMOD}/rtmidi")
@@ -33,6 +34,7 @@ set(IMGUI_SOURCES
     ${SUBMOD}/imgui_toggle/imgui_toggle_palette.cpp
     ${SUBMOD}/imgui_toggle/imgui_toggle_presets.cpp
     ${SUBMOD}/imgui_toggle/imgui_toggle_renderer.cpp
+    ${IMGUI_FILE_DIALOG_DIR}/ImGuiFileDialog.cpp
 )
 
 add_library(imgui STATIC ${IMGUI_SOURCES})
@@ -84,6 +86,7 @@ include_directories(
     ${SUBMOD}/imgui-command-palette
     ${SUBMOD}/imsearch
     ${SUBMOD}/imgui_toggle
+    ${IMGUI_FILE_DIALOG_DIR}
     ${SUBMOD}
 )
 

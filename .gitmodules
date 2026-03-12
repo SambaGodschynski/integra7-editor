@@ -19,3 +19,6 @@
 [submodule "submodules/imgui_toggle"]
 	path = submodules/imgui_toggle
 	url = https://github.com/cmdwtf/imgui_toggle.git
+[submodule "submodules/ImGuiFileDialog"]
+	path = submodules/ImGuiFileDialog
+	url = https://github.com/aiekick/ImGuiFileDialog.git

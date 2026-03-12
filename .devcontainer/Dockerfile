@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libxcursor-dev libxi-dev \
     x11-apps mesa-utils \
     nodejs npm \
+    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g @anthropic-ai/claude-code

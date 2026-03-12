@@ -53,6 +53,33 @@ end
 
 EmptyValueChangedMessage = ValueChangedMessage.new()
 
+-- Creates a single RQ1 RequestMessage for one leaf node by its full param ID.
+-- Returns nil if the node is not found or is not a leaf.
+function CreateReceiveMessageForLeafId(node_id)
+    local nodeinfo = Get_Node(node_id)
+    if nodeinfo == nil then
+        return nil
+    end
+    if nodeinfo.node.children ~= nil then
+        return nil
+    end
+    local byteSize = Get_Byte_Size(nodeinfo.node.valueByteSizeType)
+    local sysex = Create_Sysex_Rq1_Message(nodeinfo.addr, byteSize)
+    local rqmsg = RequestMessage.new()
+    rqmsg.sysex = sysex
+    rqmsg.onMessageReceived = function(received_msg)
+        local response = getResponseData(received_msg)
+        if response == nil or response.addr ~= nodeinfo.addr then
+            return {EmptyValueChangedMessage}
+        end
+        local vcm = ValueChangedMessage.new()
+        vcm.id = node_id
+        vcm.i7Value = Bytes_To_Value(response.payload)
+        return {vcm}
+    end
+    return rqmsg
+end
+
 local receiveHandlers = {}
 
 function AddReceiveHandler(handler)

@@ -30,9 +30,29 @@ local function partTypeChange(part)
     end
 end
 
+-- Collect all RequestMessages for a given part by iterating Main at call time.
+-- Uses the "Part NN " prefix to find all matching sections with getReceiveValueSysex.
+local function buildReceiveAllAction(partNr)
+    local prefix = "Part " .. string.format("%02d", partNr) .. " "
+    return function()
+        local result = {}
+        for key, section in pairs(Main) do
+            if string.sub(key, 1, #prefix) == prefix and section.getReceiveValueSysex then
+                for _, msg in ipairs(section.getReceiveValueSysex()) do
+                    table.insert(result, msg)
+                end
+            end
+        end
+        return result
+    end
+end
+
 function CreatePartsSections(main)
     local parts = {
         name = "Parts View",
+        params = {
+            {type="loadsysex", id="LOAD_SYSEX", name=get("Load SysEx")}
+        },
         grp = {}
     }
     for i = 1, 16, 1 do
@@ -49,6 +69,10 @@ function CreatePartsSections(main)
         )
         table.insert(subSection.params,
             {type="select", id="PRM-_PRF-_FP"..i.."-NEFP_TYPE_DUMMY", name=get(partName.." Type"), default=1, options=toneTypes, setValue=partTypeChange(i)}
+        )
+        table.insert(subSection.params,
+            {type="savesysex", id="SAVE_SYSEX_PART_"..i, name=get("Save SysEx Part "..string.format("%02d", i)),
+             partPrefix="Part " .. string.format("%02d", i) .. " "}
         )
         table.insert(parts.grp, subSection)
     end

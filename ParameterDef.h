@@ -13,6 +13,8 @@
 #define PARAM_TYPE_ENVELOPE  "envelope"
 #define PARAM_TYPE_STEP_LFO  "steplfo"
 #define PARAM_TYPE_ACTION    "action"
+#define PARAM_TYPE_SAVE_SYSEX "savesysex"
+#define PARAM_TYPE_LOAD_SYSEX "loadsysex"
 
 struct RequestMessage; // forward declaration for FGetAction
 
@@ -46,6 +48,8 @@ struct ParameterDef
     FSetValue setValue;
     // PARAM_TYPE_ACTION only
     FGetAction getAction;
+    // PARAM_TYPE_SAVE_SYSEX only
+    std::string partPrefix;
     // PARAM_TYPE_ENVELOPE only
     std::vector<std::string> levelIds;
     std::vector<std::string> timeIds;

@@ -31,6 +31,8 @@
 #include <memory>
 #include "Com.h"
 #include "Midi.h"
+#include "ImGuiFileDialog.h"
+#include <fstream>
 
 #define HIDDEN_PARAM_NAME "__HIDDEN__"
 
@@ -72,6 +74,20 @@ struct I7Ed
     // param search highlight
     std::string highlightParamId;
     float       highlightTimer = 0.f;
+    // Save SysEx
+    SectionDef::NamedSections* pSections = nullptr;
+    struct LoadSysexState
+    {
+        std::string filepath;
+    } loadSysex;
+    struct SaveSysexState
+    {
+        enum class Phase { Idle, ReadMsb, ReadTone };
+        Phase       phase = Phase::Idle;
+        std::string filepath;
+        std::string partPrefix;              // "Part 01 "
+        std::vector<std::string> tonePrefixes; // set after MSB is received
+    } saveSysex;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -224,6 +240,11 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
             {
                 param->getAction = require_key<ParameterDef::FGetAction>(luaParam, "getAction");
             }
+            else if (param->type == PARAM_TYPE_SAVE_SYSEX
+                  || param->type == PARAM_TYPE_LOAD_SYSEX)
+            {
+                param->partPrefix = optional_key<std::string>(luaParam, "partPrefix", "");
+            }
             else
             {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
@@ -325,6 +346,7 @@ void valueChanged(I7Ed &ed, const ParameterDef& paramDef)
 }
 
 ParameterDef* getParameterDef(I7Ed &ed, const std::string &id); // forward declaration
+void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage); // forward declaration
 
 void renderCombo(ParameterDef& param, I7Ed &ed)
 {
@@ -355,6 +377,269 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
 }
 
 void renderSection(SectionDef &section, I7Ed &ed);
+
+void saveSysexToFile(I7Ed &ed)
+{
+    if (!ed.pSections || ed.saveSysex.filepath.empty())
+    {
+        return;
+    }
+    const std::string& prefix = ed.saveSysex.partPrefix;
+    std::ofstream file(ed.saveSysex.filepath, std::ios::binary);
+    if (!file)
+    {
+        ed.notifications.push("Error: could not open file: " + ed.saveSysex.filepath,
+                              ImVec4(1.f, 0.2f, 0.2f, 1.f));
+        return;
+    }
+    int count = 0;
+    // Helper: write sysex for one param by id
+    auto writeParam = [&](const std::string& paramId)
+    {
+        auto it = ed.parameterDefs.find(paramId);
+        if (it == ed.parameterDefs.end())
+        {
+            return;
+        }
+        auto* p = it->second.get();
+        if (!p->setValue)
+        {
+            return;
+        }
+        try
+        {
+            int i7v = p->toI7Value ? p->toI7Value(p->value) : (int)p->value;
+            Bytes sysex = p->setValue(i7v);
+            if (!sysex.empty() && sysex[0] == 0xF0)
+            {
+                file.write(reinterpret_cast<const char*>(sysex.data()),
+                           static_cast<std::streamsize>(sysex.size()));
+                ++count;
+            }
+        }
+        catch (const sol::error& e)
+        {
+            std::cerr << "saveSysex: " << paramId << ": " << e.what() << std::endl;
+        }
+    };
+    // Helper: write all saveable params of one section
+    auto writeSection = [&](const SectionDef& sec)
+    {
+        for (const auto* param : sec.params)
+        {
+            if (!param)
+            {
+                continue;
+            }
+            if (param->type == PARAM_TYPE_RANGE
+             || param->type == PARAM_TYPE_SELECTION
+             || param->type == PARAM_TYPE_TOGGLE)
+            {
+                writeParam(param->id);
+            }
+            else if (param->type == PARAM_TYPE_ENVELOPE)
+            {
+                for (const auto& id : param->levelIds) { writeParam(id); }
+                for (const auto& id : param->timeIds)  { writeParam(id); }
+            }
+            else if (param->type == PARAM_TYPE_STEP_LFO)
+            {
+                if (!param->stepTypeId.empty()) { writeParam(param->stepTypeId); }
+                for (const auto& id : param->stepIds) { writeParam(id); }
+            }
+        }
+    };
+    auto keyMatches = [&](const std::string& key) -> bool
+    {
+        for (const auto& pfx : ed.saveSysex.tonePrefixes)
+        {
+            if (key.size() >= pfx.size() && key.substr(0, pfx.size()) == pfx)
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+    for (auto& [key, sec] : *ed.pSections)
+    {
+        if (!keyMatches(key))
+        {
+            continue;
+        }
+        writeSection(sec);
+        for (const auto& sub : sec.subSections)
+        {
+            writeSection(sub);
+        }
+    }
+    file.close();
+    std::string msg = "Saved " + std::to_string(count) + " SysEx to " + ed.saveSysex.filepath;
+    ed.notifications.push(msg, ImVec4(0.2f, 1.f, 0.4f, 1.f), 5.f, 3.5f);
+}
+
+// Builds one RequestMessage per param that is registered in parameterDefs.
+// Covers range/select/toggle directly and levelIds/timeIds/stepIds for
+// envelope and step-lfo meta-params.
+std::vector<RequestMessage> buildParamRequests(
+    I7Ed& ed,
+    const std::vector<ParameterDef*>& params)
+{
+    sol::function fn = ed.lua["CreateReceiveMessageForLeafId"];
+    std::vector<RequestMessage> result;
+    auto tryAdd = [&](const std::string& id)
+    {
+        if (!ed.parameterDefs.count(id))
+        {
+            return;
+        }
+        sol::object obj = fn(id);
+        if (!obj.valid() || obj.get_type() == sol::type::nil)
+        {
+            return;
+        }
+        result.push_back(obj.as<RequestMessage>());
+    };
+    for (const auto* param : params)
+    {
+        if (!param)
+        {
+            continue;
+        }
+        if (param->type == PARAM_TYPE_RANGE
+         || param->type == PARAM_TYPE_SELECTION
+         || param->type == PARAM_TYPE_TOGGLE)
+        {
+            tryAdd(param->id);
+        }
+        else if (param->type == PARAM_TYPE_ENVELOPE)
+        {
+            for (const auto& id : param->levelIds) { tryAdd(id); }
+            for (const auto& id : param->timeIds)  { tryAdd(id); }
+        }
+        else if (param->type == PARAM_TYPE_STEP_LFO)
+        {
+            if (!param->stepTypeId.empty()) { tryAdd(param->stepTypeId); }
+            for (const auto& id : param->stepIds) { tryAdd(id); }
+        }
+    }
+    return result;
+}
+
+// Returns a FGetReceiveSysex getter that only requests params known to parameterDefs.
+SectionDef::FGetReceiveSysex makeParamOnlyGetter(I7Ed& ed, const SectionDef& sec)
+{
+    std::vector<ParameterDef*> params(sec.params.begin(), sec.params.end());
+    for (const auto& sub : sec.subSections)
+    {
+        for (auto* p : sub.params) { params.push_back(p); }
+    }
+    return [&ed, params]() -> std::vector<RequestMessage>
+    {
+        return buildParamRequests(ed, params);
+    };
+}
+
+void loadSysexFromFile(I7Ed& ed)
+{
+    if (ed.loadSysex.filepath.empty())
+    {
+        return;
+    }
+    // Build addr -> onMessageReceived map from ALL params in parameterDefs.
+    // Reuses buildParamRequests; the RQ1 sysex encodes the address at bytes 7-10.
+    std::vector<ParameterDef*> allParams;
+    allParams.reserve(ed.parameterDefs.size());
+    for (auto& [id, param] : ed.parameterDefs)
+    {
+        allParams.push_back(param.get());
+    }
+    auto allRequests = buildParamRequests(ed, allParams);
+
+    std::unordered_map<uint32_t, RequestMessage::FOnMessageReceived> addrMap;
+    addrMap.reserve(allRequests.size());
+    for (const auto& req : allRequests)
+    {
+        if (req.sysex.size() >= 11)
+        {
+            uint32_t addr = ((uint32_t)req.sysex[7] << 24)
+                          | ((uint32_t)req.sysex[8] << 16)
+                          | ((uint32_t)req.sysex[9]  << 8)
+                          |  (uint32_t)req.sysex[10];
+            addrMap[addr] = req.onMessageReceived;
+        }
+    }
+
+    std::ifstream file(ed.loadSysex.filepath, std::ios::binary);
+    if (!file)
+    {
+        ed.notifications.push("Error: could not open file: " + ed.loadSysex.filepath,
+                              ImVec4(1.f, 0.2f, 0.2f, 1.f));
+        return;
+    }
+    Bytes fileBytes((std::istreambuf_iterator<char>(file)), {});
+    file.close();
+
+    int count = 0;
+    for (size_t i = 0; i < fileBytes.size(); )
+    {
+        if (fileBytes[i] != 0xF0)
+        {
+            ++i;
+            continue;
+        }
+        auto endIt = std::find(fileBytes.begin() + (ptrdiff_t)i, fileBytes.end(),
+                               (unsigned char)0xF7);
+        if (endIt == fileBytes.end())
+        {
+            break;
+        }
+        ++endIt;
+        Bytes msg(fileBytes.begin() + (ptrdiff_t)i, endIt);
+
+        // DT1: byte[6] == 0x12, address at bytes 7-10
+        if (msg.size() >= 12 && msg[6] == 0x12)
+        {
+            uint32_t addr = ((uint32_t)msg[7] << 24)
+                          | ((uint32_t)msg[8] << 16)
+                          | ((uint32_t)msg[9]  << 8)
+                          |  (uint32_t)msg[10];
+            auto it = addrMap.find(addr);
+            if (it != addrMap.end())
+            {
+                auto vcMsgs = it->second(msg);
+                for (const auto& vcm : vcMsgs)
+                {
+                    if (!vcm.id.empty())
+                    {
+                        valueChanged(ed, vcm);        // update GUI
+                        auto* p = getParameterDef(ed, vcm.id);
+                        if (p && p->setValue)
+                        {
+                            valueChanged(ed, *p);     // send to device
+                        }
+                        ++count;
+                    }
+                }
+            }
+        }
+        i = (size_t)(endIt - fileBytes.begin());
+    }
+    std::string msg = "Loaded " + std::to_string(count) + " params from " + ed.loadSysex.filepath;
+    ed.notifications.push(msg, ImVec4(0.2f, 1.f, 0.4f, 1.f), 5.f, 3.5f);
+}
+
+std::vector<std::string> getTonePrefixes(const std::string& partPrefix, int msb)
+{
+    switch (msb)
+    {
+        case 89: return {partPrefix + "SNA", partPrefix + "MFX"};
+        case 95: return {partPrefix + "SN-S "};
+        case 88: return {partPrefix + "SN-D "};
+        case 87: return {partPrefix + "PCM-S "};
+        case 86: return {partPrefix + "PCM-D "};
+        default: return {};
+    }
+}
 
 void triggerReceive(I7Ed &ed, const std::vector<SectionDef::FGetReceiveSysex> &getters)
 {
@@ -707,6 +992,34 @@ void renderSection(SectionDef &section, I7Ed &ed)
             }
             prevWasInline = false;
         }
+        else if (param->type == PARAM_TYPE_SAVE_SYSEX)
+        {
+            if (ImGui::Button(param->name().c_str()))
+            {
+                ed.saveSysex.partPrefix = param->partPrefix;
+                IGFD::FileDialogConfig cfg;
+                cfg.path      = ".";
+                cfg.fileName  = "patch.syx";
+                cfg.countSelectionMax = 1;
+                cfg.flags     = ImGuiFileDialogFlags_ConfirmOverwrite;
+                ImGuiFileDialog::Instance()->OpenDialog(
+                    "SaveSysexDlg", "Save SysEx File", ".syx", cfg);
+            }
+            prevWasInline = false;
+        }
+        else if (param->type == PARAM_TYPE_LOAD_SYSEX)
+        {
+            if (ImGui::Button(param->name().c_str()))
+            {
+                IGFD::FileDialogConfig cfg;
+                cfg.path      = ".";
+                cfg.countSelectionMax = 1;
+                cfg.flags     = 0;
+                ImGuiFileDialog::Instance()->OpenDialog(
+                    "LoadSysexDlg", "Load SysEx File", ".syx", cfg);
+            }
+            prevWasInline = false;
+        }
         else
         {
             std::cerr << "unknown param type: '" << param->type << "'" << std::endl;
@@ -905,6 +1218,7 @@ int main(int argc, const char** args)
     ed.lua.script_file(luaFile);
 
     getDefs(ed, sections);
+    ed.pSections = &sections;
 
     // Restore sections that were open in the previous session.
     for (auto& [key, section] : sections)
@@ -1105,6 +1419,40 @@ int main(int argc, const char** args)
             if (ed.pendingReceives.empty())
             {
                 ed.isReceiving.store(false);
+                if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadMsb)
+                {
+                    // MSB received -- determine tone type and receive tone sections
+                    const std::string msbId = ed.saveSysex.partPrefix.empty()
+                        ? ""
+                        : [&]() -> std::string
+                        {
+                            // "Part 01 " -> partNr=1 -> "PRM-_PRF-_FP1-NEFP_PAT_BS_MSB"
+                            int n = std::stoi(ed.saveSysex.partPrefix.substr(5, 2));
+                            return "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
+                        }();
+                    auto* msbParam = getParameterDef(ed, msbId);
+                    int msb = msbParam ? (int)msbParam->value : -1;
+                    ed.saveSysex.tonePrefixes = getTonePrefixes(ed.saveSysex.partPrefix, msb);
+                    std::vector<SectionDef::FGetReceiveSysex> getters;
+                    for (auto& [key, sec] : sections)
+                    {
+                        for (const auto& pfx : ed.saveSysex.tonePrefixes)
+                        {
+                            if (key.size() >= pfx.size() && key.substr(0, pfx.size()) == pfx)
+                            {
+                                getters.push_back(makeParamOnlyGetter(ed, sec));
+                                break;
+                            }
+                        }
+                    }
+                    ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::ReadTone;
+                    triggerReceive(ed, getters);
+                }
+                else if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadTone)
+                {
+                    ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::Idle;
+                    saveSysexToFile(ed);
+                }
             }
         }
 
@@ -1140,6 +1488,44 @@ int main(int argc, const char** args)
         if (show_command_palette)
         {
             ImCmd::CommandPaletteWindow("CommandPalette", &show_command_palette);
+        }
+
+        // File dialog for Save SysEx
+        if (ImGuiFileDialog::Instance()->Display("LoadSysexDlg",
+                ImGuiWindowFlags_NoCollapse, ImVec2(600, 400)))
+        {
+            if (ImGuiFileDialog::Instance()->IsOk())
+            {
+                ed.loadSysex.filepath = ImGuiFileDialog::Instance()->GetFilePathName();
+                loadSysexFromFile(ed);
+            }
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        if (ImGuiFileDialog::Instance()->Display("SaveSysexDlg",
+                ImGuiWindowFlags_NoCollapse, ImVec2(600, 400)))
+        {
+            if (ImGuiFileDialog::Instance()->IsOk())
+            {
+                ed.saveSysex.filepath = ImGuiFileDialog::Instance()->GetFilePathName();
+                // Phase 1: receive only NEFP_PAT_BS_MSB to determine tone type.
+                int n = std::stoi(ed.saveSysex.partPrefix.substr(5, 2));
+                std::string msbId = "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
+                SectionDef::FGetReceiveSysex msbGetter = [&ed, msbId]()
+                    -> std::vector<RequestMessage>
+                {
+                    sol::function fn = ed.lua["CreateReceiveMessageForLeafId"];
+                    sol::object obj = fn(msbId);
+                    if (!obj.valid() || obj.get_type() == sol::type::nil)
+                    {
+                        return {};
+                    }
+                    return {obj.as<RequestMessage>()};
+                };
+                ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::ReadMsb;
+                triggerReceive(ed, {msbGetter});
+            }
+            ImGuiFileDialog::Instance()->Close();
         }
 
         for(auto &sectionPair : sections)
