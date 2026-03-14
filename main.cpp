@@ -46,7 +46,7 @@ Args parseArguments(int argc, const char** argv)
             }
             result.mainLuaFilePath = std::string(argv[i]);
         }
-        if (std::string(arg) == "--help")
+        else if (std::string(arg) == "--help")
         {
             result.printHelp = true;
         }
@@ -340,8 +340,43 @@ int main(int argc, const char** args)
             ed.highlightTimer -= ImGui::GetIO().DeltaTime;
         }
 
+        // ── Sidebar resize logic (no draws here) ─────────────────────────────
+        bool sidebarHandleHovering = false;
+        {
+            const float handleX = ed.sidebar.width;
+            ImGuiIO& ioRef = ImGui::GetIO();
+            sidebarHandleHovering = rawMouse.x >= handleX - 4.0f
+                && rawMouse.x <= handleX + 4.0f
+                && rawMouse.y >= 0.0f
+                && rawMouse.y <= fh;
+            if (sidebarHandleHovering || ed.sidebar.isResizing)
+            {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+                if (ioRef.MouseDown[0])
+                {
+                    ed.sidebar.isResizing = true;
+                    ed.sidebar.width += ioRef.MouseDelta.x;
+                    ed.sidebar.width = std::max(120.0f, std::min(600.0f, ed.sidebar.width));
+                }
+            }
+            if (!ioRef.MouseDown[0])
+            {
+                ed.sidebar.isResizing = false;
+            }
+        }
+
+        // Shift viewport to implement canvas scroll.
+        // screen = imgui - scrollOfs from this point on.
+        ImGui::GetMainViewport()->Pos     = ImVec2(scrollOfs.x, scrollOfs.y);
+        ImGui::GetMainViewport()->WorkSize = {10000.f, 10000.f};
+        canvasMax = {fw, fh};
+
         // ── Sidebar ───────────────────────────────────────────────────────────
-        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+        // Rendered AFTER viewport->Pos so ImGui's internal clamping uses the
+        // current scrollOfs and the window stays pinned to screen (0,0).
+        // The resize border is drawn into the sidebar's own window DrawList so
+        // it shares the sidebar's z-order and section windows can appear on top.
+        ImGui::SetNextWindowPos(ImVec2(scrollOfs.x, scrollOfs.y), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(ed.sidebar.width, (float)display_h), ImGuiCond_Always);
         if (ImGui::Begin("##Sidebar", nullptr,
                 ImGuiWindowFlags_NoMove
@@ -350,47 +385,67 @@ int main(int argc, const char** args)
                 | ImGuiWindowFlags_NoBringToFrontOnFocus
                 | ImGuiWindowFlags_NoCollapse))
         {
+            // Draw resize border into the sidebar window's draw list.
+            // PushClipRectFullScreen lets the line extend outside the sidebar bounds.
+            // Because this is a window draw list (not FG), section windows rendered
+            // later will appear on top of this line.
+            {
+                const float sx = scrollOfs.x, sy = scrollOfs.y;
+                const float handleX = ed.sidebar.width;
+                ImDrawList* wdl = ImGui::GetWindowDrawList();
+                wdl->PushClipRectFullScreen();
+                if (sidebarHandleHovering || ed.sidebar.isResizing)
+                {
+                    wdl->AddLine(ImVec2(handleX + sx, sy), ImVec2(handleX + sx, fh + sy),
+                                 IM_COL32(180, 180, 180, 255), 2.0f);
+                }
+                else
+                {
+                    wdl->AddLine(ImVec2(handleX + sx, sy), ImVec2(handleX + sx, fh + sy),
+                                 IM_COL32(80, 80, 80, 255), 1.0f);
+                }
+                wdl->PopClipRect();
+            }
             renderSidebar(ed, sections);
         }
         ImGui::End();
 
-        // Sidebar resize handle
+        // ── Scrollbars (ForegroundDrawList) ───────────────────────────────────
+        // First FG access in this frame happens here, after viewport->Pos = scrollOfs,
+        // so the clip rect is [scrollOfs, scrollOfs + display].
+        // All draw positions add scrollOfs to convert screen coords to imgui coords.
         {
-            const float handleX = ed.sidebar.width;
-            ImGuiIO& ioRef = ImGui::GetIO();
-            bool hovering = ioRef.MousePos.x >= handleX - 4.0f
-                && ioRef.MousePos.x <= handleX + 4.0f
-                && ioRef.MousePos.y >= 0.0f
-                && ioRef.MousePos.y <= fh;
-            if (hovering || ed.sidebar.isResizing)
+            auto* dl = ImGui::GetForegroundDrawList();
+            const float sx = scrollOfs.x, sy = scrollOfs.y;
+            const float vtl2 = (needV && maxScrollY > 0.0f)
+                                ? (vTrackLen - vThumbLen) * sy / maxScrollY : 0.0f;
+            const float htl2 = (needH && maxScrollX > 0.0f)
+                                ? (hTrackLen - hThumbLen) * sx / maxScrollX : 0.0f;
+            constexpr ImU32 kTrack = IM_COL32( 30, 30, 30, 220);
+            constexpr ImU32 kThumb = IM_COL32(120,120,120, 220);
+            constexpr ImU32 kDrag  = IM_COL32(200,200,200, 255);
+            if (needV)
             {
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-                ImGui::GetForegroundDrawList()->AddLine(
-                    ImVec2(handleX, 0.0f), ImVec2(handleX, fh),
-                    IM_COL32(180, 180, 180, 255), 2.0f);
-                if (ioRef.MouseDown[0])
-                {
-                    ed.sidebar.isResizing = true;
-                    ed.sidebar.width += ioRef.MouseDelta.x;
-                    ed.sidebar.width = std::max(120.0f, std::min(600.0f, ed.sidebar.width));
-                }
+                dl->AddRectFilled({fw - kSbW + sx, sy},
+                                  {fw + sx, fh - (needH ? kSbW : 0.f) + sy}, kTrack);
+                dl->AddRectFilled({fw - kSbW + sx, vtl2 + sy},
+                                  {fw + sx, vtl2 + vThumbLen + sy},
+                                  vDrag.active ? kDrag : kThumb);
             }
-            else
+            if (needH)
             {
-                ImGui::GetForegroundDrawList()->AddLine(
-                    ImVec2(handleX, 0.0f), ImVec2(handleX, fh),
-                    IM_COL32(80, 80, 80, 255), 1.0f);
+                dl->AddRectFilled({sx, fh - kSbW + sy},
+                                  {fw - (needV ? kSbW : 0.f) + sx, fh + sy}, kTrack);
+                dl->AddRectFilled({htl2 + sx, fh - kSbW + sy},
+                                  {htl2 + hThumbLen + sx, fh + sy},
+                                  hDrag.active ? kDrag : kThumb);
             }
-            if (!ioRef.MouseDown[0])
+            if (needV && needH)
             {
-                ed.sidebar.isResizing = false;
+                dl->AddRectFilled({fw - kSbW + sx, fh - kSbW + sy},
+                                  {fw + sx, fh + sy}, kTrack);
             }
         }
-
-        // Shift viewport to implement canvas scroll
-        ImGui::GetMainViewport()->Pos     = ImVec2(scrollOfs.x, scrollOfs.y);
-        ImGui::GetMainViewport()->WorkSize = {10000.f, 10000.f};
-        canvasMax = {fw, fh};
 
         // ── Process pending MIDI receives ─────────────────────────────────────
         {
@@ -457,12 +512,13 @@ int main(int argc, const char** args)
             const float lFrac = std::clamp(pos,           0.0f, 1.0f);
             const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
             const float W     = fw;
+            const float bx = scrollOfs.x, by = scrollOfs.y;
             auto* dl = ImGui::GetBackgroundDrawList();
-            dl->AddRectFilled({scrollOfs.x,             scrollOfs.y},
-                              {scrollOfs.x + W,         scrollOfs.y + kBarH},
+            dl->AddRectFilled({bx,            by},
+                              {W + bx,        kBarH + by},
                               IM_COL32(80, 10, 10, 200));
-            dl->AddRectFilled({scrollOfs.x + lFrac * W, scrollOfs.y},
-                              {scrollOfs.x + rFrac * W, scrollOfs.y + kBarH},
+            dl->AddRectFilled({lFrac * W + bx, by},
+                              {rFrac * W + bx, kBarH + by},
                               IM_COL32(220, 30, 30, 255));
         }
 
@@ -589,39 +645,6 @@ int main(int argc, const char** args)
 
         scrollOfs.x = std::clamp(scrollOfs.x, 0.0f, maxScrollX);
         scrollOfs.y = std::clamp(scrollOfs.y, 0.0f, maxScrollY);
-
-        // ── Scrollbars ────────────────────────────────────────────────────────
-        {
-            const float vtl2 = (needV && maxScrollY > 0.0f)
-                                ? (vTrackLen - vThumbLen) * scrollOfs.y / maxScrollY : 0.0f;
-            const float htl2 = (needH && maxScrollX > 0.0f)
-                                ? (hTrackLen - hThumbLen) * scrollOfs.x / maxScrollX : 0.0f;
-            constexpr ImU32 kTrack = IM_COL32( 30, 30, 30, 220);
-            constexpr ImU32 kThumb = IM_COL32(120,120,120, 220);
-            constexpr ImU32 kDrag  = IM_COL32(200,200,200, 255);
-            auto* dl = ImGui::GetForegroundDrawList();
-            if (needV)
-            {
-                dl->AddRectFilled({fw - kSbW + scrollOfs.x, scrollOfs.y},
-                                  {fw + scrollOfs.x, fh - (needH ? kSbW : 0.f) + scrollOfs.y}, kTrack);
-                dl->AddRectFilled({fw - kSbW + scrollOfs.x, vtl2 + scrollOfs.y},
-                                  {fw + scrollOfs.x, vtl2 + vThumbLen + scrollOfs.y},
-                                  vDrag.active ? kDrag : kThumb);
-            }
-            if (needH)
-            {
-                dl->AddRectFilled({scrollOfs.x, fh - kSbW + scrollOfs.y},
-                                  {fw - (needV ? kSbW : 0.f) + scrollOfs.x, fh + scrollOfs.y}, kTrack);
-                dl->AddRectFilled({htl2 + scrollOfs.x, fh - kSbW + scrollOfs.y},
-                                  {htl2 + hThumbLen + scrollOfs.x, fh + scrollOfs.y},
-                                  hDrag.active ? kDrag : kThumb);
-            }
-            if (needV && needH)
-            {
-                dl->AddRectFilled({fw - kSbW + scrollOfs.x, fh - kSbW + scrollOfs.y},
-                                  {fw + scrollOfs.x, fh + scrollOfs.y}, kTrack);
-            }
-        }
 
         renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs,
                                {scrollOfs.x, scrollOfs.y});
