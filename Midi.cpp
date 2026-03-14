@@ -95,21 +95,103 @@ void Midi::enqueue(QueueItem item)
     queue.emplace_front(std::move(item));
 }
 
+int Midi::getInputPortCount()
+{
+    RtMidiIn tmp;
+    return (int)tmp.getPortCount();
+}
+
+std::string Midi::getInputPortName(int index)
+{
+    RtMidiIn tmp;
+    if (index < 0 || (size_t)index >= tmp.getPortCount())
+    {
+        return "";
+    }
+    return tmp.getPortName((size_t)index);
+}
+
+int Midi::getOutputPortCount()
+{
+    RtMidiOut tmp;
+    return (int)tmp.getPortCount();
+}
+
+std::string Midi::getOutputPortName(int index)
+{
+    RtMidiOut tmp;
+    if (index < 0 || (size_t)index >= tmp.getPortCount())
+    {
+        return "";
+    }
+    return tmp.getPortName((size_t)index);
+}
+
+void Midi::reopenInput(int index)
+{
+    pendingInPort.store(index);
+}
+
+void Midi::reopenOutput(int index)
+{
+    pendingOutPort.store(index);
+}
+
 void Midi::runThread()
 {
     RtMidiIn  midiIn;
     RtMidiOut midiOut;
-    if (inport >= 0)
+    if (inport >= 0 && (size_t)inport < midiIn.getPortCount())
     {
         openPort(midiIn, (size_t)inport);
         midiIn.ignoreTypes(false, false, false);
     }
-    if (outport >= 0)
+    else if (inport >= 0)
+    {
+        std::cerr << "MIDI in port " << inport << " not available, skipping." << std::endl;
+    }
+    if (outport >= 0 && (size_t)outport < midiOut.getPortCount())
     {
         openPort(midiOut, (size_t)outport);
     }
+    else if (outport >= 0)
+    {
+        std::cerr << "MIDI out port " << outport << " not available, skipping." << std::endl;
+    }
     while (running)
     {
+        // Handle pending port hot-swap requests
+        {
+            int wantIn = pendingInPort.exchange(-2);
+            if (wantIn != -2)
+            {
+                if (midiIn.isPortOpen())
+                {
+                    midiIn.closePort();
+                }
+                if (wantIn >= 0 && (size_t)wantIn < midiIn.getPortCount())
+                {
+                    midiIn.openPort((size_t)wantIn);
+                    midiIn.ignoreTypes(false, false, false);
+                    std::cout << "reopen in: (" << wantIn << ") "
+                              << midiIn.getPortName((size_t)wantIn) << std::endl;
+                }
+            }
+            int wantOut = pendingOutPort.exchange(-2);
+            if (wantOut != -2)
+            {
+                if (midiOut.isPortOpen())
+                {
+                    midiOut.closePort();
+                }
+                if (wantOut >= 0 && (size_t)wantOut < midiOut.getPortCount())
+                {
+                    midiOut.openPort((size_t)wantOut);
+                    std::cout << "reopen out: (" << wantOut << ") "
+                              << midiOut.getPortName((size_t)wantOut) << std::endl;
+                }
+            }
+        }
         {
             while(!queue.empty())
             {

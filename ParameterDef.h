@@ -28,6 +28,7 @@ struct ParameterDef
     typedef std::function<std::vector<unsigned char>(float)> FSetValue;
     typedef std::map<int, std::string> SelectionOptions;
     typedef std::function<std::vector<RequestMessage>()> FGetAction;
+    typedef std::function<SelectionOptions()> FGetOptions;
     std::string id;
     FStringGetter name;
     std::string format = "%.0f";
@@ -35,6 +36,7 @@ struct ParameterDef
     FToI7Value toI7Value;
     FToGuiValue toGuiValue;
     SelectionOptions options;
+    FGetOptions optionsFn;
     std::string stringValue;
     float value = 0.0f;
     FFloatGetter min = []()

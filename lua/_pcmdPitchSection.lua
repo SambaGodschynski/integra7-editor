@@ -3,6 +3,7 @@ require "_sysex"
 require "_com"
 require "_model"
 require "_waveData"
+require "_srxWaveData"
 
 local get = GetWrapper
 
@@ -28,6 +29,17 @@ local OutAssign   = {
     [3]="COMP+EQ 3", [4]="COMP+EQ 4", [5]="COMP+EQ 5", [6]="COMP+EQ 6",
 }
 local WmtVeloCtrl = {[0]="OFF", [1]="ON", [2]="RANDOM"}
+
+-- per-part/wmt GID state for dynamic wave options
+local currentGidPcmd = {}
+
+local function waveOptionsForPcmd(partNr, wmtNr)
+    local gid = ((currentGidPcmd[partNr] or {})[wmtNr]) or 0
+    if gid >= 1 and gid <= 12 and SrxWaveNames[gid] then
+        return SrxWaveNames[gid]
+    end
+    return WaveNames
+end
 local WaveGroup   = {
     [0]="Internal (XV-5080)",
     [1]="SRX-01", [2]="SRX-02", [3]="SRX-03", [4]="SRX-04",
@@ -350,15 +362,26 @@ function CreatePcmdPitchSections(main)
         -- ----------------------------------------------------------------
         -- WMT sections 1-4 (tabbed in _pcmdTabsSection)
         -- ----------------------------------------------------------------
+        currentGidPcmd[partNr] = currentGidPcmd[partNr] or {}
         for wmtNr = 1, 4, 1 do
-            local s  = tostring(wmtNr)
-            local kW = "Part " .. pn .. " PCM-D WMT " .. s
+            local s      = tostring(wmtNr)
+            local kW     = "Part " .. pn .. " PCM-D WMT " .. s
+            local wmtNr2 = wmtNr  -- capture for closures
 
+            local origGtypeSetter = makePitchSetter("WMT"..s.."_WAV_GTYPE")
             local wmtParams = {
                 {type="toggle", id=pid("_PcmdWmt"..s.."Sw"),       name=get("Wave Switch"),        default=0,   min=get(0),   max=get(1),   setValue=makePitchSetter("WMT"..s.."_SW")},
-                {type="select", id=pid("_PcmdWmt"..s.."WavGtype"),  name=get("Wave Group"),         default=0,   options=WaveGroup,            setValue=makePitchSetter("WMT"..s.."_WAV_GTYPE")},
-                {type="select", id=pid("_PcmdWmt"..s.."WavNumL"),   name=get("Wave No. L (Mono)"),  default=0,   options=WaveNames,            setValue=makePitchSetter("WMT"..s.."_WAV_NUML")},
-                {type="select", id=pid("_PcmdWmt"..s.."WavNumR"),   name=get("Wave No. R"),         default=0,   options=WaveNames,            setValue=makePitchSetter("WMT"..s.."_WAV_NUMR")},
+                {type="select", id=pid("_PcmdWmt"..s.."WavGtype"),  name=get("Wave Group"),         default=0,   options=WaveGroup,
+                    setValue=function(v)
+                        currentGidPcmd[partNr][wmtNr2] = v
+                        return origGtypeSetter(v)
+                    end},
+                {type="select", id=pid("_PcmdWmt"..s.."WavNumL"),   name=get("Wave No. L (Mono)"),  default=0,
+                    options=function() return waveOptionsForPcmd(partNr, wmtNr2) end,
+                    setValue=makePitchSetter("WMT"..s.."_WAV_NUML")},
+                {type="select", id=pid("_PcmdWmt"..s.."WavNumR"),   name=get("Wave No. R"),         default=0,
+                    options=function() return waveOptionsForPcmd(partNr, wmtNr2) end,
+                    setValue=makePitchSetter("WMT"..s.."_WAV_NUMR")},
                 {type="select", id=pid("_PcmdWmt"..s.."WavGain"),   name=get("Wave Gain"),          default=1,   options=WaveGain,             setValue=makePitchSetter("WMT"..s.."_WAV_GAIN")},
                 {type="toggle", id=pid("_PcmdWmt"..s.."FxmSw"),     name=get("FXM Switch"),        default=0,   min=get(0),   max=get(1),   setValue=makePitchSetter("WMT"..s.."_FXM_SW")},
                 {type="select", id=pid("_PcmdWmt"..s.."FxmColor"),  name=get("FXM Color"),         default=0,   options=FxmColor,             setValue=makePitchSetter("WMT"..s.."_FXM_COLOR")},

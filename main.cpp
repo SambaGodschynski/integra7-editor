@@ -69,7 +69,13 @@ enum class ToneType
 
 struct SidebarState
 {
-    static constexpr float kWidth = 250.0f;
+    float width      = 250.0f;
+    bool  isResizing = false;
+    // MIDI IO
+    std::vector<std::string> inPortNames;
+    std::vector<std::string> outPortNames;
+    int selectedInPort  = -1;
+    int selectedOutPort = -1;
 };
 
 struct I7Ed
@@ -276,6 +282,37 @@ void getSection(I7Ed &ed, sol::table &lua_table, SectionDef &outSectionDef)
             {
                 param->stringValue = getDefaultValue(param->options, param->value);
             }
+            else
+            {
+                sol::optional<sol::function> optFnLua = luaParam["options"];
+                if (optFnLua && optFnLua->valid())
+                {
+                    // Wrap the Lua function with explicit table-to-map conversion
+                    // to avoid sol2 automatic type conversion failures
+                    sol::function fn = *optFnLua;
+                    param->optionsFn = [fn]() -> ParameterDef::SelectionOptions
+                    {
+                        try
+                        {
+                            sol::table luaTable = fn();
+                            ParameterDef::SelectionOptions opts;
+                            for (const auto& kv : luaTable)
+                            {
+                                if (kv.first.get_type()  == sol::type::number
+                                 && kv.second.get_type() == sol::type::string)
+                                {
+                                    opts[kv.first.as<int>()] = kv.second.as<std::string>();
+                                }
+                            }
+                            return opts;
+                        }
+                        catch (...)
+                        {
+                            return {};
+                        }
+                    };
+                }
+            }
             outSectionDef.params.push_back(param.get());
             ed.parameterDefs[param->id] = param;
         }
@@ -372,7 +409,9 @@ void renderCombo(ParameterDef& param, I7Ed &ed)
         {
             ImSearch::SearchBar();
 
-            for (const auto& [value, label] : param.options)
+            const ParameterDef::SelectionOptions resolvedOpts =
+                param.optionsFn ? param.optionsFn() : param.options;
+            for (const auto& [value, label] : resolvedOpts)
             {
                 ImSearch::SearchableItem(label.c_str(),
                     [&](const char* name)
@@ -1133,6 +1172,8 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::SNS:
         {
             std::string pfx = base + "SN-S ";
+            viewButton("Common", pfx + "Common");
+            viewButton("Misc",   pfx + "Misc");
             viewButton("OSC",    pfx + "OSC");
             viewButton("Pitch",  pfx + "Pitch");
             viewButton("Filter", pfx + "Filter");
@@ -1145,6 +1186,7 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         {
             std::string pfx = base + "SN-D ";
             viewButton("Common", pfx + "Common");
+            viewButton("Inst",   pfx + "Inst");
             viewButton("CompEq", pfx + "CompEq");
             viewButton("MFX",    pfx + "MFX");
             break;
@@ -1152,19 +1194,22 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::PCMS:
         {
             std::string pfx = base + "PCM-S ";
-            viewButton("Common",  pfx + "Common");
-            viewButton("Wave",    pfx + "Wave");
-            viewButton("PMT",     pfx + "PMT");
-            viewButton("Pitch",   pfx + "Pitch All");
-            viewButton("TVF",     pfx + "TVF");
-            viewButton("TVA",     pfx + "TVA");
-            viewButton("LFO1",    pfx + "LFO1");
-            viewButton("LFO2",    pfx + "LFO2");
-            viewButton("StepLFO", pfx + "Step LFO");
-            viewButton("CTRL",    pfx + "CTRL");
-            viewButton("MTRX",    pfx + "MTRX CTRL");
-            viewButton("Output",  pfx + "Output");
-            viewButton("MFX",     pfx + "MFX");
+            viewButton("Common",   pfx + "Common");
+            viewButton("Wave",     pfx + "Wave");
+            viewButton("PMT",      pfx + "PMT");
+            viewButton("Pitch",    pfx + "Pitch All");
+            viewButton("PitchEnv", pfx + "Pitch Env");
+            viewButton("TVF",      pfx + "TVF");
+            viewButton("TVFEnv",   pfx + "TVF Env");
+            viewButton("TVA",      pfx + "TVA");
+            viewButton("TVAEnv",   pfx + "TVA Env");
+            viewButton("LFO1",     pfx + "LFO1");
+            viewButton("LFO2",     pfx + "LFO2");
+            viewButton("StepLFO",  pfx + "Step LFO");
+            viewButton("CTRL",     pfx + "CTRL");
+            viewButton("MTRX",     pfx + "MTRX CTRL");
+            viewButton("Output",   pfx + "Output");
+            viewButton("MFX",      pfx + "MFX");
             break;
         }
         case ToneType::PCMD:
@@ -1172,6 +1217,7 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
             std::string pfx = base + "PCM-D ";
             viewButton("Common", pfx + "Common");
             viewButton("Pitch",  pfx + "Pitch");
+            viewButton("WMT",    pfx + "WMT");
             viewButton("CompEq", pfx + "CompEq");
             viewButton("MFX",    pfx + "MFX");
             break;
@@ -1185,8 +1231,46 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
     ImGui::NewLine();
 }
 
+static void renderMidiPortCombo(
+    const char* id,
+    const std::vector<std::string>& names,
+    int& selected,
+    std::function<void(int)> onSelect)
+{
+    const char* preview = (selected >= 0 && selected < (int)names.size())
+        ? names[selected].c_str()
+        : "(none)";
+    ImGui::SetNextItemWidth(-1.0f);
+    if (ImGui::BeginCombo(id, preview))
+    {
+        for (int i = 0; i < (int)names.size(); ++i)
+        {
+            bool sel = (i == selected);
+            if (ImGui::Selectable(names[i].c_str(), sel))
+            {
+                selected = i;
+                onSelect(i);
+            }
+        }
+        ImGui::EndCombo();
+    }
+}
+
 static void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
 {
+    if (ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::TextUnformatted("In");
+        renderMidiPortCombo("##MidiIn", ed.sidebar.inPortNames,
+            ed.sidebar.selectedInPort,
+            [&](int i) { ed.midi.reopenInput(i); });
+        ImGui::TextUnformatted("Out");
+        renderMidiPortCombo("##MidiOut", ed.sidebar.outPortNames,
+            ed.sidebar.selectedOutPort,
+            [&](int i) { ed.midi.reopenOutput(i); });
+    }
+    ImGui::Separator();
+
     for (int partIdx = 0; partIdx < 16; ++partIdx)
     {
         int partNr = partIdx + 1;
@@ -1203,7 +1287,10 @@ static void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
             ParameterDef* typeParam = getParameterDef(ed, typeParamId);
             if (typeParam != nullptr)
             {
-                ImGui::SetNextItemWidth(-1.0f);
+                float comboWidth = ImGui::CalcTextSize("PCM-D").x
+                    + ImGui::GetStyle().FramePadding.x * 2.0f
+                    + ImGui::GetFrameHeight(); // arrow button
+                ImGui::SetNextItemWidth(comboWidth);
                 renderCombo(*typeParam, ed);
             }
             ToneType type = getPartToneType(ed, partNr);
@@ -1227,9 +1314,14 @@ void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage)
         guiValue = paramDef->toGuiValue(vcMessage.i7Value);
     }
     paramDef->value = guiValue;
-    if (!paramDef->options.empty())
     {
-        paramDef->stringValue = paramDef->options.at((int)paramDef->value);
+        const ParameterDef::SelectionOptions resolvedOpts =
+            paramDef->optionsFn ? paramDef->optionsFn() : paramDef->options;
+        auto it = resolvedOpts.find((int)paramDef->value);
+        if (it != resolvedOpts.end())
+        {
+            paramDef->stringValue = it->second;
+        }
     }
 }
 
@@ -1263,13 +1355,22 @@ int main(int argc, const char** args)
         return 0;
     }
 
-    if (ed.args.inPortNr >= 0)
+    // Enumerate ports before start() to avoid ALSA threading conflicts
     {
-        ed.midi.openInput((size_t)ed.args.inPortNr);
-    }
-    if (ed.args.outPortNr >= 0)
-    {
-         ed.midi.openOutput((size_t)ed.args.inPortNr);
+        int nIn  = ed.midi.getInputPortCount();
+        int nOut = ed.midi.getOutputPortCount();
+        for (int i = 0; i < nIn;  ++i) { ed.sidebar.inPortNames.push_back(ed.midi.getInputPortName(i)); }
+        for (int i = 0; i < nOut; ++i) { ed.sidebar.outPortNames.push_back(ed.midi.getOutputPortName(i)); }
+        if (ed.args.inPortNr  >= 0 && ed.args.inPortNr  < nIn)
+        {
+            ed.sidebar.selectedInPort  = ed.args.inPortNr;
+            ed.midi.openInput(ed.args.inPortNr);
+        }
+        if (ed.args.outPortNr >= 0 && ed.args.outPortNr < nOut)
+        {
+            ed.sidebar.selectedOutPort = ed.args.outPortNr;
+            ed.midi.openOutput(ed.args.outPortNr);
+        }
     }
 
     ed.midi.start();
@@ -1363,10 +1464,78 @@ int main(int argc, const char** args)
         ImGui::AddSettingsHandler(&h);
     }
 
+    // MIDI port settings handler (persists port names across sessions)
+    struct MidiPortsData
+    {
+        std::string pendingInName;
+        std::string pendingOutName;
+        SidebarState* pSidebar = nullptr;
+        Midi*         pMidi    = nullptr;
+    };
+    MidiPortsData midiPortsData;
+    midiPortsData.pSidebar = &ed.sidebar;
+    midiPortsData.pMidi    = &ed.midi;
+    {
+        ImGuiSettingsHandler h = {};
+        h.TypeName = "I7EdMidiPorts";
+        h.TypeHash = ImHashStr("I7EdMidiPorts");
+        h.UserData = &midiPortsData;
+        h.ReadOpenFn = [](ImGuiContext*, ImGuiSettingsHandler*, const char*) -> void*
+        {
+            return (void*)1;
+        };
+        h.ReadLineFn = [](ImGuiContext*, ImGuiSettingsHandler* handler, void*, const char* line)
+        {
+            auto* d = static_cast<MidiPortsData*>(handler->UserData);
+            if (strncmp(line, "In=", 3) == 0)  { d->pendingInName  = line + 3; }
+            if (strncmp(line, "Out=", 4) == 0) { d->pendingOutName = line + 4; }
+        };
+        h.WriteAllFn = [](ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
+        {
+            auto* d = static_cast<MidiPortsData*>(handler->UserData);
+            SidebarState& sb = *d->pSidebar;
+            buf->appendf("[%s][]\n", handler->TypeName);
+            if (sb.selectedInPort >= 0 && sb.selectedInPort < (int)sb.inPortNames.size())
+            {
+                buf->appendf("In=%s\n", sb.inPortNames[sb.selectedInPort].c_str());
+            }
+            if (sb.selectedOutPort >= 0 && sb.selectedOutPort < (int)sb.outPortNames.size())
+            {
+                buf->appendf("Out=%s\n", sb.outPortNames[sb.selectedOutPort].c_str());
+            }
+            buf->appendf("\n");
+        };
+        ImGui::AddSettingsHandler(&h);
+    }
+
     // Explicitly load ini now so pending open-sections are known before getDefs.
     if (io.IniFilename)
     {
         ImGui::LoadIniSettingsFromDisk(io.IniFilename);
+    }
+
+    // Apply saved MIDI port names (resolved after port enumeration above)
+    {
+        auto findPort = [](const std::vector<std::string>& names, const std::string& name) -> int
+        {
+            for (int i = 0; i < (int)names.size(); ++i)
+            {
+                if (names[i] == name) { return i; }
+            }
+            return names.empty() ? -1 : 0;
+        };
+        if (!midiPortsData.pendingInName.empty())
+        {
+            int idx = findPort(ed.sidebar.inPortNames, midiPortsData.pendingInName);
+            ed.sidebar.selectedInPort = idx;
+            ed.midi.reopenInput(idx);
+        }
+        if (!midiPortsData.pendingOutName.empty())
+        {
+            int idx = findPort(ed.sidebar.outPortNames, midiPortsData.pendingOutName);
+            ed.sidebar.selectedOutPort = idx;
+            ed.midi.reopenOutput(idx);
+        }
     }
 
     ImGui::StyleColorsDark();
@@ -1569,7 +1738,7 @@ int main(int argc, const char** args)
 
         // Sidebar -- fixed at screen position (0,0), independent of scroll
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(SidebarState::kWidth, (float)display_h), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(ed.sidebar.width, (float)display_h), ImGuiCond_Always);
         if (ImGui::Begin("##Sidebar",
             nullptr,
             ImGuiWindowFlags_NoMove
@@ -1581,6 +1750,42 @@ int main(int argc, const char** args)
             renderSidebar(ed, sections);
         }
         ImGui::End();
+
+        // Sidebar resize handle
+        {
+            const float fh = (float)display_h;
+            const float handleX = ed.sidebar.width;
+            ImGuiIO& io = ImGui::GetIO();
+            bool hovering = io.MousePos.x >= handleX - 4.0f
+                && io.MousePos.x <= handleX + 4.0f
+                && io.MousePos.y >= 0.0f
+                && io.MousePos.y <= fh;
+            if (hovering || ed.sidebar.isResizing)
+            {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+                ImGui::GetForegroundDrawList()->AddLine(
+                    ImVec2(handleX, 0.0f),
+                    ImVec2(handleX, fh),
+                    IM_COL32(180, 180, 180, 255), 2.0f);
+                if (io.MouseDown[0])
+                {
+                    ed.sidebar.isResizing = true;
+                    ed.sidebar.width += io.MouseDelta.x;
+                    ed.sidebar.width = std::max(120.0f, std::min(600.0f, ed.sidebar.width));
+                }
+            }
+            else
+            {
+                ImGui::GetForegroundDrawList()->AddLine(
+                    ImVec2(handleX, 0.0f),
+                    ImVec2(handleX, fh),
+                    IM_COL32(80, 80, 80, 255), 1.0f);
+            }
+            if (!io.MouseDown[0])
+            {
+                ed.sidebar.isResizing = false;
+            }
+        }
 
         // Shift the main viewport origin to match the current scroll offset.
         // This controls the clip rect applied to every Begin() call:

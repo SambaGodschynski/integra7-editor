@@ -5,6 +5,8 @@
 #include <list> // TODO: use queue
 #include <mutex>
 #include <thread>
+#include <atomic>
+#include <string>
 
 class Midi
 {
@@ -19,6 +21,8 @@ public:
 private:
     int inport = -1, outport = -1;
     bool running;
+    std::atomic<int> pendingInPort{-2};   // -2 = no-op sentinel
+    std::atomic<int> pendingOutPort{-2};
     typedef std::mutex Lock;
     typedef std::list<QueueItem> Queue;
     std::thread *thread = nullptr;
@@ -38,4 +42,10 @@ public:
     void openOutput(int index);
     void sendMessage(const Bytes& message);
     void sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback);
+    int  getInputPortCount();
+    std::string getInputPortName(int index);
+    int  getOutputPortCount();
+    std::string getOutputPortName(int index);
+    void reopenInput(int index);    // -1 = close
+    void reopenOutput(int index);   // -1 = close
 };
