@@ -92,7 +92,15 @@ include_directories(
 
 add_subdirectory(${RTMIDI_DIR})
 
-add_executable(i7ed main.cpp Midi.cpp)
+add_executable(i7ed
+    main.cpp
+    Midi.cpp
+    LuaBridge.cpp
+    SysexIO.cpp
+    Rendering.cpp
+    Sidebar.cpp
+    Settings.cpp
+)
 target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
 
 
