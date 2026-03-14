@@ -18,12 +18,8 @@
 
 struct Args
 {
-    bool listOutputs = false;
-    bool listInputs  = false;
     bool printHelp   = false;
     std::string mainLuaFilePath;
-    int inPortNr  = -1;
-    int outPortNr = -1;
 };
 
 struct PendingReceive

@@ -35,16 +35,8 @@ Args parseArguments(int argc, const char** argv)
     Args result;
     for (int i = 1; i < argc; ++i)
     {
-        const char* arg = argv[i];
-        if (std::string(arg) == "--outputs")
-        {
-            result.listOutputs = true;
-        }
-        else if (std::string(arg) == "--inputs")
-        {
-            result.listInputs = true;
-        }
-        else if (std::string(arg) == "--lua-main")
+        const char *arg = argv[i];
+        if (std::string(arg) == "--lua-main")
         {
             ++i;
             if (i >= argc)
@@ -54,27 +46,7 @@ Args parseArguments(int argc, const char** argv)
             }
             result.mainLuaFilePath = std::string(argv[i]);
         }
-        else if (std::string(arg) == "--in-portnr")
-        {
-            ++i;
-            if (i >= argc)
-            {
-                std::cerr << "missing argument for " << arg << std::endl;
-                exit(-1);
-            }
-            result.inPortNr = (int)atoi(argv[i]);
-        }
-        else if (std::string(arg) == "--out-portnr")
-        {
-            ++i;
-            if (i >= argc)
-            {
-                std::cerr << "missing argument for " << arg << std::endl;
-                exit(-1);
-            }
-            result.outPortNr = (int)atoi(argv[i]);
-        }
-        else if (std::string(arg) == "--help")
+        if (std::string(arg) == "--help")
         {
             result.printHelp = true;
         }
@@ -105,20 +77,6 @@ int main(int argc, const char** args)
                   << std::endl;
         return 0;
     }
-    if (ed.args.listInputs)
-    {
-        std::cout << "Inputs:" << std::endl;
-        ed.midi.printInputs(std::cout);
-    }
-    if (ed.args.listOutputs)
-    {
-        std::cout << "Outputs:" << std::endl;
-        ed.midi.printOutputs(std::cout);
-    }
-    if (ed.args.listOutputs || ed.args.listInputs)
-    {
-        return 0;
-    }
 
     // Enumerate ports before start() to avoid ALSA threading conflicts
     {
@@ -126,16 +84,6 @@ int main(int argc, const char** args)
         int nOut = ed.midi.getOutputPortCount();
         for (int i = 0; i < nIn;  ++i) { ed.sidebar.inPortNames.push_back(ed.midi.getInputPortName(i)); }
         for (int i = 0; i < nOut; ++i) { ed.sidebar.outPortNames.push_back(ed.midi.getOutputPortName(i)); }
-        if (ed.args.inPortNr  >= 0 && ed.args.inPortNr  < nIn)
-        {
-            ed.sidebar.selectedInPort = ed.args.inPortNr;
-            ed.midi.openInput(ed.args.inPortNr);
-        }
-        if (ed.args.outPortNr >= 0 && ed.args.outPortNr < nOut)
-        {
-            ed.sidebar.selectedOutPort = ed.args.outPortNr;
-            ed.midi.openOutput(ed.args.outPortNr);
-        }
     }
 
     ed.midi.start();

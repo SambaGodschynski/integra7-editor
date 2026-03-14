@@ -9,6 +9,36 @@
 #include "ImGuiFileDialog.h"
 #include <iostream>
 #include <algorithm>
+#include <unordered_map>
+#include <string>
+
+// Persistent search text per param ID – survives across combo open/close cycles.
+static std::unordered_map<std::string, std::string> gComboSearchText;
+
+// Replacement for ImSearch::SearchBar() that restores the last query on open.
+static void comboSearchBar(const std::string& paramId)
+{
+    auto& saved = gComboSearchText[paramId];
+
+    if (ImGui::IsWindowAppearing())
+    {
+        ImGui::SetKeyboardFocusHere();
+        // Pre-populate ImSearch's query with the saved text so the filter is
+        // active from the very first frame the combo is open.
+        ImSearch::SetUserQuery(saved.c_str());
+    }
+
+    // Fixed-size buffer – queries are short, 512 chars is ample.
+    char buf[512] = {};
+    strncpy(buf, ImSearch::GetUserQuery(), sizeof(buf) - 1);
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::InputTextWithHint("##SearchBar", "Search", buf, sizeof(buf)))
+    {
+        ImSearch::SetUserQuery(buf);
+    }
+    // Persist the current query every frame so it survives combo close.
+    saved = ImSearch::GetUserQuery();
+}
 
 void renderCombo(ParameterDef& param, I7Ed& ed)
 {
@@ -16,7 +46,7 @@ void renderCombo(ParameterDef& param, I7Ed& ed)
     {
         if (ImSearch::BeginSearch())
         {
-            ImSearch::SearchBar();
+            comboSearchBar(param.id);
 
             const ParameterDef::SelectionOptions resolvedOpts =
                 param.optionsFn ? param.optionsFn() : param.options;
