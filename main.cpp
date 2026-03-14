@@ -57,6 +57,21 @@ struct PendingReceive
     Bytes data;
 };
 
+enum class ToneType
+{
+    Unknown = 0,
+    SNA  = 1,
+    SNS  = 2,
+    SND  = 3,
+    PCMS = 4,
+    PCMD = 5,
+};
+
+struct SidebarState
+{
+    static constexpr float kWidth = 250.0f;
+};
+
 struct I7Ed
 {
     Args args;
@@ -88,6 +103,7 @@ struct I7Ed
         std::string partPrefix;              // "Part 01 "
         std::vector<std::string> tonePrefixes; // set after MSB is received
     } saveSysex;
+    SidebarState sidebar;
 };
 
 Args parseArguments(int argc, const char **argv)
@@ -1053,6 +1069,150 @@ ParameterDef* getParameterDef(I7Ed &ed, const std::string &id)
     return mapIt->second.get();
 }
 
+static ToneType getPartToneType(I7Ed& ed, int partNr)
+{
+    std::string id = "PRM-_PRF-_FP" + std::to_string(partNr) + "-NEFP_TYPE_DUMMY";
+    ParameterDef* p = getParameterDef(ed, id);
+    if (p == nullptr)
+    {
+        return ToneType::Unknown;
+    }
+    int v = (int)p->value;
+    if (v < 1 || v > 5)
+    {
+        return ToneType::Unknown;
+    }
+    return static_cast<ToneType>(v);
+}
+
+static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, ToneType type)
+{
+    char pn[4];
+    snprintf(pn, sizeof(pn), "%02d", partNr);
+    std::string base = std::string("Part ") + pn + " ";
+
+    auto viewButton = [&](const char* label, const std::string& key) -> void
+    {
+        auto it = sections.find(key);
+        if (it == sections.end())
+        {
+            return;
+        }
+        SectionDef& sec = it->second;
+        float btnWidth = ImGui::CalcTextSize(label).x
+            + ImGui::GetStyle().FramePadding.x * 2.0f;
+        if (ImGui::GetContentRegionAvail().x < btnWidth + 4.0f)
+        {
+            ImGui::NewLine();
+        }
+        bool wasOpen = sec.isOpen;
+        if (wasOpen)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button,
+                ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+        if (ImGui::SmallButton(label))
+        {
+            sec.isOpen = !sec.isOpen;
+        }
+        if (wasOpen)
+        {
+            ImGui::PopStyleColor();
+        }
+        ImGui::SameLine();
+    };
+
+    switch (type)
+    {
+        case ToneType::SNA:
+        {
+            viewButton("SNA", base + "SNA");
+            viewButton("MFX", base + "MFX");
+            break;
+        }
+        case ToneType::SNS:
+        {
+            std::string pfx = base + "SN-S ";
+            viewButton("OSC",    pfx + "OSC");
+            viewButton("Pitch",  pfx + "Pitch");
+            viewButton("Filter", pfx + "Filter");
+            viewButton("Amp",    pfx + "Amp");
+            viewButton("LFO",    pfx + "LFO");
+            viewButton("MFX",    pfx + "MFX");
+            break;
+        }
+        case ToneType::SND:
+        {
+            std::string pfx = base + "SN-D ";
+            viewButton("Common", pfx + "Common");
+            viewButton("CompEq", pfx + "CompEq");
+            viewButton("MFX",    pfx + "MFX");
+            break;
+        }
+        case ToneType::PCMS:
+        {
+            std::string pfx = base + "PCM-S ";
+            viewButton("Common",  pfx + "Common");
+            viewButton("Wave",    pfx + "Wave");
+            viewButton("PMT",     pfx + "PMT");
+            viewButton("Pitch",   pfx + "Pitch All");
+            viewButton("TVF",     pfx + "TVF");
+            viewButton("TVA",     pfx + "TVA");
+            viewButton("LFO1",    pfx + "LFO1");
+            viewButton("LFO2",    pfx + "LFO2");
+            viewButton("StepLFO", pfx + "Step LFO");
+            viewButton("CTRL",    pfx + "CTRL");
+            viewButton("MTRX",    pfx + "MTRX CTRL");
+            viewButton("Output",  pfx + "Output");
+            viewButton("MFX",     pfx + "MFX");
+            break;
+        }
+        case ToneType::PCMD:
+        {
+            std::string pfx = base + "PCM-D ";
+            viewButton("Common", pfx + "Common");
+            viewButton("Pitch",  pfx + "Pitch");
+            viewButton("CompEq", pfx + "CompEq");
+            viewButton("MFX",    pfx + "MFX");
+            break;
+        }
+        default:
+        {
+            ImGui::TextDisabled("(unknown)");
+            break;
+        }
+    }
+    ImGui::NewLine();
+}
+
+static void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
+{
+    for (int partIdx = 0; partIdx < 16; ++partIdx)
+    {
+        int partNr = partIdx + 1;
+        char pn[4];
+        snprintf(pn, sizeof(pn), "%02d", partNr);
+        std::string headerLabel = std::string("Part ") + pn;
+
+        ImGui::PushID(partIdx);
+        if (ImGui::CollapsingHeader(headerLabel.c_str()))
+        {
+            std::string typeParamId = "PRM-_PRF-_FP"
+                + std::to_string(partNr)
+                + "-NEFP_TYPE_DUMMY";
+            ParameterDef* typeParam = getParameterDef(ed, typeParamId);
+            if (typeParam != nullptr)
+            {
+                ImGui::SetNextItemWidth(-1.0f);
+                renderCombo(*typeParam, ed);
+            }
+            ToneType type = getPartToneType(ed, partNr);
+            renderPartButtons(sections, partNr, type);
+        }
+        ImGui::PopID();
+    }
+}
+
 void valueChanged(I7Ed &ed, const ValueChangedMessage& vcMessage)
 {
     auto paramDef = getParameterDef(ed, vcMessage.id);
@@ -1363,23 +1523,41 @@ int main(int argc, const char** args)
                                  ? (hTrackLen - hThumbLen) * scrollOfs.x / maxScrollX : 0.0f;
 
         ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();   // sets io.MousePos from GLFW state
+        ImGui_ImplGlfw_NewFrame();   // updates display size, DPI scale, queues mouse events
 
-        ImVec2 rawMouse = ImGui::GetIO().MousePos;
-        const bool rawValid = rawMouse.x > -FLT_MAX;
+        // Get raw mouse position directly from GLFW.
+        // Do NOT read io.MousePos here: it is stale (set by the previous NewFrame) and
+        // may be {-FLT_MAX,-FLT_MAX} from our own drag-blocking, causing the drag
+        // computation to snap the view to position 0 whenever the mouse is stationary.
+        ImVec2 rawMouse;
+        {
+            double mx, my;
+            glfwGetCursorPos(window, &mx, &my);
+            const ImGuiIO& io0 = ImGui::GetIO();
+            rawMouse = { (float)mx * io0.DisplayFramebufferScale.x,
+                         (float)my * io0.DisplayFramebufferScale.y };
+        }
+        // rawMouse is valid whenever the cursor is inside the framebuffer area.
+        const bool rawValid = rawMouse.x >= 0.f && rawMouse.x < fw
+                           && rawMouse.y >= 0.f && rawMouse.y < fh;
 
         const bool overVSb = needV && rawValid && rawMouse.x >= fw - kSbW;
         const bool overHSb = needH && rawValid && rawMouse.y >= fh - kSbW;
         {
+            // Inject the adjusted mouse position as the LAST event in the queue so
+            // that ImGui::NewFrame() uses it instead of the raw GLFW position.
             auto &io = ImGui::GetIO();
             if ((overVSb || overHSb || vDrag.active || hDrag.active) && rawValid)
             {
-                io.MousePos = {-FLT_MAX, -FLT_MAX};  // block ImGui from scrollbar area
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  // hide from ImGui during scrollbar ops
             }
             else if (rawValid)
             {
-                io.MousePos.x += scrollOfs.x;
-                io.MousePos.y += scrollOfs.y;
+                io.AddMousePosEvent(rawMouse.x + scrollOfs.x, rawMouse.y + scrollOfs.y);
+            }
+            else
+            {
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
             }
         }
 
@@ -1388,9 +1566,31 @@ int main(int argc, const char** args)
         {
             ed.highlightTimer -= ImGui::GetIO().DeltaTime;
         }
+
+        // Sidebar -- fixed at screen position (0,0), independent of scroll
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(SidebarState::kWidth, (float)display_h), ImGuiCond_Always);
+        if (ImGui::Begin("##Sidebar",
+            nullptr,
+            ImGuiWindowFlags_NoMove
+            | ImGuiWindowFlags_NoResize
+            | ImGuiWindowFlags_NoTitleBar
+            | ImGuiWindowFlags_NoBringToFrontOnFocus
+            | ImGuiWindowFlags_NoCollapse))
+        {
+            renderSidebar(ed, sections);
+        }
+        ImGui::End();
+
+        // Shift the main viewport origin to match the current scroll offset.
+        // This controls the clip rect applied to every Begin() call:
+        //   clip = [Pos, Pos + Size] = [scrollOfs, scrollOfs + {fw, fh}]
+        // so only content inside the visible scroll window is rendered.
+        // ImGui::Render() reads viewport->Pos into DrawData->DisplayPos automatically,
+        // so the OpenGL renderer maps that region correctly to screen coordinates.
+        // WorkPos is set during NewFrame() and is NOT affected by our Pos change here.
+        ImGui::GetMainViewport()->Pos = ImVec2(scrollOfs.x, scrollOfs.y);
         // Inflate work area so windows can auto-size beyond the visible screen region.
-        // GetMainViewport()->Size (used by command palette) is unchanged; only WorkSize
-        // (used for window auto-resize clamping) is expanded.
         ImGui::GetMainViewport()->WorkSize = {10000.f, 10000.f};
         canvasMax = {fw, fh};   // reset; grows during section rendering below
 
@@ -1650,7 +1850,7 @@ int main(int argc, const char** args)
         renderMidiActivityLeds(display_w, display_h, ed.midiSendTimeNs, ed.midiRecvTimeNs,
                                {scrollOfs.x, scrollOfs.y});
         ImGui::Render();
-        ImGui::GetDrawData()->DisplayPos = {scrollOfs.x, scrollOfs.y};
+        // DisplayPos is already set to scrollOfs by ImGui::Render() via viewport->Pos.
         glViewport(0, 0, display_w, display_h);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
