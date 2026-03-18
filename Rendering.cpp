@@ -173,6 +173,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         bool isBlock = param->type == PARAM_TYPE_SELECTION
                     || param->type == PARAM_TYPE_TOGGLE
+                    || param->type == PARAM_TYPE_SOLO_TOGGLE
                     || param->type == PARAM_TYPE_ENVELOPE
                     || param->type == PARAM_TYPE_STEP_LFO;
         bool doSameLine = false;
@@ -350,6 +351,20 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 cfg.flags     = 0;
                 ImGuiFileDialog::Instance()->OpenDialog(
                     "LoadSysexDlg", "Load SysEx File", ".syx", cfg);
+            }
+            prevWasInline = false;
+        }
+        else if (param->type == PARAM_TYPE_SOLO_TOGGLE)
+        {
+            auto* linked = getParameterDef(ed, param->linkedParamId);
+            bool isSoloed = linked && (linked->value == param->linkedValue);
+            if (ImGui::Toggle(param->name().c_str(), &isSoloed))
+            {
+                if (linked)
+                {
+                    linked->value = isSoloed ? param->linkedValue : 0.0f;
+                    valueChanged(ed, *linked);
+                }
             }
             prevWasInline = false;
         }

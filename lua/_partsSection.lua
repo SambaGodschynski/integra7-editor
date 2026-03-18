@@ -3,6 +3,7 @@ require "_sysex"
 
 local p = ParameterSetValueWrapper;
 local get = GetWrapper
+local SOLO_PARAM_ID = "PRM-_PRF-_FC-NEFC_SOLO_PART"
 local toneTypes = {"SN-A", "SN-S", "SN-D", "PCM-S", "PCM-D"}
 local toneTypeValues = {
     { msb=89, lsb=64 },
@@ -47,11 +48,15 @@ local function buildReceiveAllAction(partNr)
     end
 end
 
+local function panToI7(gui) return math.tointeger(64 + gui) end
+local function panToGui(i7) return math.tointeger(i7 - 64) end
+
 function CreatePartsSections(main)
     local parts = {
         name = "Parts View",
         params = {
-            {type="loadsysex", id="LOAD_SYSEX", name=get("Load SysEx")}
+            {type="loadsysex", id="LOAD_SYSEX", name=get("Load SysEx")},
+            p({type="range", id=SOLO_PARAM_ID, name=get("__HIDDEN__"), min=get(0), max=get(16), default=0})
         },
         grp = {}
     }
@@ -65,7 +70,21 @@ function CreatePartsSections(main)
             p({type="range", id="PRM-_PRF-_FP"..i.."-NEFP_LEVEL", name=get(partName ..  " Level"), min=get(0), max=get(127), default=100})
         )
         table.insert(subSection.params,
+            p({type="range", id="PRM-_PRF-_FP"..i.."-NEFP_PAN", name=get(partName .. " Pan"), min=get(-64), max=get(63), default=0,
+               toI7Value=panToI7, toGuiValue=panToGui})
+        )
+        table.insert(subSection.params,
+            p({type="range", id="PRM-_PRF-_FP"..i.."-NEFP_CHO_SEND", name=get(partName .. " Chorus"), min=get(0), max=get(127), default=0})
+        )
+        table.insert(subSection.params,
+            p({type="range", id="PRM-_PRF-_FP"..i.."-NEFP_REV_SEND", name=get(partName .. " Reverb"), min=get(0), max=get(127), default=20})
+        )
+        table.insert(subSection.params,
             p({type="toggle", id="PRM-_PRF-_FP"..i.."-NEFP_MUTE_SW", name=get(partName ..  " Mute"), min=get(0), max=get(1)})
+        )
+        table.insert(subSection.params,
+            {type="solotoggle", id="SOLO_TOGGLE_PART_"..i, name=get(partName .. " Solo"),
+             linkedParamId=SOLO_PARAM_ID, linkedValue=i}
         )
         table.insert(subSection.params,
             {type="select", id="PRM-_PRF-_FP"..i.."-NEFP_TYPE_DUMMY", name=get(partName.." Type"), default=1, options=toneTypes, setValue=partTypeChange(i)}

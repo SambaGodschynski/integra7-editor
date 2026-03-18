@@ -72,6 +72,11 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
             {
                 param->partPrefix = optional_key<std::string>(luaParam, "partPrefix", "");
             }
+            else if (param->type == PARAM_TYPE_SOLO_TOGGLE)
+            {
+                param->linkedParamId = require_key<std::string>(luaParam, "linkedParamId");
+                param->linkedValue   = optional_key<float>(luaParam, "linkedValue", 0.0f);
+            }
             else
             {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");

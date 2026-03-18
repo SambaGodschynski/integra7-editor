@@ -15,6 +15,7 @@
 #define PARAM_TYPE_ACTION    "action"
 #define PARAM_TYPE_SAVE_SYSEX "savesysex"
 #define PARAM_TYPE_LOAD_SYSEX "loadsysex"
+#define PARAM_TYPE_SOLO_TOGGLE "solotoggle"
 
 struct RequestMessage; // forward declaration for FGetAction
 
@@ -52,6 +53,9 @@ struct ParameterDef
     FGetAction getAction;
     // PARAM_TYPE_SAVE_SYSEX only
     std::string partPrefix;
+    // PARAM_TYPE_SOLO_TOGGLE only
+    std::string linkedParamId;
+    float linkedValue = 0.0f;
     // PARAM_TYPE_ENVELOPE only
     std::vector<std::string> levelIds;
     std::vector<std::string> timeIds;
