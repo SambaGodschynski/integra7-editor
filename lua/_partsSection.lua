@@ -96,16 +96,16 @@ end
 local function makeEqSection(i)
     local partName = "Part " .. i
     local prefix = "PRM-_PRF-_FPEQ"..i.."-NEFPEQ_EQ_"
-    local s = { name = "Part " .. i .. " EQ", params = {} }
+    -- param order must match renderEq3Band: SW, LowGain, MidGain, HighGain, LowFreq, MidFreq, MidQ, HighFreq
+    local s = { name = "Part " .. i .. " EQ", layout = "eq3band", params = {} }
     table.insert(s.params, p({type="toggle",  id=prefix.."SW",       name=get(partName.." EQ SW"),       min=get(0),   max=get(1),   default=0}))
-    table.insert(s.params, p({type="vslider", id=prefix.."LOWGAIN",  name=get(partName.." Low Gain"),    min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui, format="%.0f dB"}))
-    table.insert(s.params, p({type="vslider", id=prefix.."MIDGAIN",  name=get(partName.." Mid Gain"),    min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui, format="%.0f dB"}))
-    table.insert(s.params, p({type="vslider", id=prefix.."HIGHGAIN", name=get(partName.." High Gain"),   min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui, format="%.0f dB"}))
-    table.insert(s.params,  {type="newline",  id="NL_EQ1_"..i,       name=get("")})
-    table.insert(s.params, p({type="range",   id=prefix.."LOWFREQ",  name=get(partName.." Low Freq"),    min=get(0),   max=get(1),   default=1,  size=25, noTitle=true, noInput=true}))
-    table.insert(s.params, p({type="range",   id=prefix.."MIDFREQ",  name=get(partName.." Mid Freq"),    min=get(0),   max=get(16),  default=7,  size=25, noTitle=true, noInput=true}))
-    table.insert(s.params, p({type="range",   id=prefix.."MIDQ",     name=get(partName.." Mid Q"),       min=get(0),   max=get(4),   default=0,  size=25, noTitle=true, noInput=true}))
-    table.insert(s.params, p({type="range",   id=prefix.."HIGHFREQ", name=get(partName.." High Freq"),   min=get(0),   max=get(2),   default=1,  size=25, noTitle=true, noInput=true}))
+    table.insert(s.params, p({type="vslider", id=prefix.."LOWGAIN",  name=get(partName.." Low Gain"),    min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
+    table.insert(s.params, p({type="vslider", id=prefix.."MIDGAIN",  name=get(partName.." Mid Gain"),    min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
+    table.insert(s.params, p({type="vslider", id=prefix.."HIGHGAIN", name=get(partName.." High Gain"),   min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
+    table.insert(s.params, p({type="range",   id=prefix.."LOWFREQ",  name=get(partName.." Low Freq"),    min=get(0),   max=get(1),   default=1}))
+    table.insert(s.params, p({type="range",   id=prefix.."MIDFREQ",  name=get(partName.." Mid Freq"),    min=get(0),   max=get(16),  default=7}))
+    table.insert(s.params, p({type="range",   id=prefix.."MIDQ",     name=get(partName.." Mid Q"),       min=get(0),   max=get(4),   default=0}))
+    table.insert(s.params, p({type="range",   id=prefix.."HIGHFREQ", name=get(partName.." High Freq"),   min=get(0),   max=get(2),   default=1}))
     return s
 end
 

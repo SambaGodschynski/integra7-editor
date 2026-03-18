@@ -571,7 +571,14 @@ int main(int argc, const char** args)
         std::function<void(SectionDef&, I7Ed&)> renderSectionTree =
             [&](SectionDef& sec, I7Ed& e)
         {
-            renderSection(sec, e);
+            if (sec.layout == "eq3band")
+            {
+                renderEq3Band(sec, e);
+            }
+            else
+            {
+                renderSection(sec, e);
+            }
             for (auto& sub : sec.subSections)
             {
                 if (sec.accordion)

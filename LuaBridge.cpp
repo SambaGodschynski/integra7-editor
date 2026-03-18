@@ -164,6 +164,11 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
         outSectionDef.accordion = lua_table["accordion"];
     }
 
+    if (lua_table["layout"] != sol::nil)
+    {
+        outSectionDef.layout = lua_table["layout"].get<std::string>();
+    }
+
     if (lua_table["tabs"] != sol::nil)
     {
         if (lua_table["tabCommonKey"] != sol::nil)

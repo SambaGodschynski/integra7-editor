@@ -105,4 +105,5 @@ struct SectionDef
     std::vector<TabEntry>  tabs;            // non-empty → render as tab bar
     bool                   hideFromPalette = false; // true for sections embedded in a tab view
     bool                   accordion = false;       // true → subSections render as collapsing headers
+    std::string            layout;                 // "" = generic, "eq3band" = 3-band EQ columns
 };

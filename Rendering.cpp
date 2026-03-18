@@ -397,7 +397,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else
+        else if (param->type != PARAM_TYPE_NEWLINE)
         {
             std::cerr << "unknown param type: '" << param->type << "'" << std::endl;
             prevWasInline = false;
@@ -417,4 +417,93 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 IM_COL32(255, 220, 0, (int)(alpha * 220)), 4.f, 0, 2.f);
         }
     }
+}
+
+void renderEq3Band(SectionDef& section, I7Ed& ed)
+{
+    // Expected param order: SW, LowGain, MidGain, HighGain, LowFreq, MidFreq, MidQ, HighFreq
+    std::vector<ParameterDef*> ps(section.params.begin(), section.params.end());
+    if (ps.size() < 8)
+    {
+        renderSection(section, ed);
+        return;
+    }
+
+    auto* swParam  = ps[0];
+    auto* lowGain  = ps[1];
+    auto* midGain  = ps[2];
+    auto* highGain = ps[3];
+    auto* lowFreq  = ps[4];
+    auto* midFreq  = ps[5];
+    auto* midQ     = ps[6];
+    auto* highFreq = ps[7];
+
+    // EQ on/off toggle
+    bool sw = swParam->value != 0;
+    if (ImGui::Toggle(swParam->name().c_str(), &sw))
+    {
+        swParam->value = sw ? 1.0f : 0.0f;
+        valueChanged(ed, *swParam);
+    }
+
+    ImGui::Spacing();
+
+    constexpr ImGuiKnobFlags kKnobFlags =
+        ImGuiKnobFlags_AlwaysClamp | ImGuiKnobFlags_NoTitle | ImGuiKnobFlags_NoInput;
+    constexpr float kKnobSize  = 25.0f;
+    constexpr float kColGap    = 20.0f;
+
+    auto renderVS = [&](ParameterDef* p)
+    {
+        std::string lbl = "##" + p->id;
+        if (ImGui::VSliderFloat(lbl.c_str(), ImVec2(20, 80), &p->value, p->min(), p->max(), ""))
+        {
+            valueChanged(ed, *p);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s: %.0f", p->name().c_str(), p->value);
+        }
+    };
+
+    auto renderKnob = [&](ParameterDef* p)
+    {
+        if (ImGuiKnobs::Knob(p->name().c_str(), &p->value,
+                p->min(), p->max(), 0.0f, "%.0f",
+                ImGuiKnobVariant_Tick, kKnobSize, kKnobFlags))
+        {
+            valueChanged(ed, *p);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s: %.0f", p->name().c_str(), p->value);
+        }
+    };
+
+    // LOW band
+    ImGui::BeginGroup();
+    ImGui::TextUnformatted("LOW");
+    renderVS(lowGain);
+    renderKnob(lowFreq);
+    ImGui::EndGroup();
+
+    ImGui::SameLine(0, kColGap);
+
+    // MID band
+    ImGui::BeginGroup();
+    ImGui::TextUnformatted("MID");
+    renderVS(midGain);
+    renderKnob(midFreq);
+    ImGui::SameLine();
+    renderKnob(midQ);
+    ImGui::EndGroup();
+
+    ImGui::SameLine(0, kColGap);
+
+    // HIGH band
+    ImGui::BeginGroup();
+    ImGui::TextUnformatted("HIGH");
+    renderVS(highGain);
+    renderKnob(highFreq);
+    ImGui::EndGroup();
 }
