@@ -568,6 +568,26 @@ int main(int argc, const char** args)
         }
 
         // ── Render open sections ──────────────────────────────────────────────
+        std::function<void(SectionDef&, I7Ed&)> renderSectionTree =
+            [&](SectionDef& sec, I7Ed& e)
+        {
+            renderSection(sec, e);
+            for (auto& sub : sec.subSections)
+            {
+                if (sec.accordion)
+                {
+                    if (ImGui::CollapsingHeader(sub.name.c_str()))
+                    {
+                        renderSectionTree(sub, e);
+                    }
+                }
+                else
+                {
+                    renderSectionTree(sub, e);
+                }
+            }
+        };
+
         for (auto& sectionPair : sections)
         {
             auto& section = sectionPair.second;
@@ -589,11 +609,7 @@ int main(int argc, const char** args)
                     {
                         drawReceiveButton(ed, {section.getReceiveSysex});
                     }
-                    renderSection(section, ed);
-                    for (auto& subSection : section.subSections)
-                    {
-                        renderSection(subSection, ed);
-                    }
+                    renderSectionTree(section, ed);
                 }
                 ImGui::End();
             }

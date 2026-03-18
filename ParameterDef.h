@@ -16,6 +16,8 @@
 #define PARAM_TYPE_SAVE_SYSEX "savesysex"
 #define PARAM_TYPE_LOAD_SYSEX "loadsysex"
 #define PARAM_TYPE_SOLO_TOGGLE "solotoggle"
+#define PARAM_TYPE_VSLIDER     "vslider"
+#define PARAM_TYPE_NEWLINE     "newline"
 
 struct RequestMessage; // forward declaration for FGetAction
 
@@ -56,6 +58,11 @@ struct ParameterDef
     // PARAM_TYPE_SOLO_TOGGLE only
     std::string linkedParamId;
     float linkedValue = 0.0f;
+    // PARAM_TYPE_RANGE / PARAM_TYPE_VSLIDER optional size override
+    float size = 0.0f;
+    // PARAM_TYPE_RANGE knob display options
+    bool noTitle = false;
+    bool noInput = false;
     // PARAM_TYPE_ENVELOPE only
     std::vector<std::string> levelIds;
     std::vector<std::string> timeIds;
@@ -97,4 +104,5 @@ struct SectionDef
     std::string            tabCommonKey;    // optional section rendered above the tab bar
     std::vector<TabEntry>  tabs;            // non-empty → render as tab bar
     bool                   hideFromPalette = false; // true for sections embedded in a tab view
+    bool                   accordion = false;       // true → subSections render as collapsing headers
 };

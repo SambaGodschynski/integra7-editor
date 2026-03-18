@@ -77,11 +77,18 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                 param->linkedParamId = require_key<std::string>(luaParam, "linkedParamId");
                 param->linkedValue   = optional_key<float>(luaParam, "linkedValue", 0.0f);
             }
+            else if (param->type == PARAM_TYPE_NEWLINE)
+            {
+                // no fields needed
+            }
             else
             {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
             }
 
+            param->size      = optional_key<float>(luaParam, "size", 0.0f);
+            param->noTitle   = optional_key<bool>(luaParam, "noTitle", false);
+            param->noInput   = optional_key<bool>(luaParam, "noInput", false);
             param->min       = optional_key(luaParam, "min",       param->min);
             param->max       = optional_key(luaParam, "max",       param->max);
             param->format    = optional_key(luaParam, "format",    param->format);
@@ -150,6 +157,11 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
     if (lua_table["hideFromPalette"] != sol::nil)
     {
         outSectionDef.hideFromPalette = lua_table["hideFromPalette"];
+    }
+
+    if (lua_table["accordion"] != sol::nil)
+    {
+        outSectionDef.accordion = lua_table["accordion"];
     }
 
     if (lua_table["tabs"] != sol::nil)

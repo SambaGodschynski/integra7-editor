@@ -167,6 +167,13 @@ void renderSection(SectionDef& section, I7Ed& ed)
 
     for (auto param : section.params)
     {
+        if (param->type == PARAM_TYPE_NEWLINE)
+        {
+            if (prevWasInline) { ImGui::NewLine(); }
+            prevWasInline = false;
+            isFirst = true;
+            continue;
+        }
         if (param->name() == HIDDEN_PARAM_NAME)
         {
             continue;
@@ -195,13 +202,35 @@ void renderSection(SectionDef& section, I7Ed& ed)
 
         if (param->type == PARAM_TYPE_RANGE)
         {
+            ImGuiKnobFlags knobFlags = ImGuiKnobFlags_AlwaysClamp;
+            if (param->noTitle) { knobFlags |= ImGuiKnobFlags_NoTitle; }
+            if (param->noInput) { knobFlags |= ImGuiKnobFlags_NoInput; }
             if (ImGuiKnobs::Knob(param->name().c_str(), &param->value,
                     param->min(), param->max(), 0.0f, param->format.c_str(),
-                    ImGuiKnobVariant_Tick, 0, ImGuiKnobFlags_AlwaysClamp))
+                    ImGuiKnobVariant_Tick, param->size, knobFlags))
             {
                 valueChanged(ed, *param);
             }
+            if (param->noTitle && ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s: %.0f", param->name().c_str(), param->value);
+            }
             lastKnobWidth = ImGui::GetItemRectSize().x;
+            prevWasInline = true;
+        }
+        else if (param->type == PARAM_TYPE_VSLIDER)
+        {
+            std::string vsLabel = "##" + param->id;
+            if (ImGui::VSliderFloat(vsLabel.c_str(), ImVec2(20, 80), &param->value,
+                    param->min(), param->max(), ""))
+            {
+                valueChanged(ed, *param);
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s: %.0f", param->name().c_str(), param->value);
+            }
+            lastKnobWidth = 20.0f;
             prevWasInline = true;
         }
         else if (param->type == PARAM_TYPE_SELECTION)
