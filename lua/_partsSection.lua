@@ -331,6 +331,42 @@ function CreatePartsSections(main)
             {type="loadsysex", id="LOAD_SYSEX", name=get("Load SysEx")},
             p({type="range", id=SOLO_PARAM_ID, name=get("__HIDDEN__"), min=get(0), max=get(16), default=0})
         },
+        getReceiveValueSysex = function()
+            local result = {}
+            local fpSuffixes = {
+                "NEFP_LEVEL", "NEFP_PAN", "NEFP_CHO_SEND", "NEFP_REV_SEND",
+                "NEFP_MUTE_SW", "NEFP_RX_SW", "NEFP_RX_CH", "NEFP_OUT_ASGN",
+                "NEFP_MONO_POLY", "NEFP_LEGATO_SW",
+                "NEFP_OCTAVE", "NEFP_PIT_CRS", "NEFP_PIT_FINE",
+                "NEFP_BEND_RANGE", "NEFP_PORT_SW", "NEFP_PORT_TIME",
+                "NEFP_CUTOFF_OFST", "NEFP_RESO_OFST", "NEFP_ATK_OFST",
+                "NEFP_DCY_OFST", "NEFP_REL_OFST",
+                "NEFP_VIB_RATE", "NEFP_VIB_DEPTH", "NEFP_VIB_DELAY",
+                "NEFP_KFADE_LO", "NEFP_KRANGE_LO", "NEFP_KRANGE_UP", "NEFP_KFADE_UP",
+                "NEFP_VFADE_LO", "NEFP_VRANGE_LO", "NEFP_VRANGE_UP", "NEFP_VFADE_UP",
+                "NEFP_VSENS_OFST",
+                "NEFP_SCALE_TYPE", "NEFP_SCALE_KEY",
+                "NEFP_TUNE_C", "NEFP_TUNE_CS", "NEFP_TUNE_D", "NEFP_TUNE_DS",
+                "NEFP_TUNE_E", "NEFP_TUNE_F", "NEFP_TUNE_FS", "NEFP_TUNE_G",
+                "NEFP_TUNE_GS", "NEFP_TUNE_A", "NEFP_TUNE_AS", "NEFP_TUNE_B",
+                "NEFP_RX_PC", "NEFP_RX_BS", "NEFP_RX_BEND", "NEFP_RX_PAFT",
+                "NEFP_RX_CAFT", "NEFP_RX_MOD", "NEFP_RX_VOL", "NEFP_RX_PAN",
+                "NEFP_RX_EXPR", "NEFP_RX_HOLD", "NEFP_VELO_CRV_TYPE",
+            }
+            for i = 1, 16 do
+                local fp = "PRM-_PRF-_FP"..i.."-"
+                for _, suffix in ipairs(fpSuffixes) do
+                    local msg = CreateReceiveMessageForLeafId(fp..suffix)
+                    if msg then table.insert(result, msg) end
+                end
+                for _, msg in ipairs(CreateReceiveMessageForBranch("PRM-_PRF-_FPEQ"..i)) do
+                    table.insert(result, msg)
+                end
+                local msg = CreateReceiveMessageForLeafId("PRM-_PRF-_FC-NEFC_VOICE_RESERV"..i)
+                if msg then table.insert(result, msg) end
+            end
+            return result
+        end,
         grp = {}
     }
     for i = 1, 16, 1 do
