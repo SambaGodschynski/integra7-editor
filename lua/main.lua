@@ -42,6 +42,7 @@ require "_pcmdCompEqSection"
 require "_pcmdMfxSection"
 require "_pcmdTabsSection"
 require "_expansionSection"
+require "_rssSection"
 
 Main = {}
 
@@ -84,3 +85,4 @@ CreatePcmdCompEqSections(Main)
 CreateMfxPcmdSections(Main)
 CreatePcmdTabSections(Main)
 CreateExpansionSection(Main)
+CreateRssSections(Main)

@@ -575,6 +575,10 @@ int main(int argc, const char** args)
             {
                 renderKeyboard(sec, e);
             }
+            else if (sec.layout == "rss_xy")
+            {
+                renderRssXY(sec, e);
+            }
             else
             {
                 renderSection(sec, e);

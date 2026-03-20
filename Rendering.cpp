@@ -609,3 +609,163 @@ void renderKeyboard(SectionDef& section, I7Ed& ed)
     ImGui::Spacing();
     renderCombo(*veloCrv, ed);
 }
+
+void renderRssXY(SectionDef& section, I7Ed& ed)
+{
+    // Expected: 64 params in order X,Y,Width,RevSend × 16 parts
+    std::vector<ParameterDef*> ps(section.params.begin(), section.params.end());
+    if ((int)ps.size() < 64) { renderSection(section, ed); return; }
+
+    // Part colours – one distinct colour per part
+    static const ImU32 kPartColors[16] = {
+        IM_COL32(220, 80,  80,  255), IM_COL32( 80, 180,  80, 255),
+        IM_COL32( 80, 130, 220, 255), IM_COL32(220, 200,  60, 255),
+        IM_COL32(200,  80, 200, 255), IM_COL32( 60, 200, 200, 255),
+        IM_COL32(230, 140,  50, 255), IM_COL32(140, 220, 100, 255),
+        IM_COL32(100, 160, 240, 255), IM_COL32(240, 120, 160, 255),
+        IM_COL32(160, 240, 180, 255), IM_COL32(240, 200, 100, 255),
+        IM_COL32(180, 100, 240, 255), IM_COL32(100, 220, 240, 255),
+        IM_COL32(240, 160,  80, 255), IM_COL32(180, 180, 180, 255),
+    };
+
+    constexpr float kDotR    = 10.0f;
+    constexpr float kMinSize = 220.0f;
+    constexpr float kMaxSize = 480.0f;
+
+    float avail     = ImGui::GetContentRegionAvail().x;
+    float canvasSize = std::clamp(avail, kMinSize, kMaxSize);
+
+    ImVec2 origin = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton("##rss_canvas", ImVec2(canvasSize, canvasSize));
+    bool canvasActive = ImGui::IsItemHovered() || ImGui::IsItemActive();
+
+    ImDrawList* dl  = ImGui::GetWindowDrawList();
+    ImVec2 cMax     = { origin.x + canvasSize, origin.y + canvasSize };
+    float  cx       = origin.x + canvasSize * 0.5f;
+    float  cy       = origin.y + canvasSize * 0.5f;
+
+    // Background
+    dl->AddRectFilled(origin, cMax, IM_COL32(25, 25, 35, 255), 4.0f);
+    dl->AddRect      (origin, cMax, IM_COL32(80, 80, 100, 200), 4.0f);
+
+    // Surround field circles
+    for (int ring = 1; ring <= 3; ++ring)
+    {
+        float r = canvasSize * 0.5f * ring / 3.0f;
+        dl->AddCircle(ImVec2(cx, cy), r, IM_COL32(60, 60, 80, 180));
+    }
+    // Cross-hair
+    dl->AddLine({cx, origin.y + 4}, {cx, cMax.y - 4}, IM_COL32(60, 60, 80, 180));
+    dl->AddLine({origin.x + 4, cy}, {cMax.x - 4, cy}, IM_COL32(60, 60, 80, 180));
+
+    // Labels: FRONT / BACK / L / R
+    ImFont* font = ImGui::GetFont();
+    float   fs   = ImGui::GetFontSize() * 0.8f;
+    dl->AddText(font, fs, {cx - 16, origin.y + 4},       IM_COL32(120,120,140,200), "FRONT");
+    dl->AddText(font, fs, {cx - 14, cMax.y  - fs - 4},   IM_COL32(120,120,140,200), "BACK");
+    dl->AddText(font, fs, {origin.x + 4, cy - fs * 0.5f},IM_COL32(120,120,140,200), "L");
+    dl->AddText(font, fs, {cMax.x - 10,  cy - fs * 0.5f},IM_COL32(120,120,140,200), "R");
+
+    // Listener symbol at canvas centre
+    dl->AddCircle    (ImVec2(cx, cy), 6.0f, IM_COL32(220, 220, 220, 220), 12, 1.5f);
+    dl->AddCircleFilled(ImVec2(cx, cy), 3.0f, IM_COL32(220, 220, 220, 220));
+
+    // Drag state (one instance is fine – only one RSS view exists)
+    static int  sDragging = -1;
+    ImVec2 mouse = ImGui::GetIO().MousePos;
+    bool   lDown = ImGui::GetIO().MouseDown[0];
+    bool   lClick= ImGui::GetIO().MouseClicked[0];
+    if (!lDown) sDragging = -1;
+
+    // Tooltip text built up while iterating
+    int    hoveredPart = -1;
+
+    for (int i = 0; i < 16; ++i)
+    {
+        ParameterDef* px = ps[i * 4 + 0];
+        ParameterDef* py = ps[i * 4 + 1];
+
+        float nx = px->value / 127.0f;
+        float ny = py->value / 127.0f;
+        float dotX = origin.x + nx * canvasSize;
+        float dotY = origin.y + ny * canvasSize;
+
+        // Hit-test
+        float ddx = mouse.x - dotX, ddy = mouse.y - dotY;
+        bool  hit = (ddx * ddx + ddy * ddy) <= kDotR * kDotR;
+
+        if (hit && lClick && canvasActive && sDragging == -1)
+            sDragging = i;
+
+        if (sDragging == i && lDown)
+        {
+            float newX = std::clamp((mouse.x - origin.x) / canvasSize * 127.0f, 0.0f, 127.0f);
+            float newY = std::clamp((mouse.y - origin.y) / canvasSize * 127.0f, 0.0f, 127.0f);
+            if ((int)newX != (int)px->value) { px->value = newX; valueChanged(ed, *px); }
+            if ((int)newY != (int)py->value) { py->value = newY; valueChanged(ed, *py); }
+            // Recalc dot position after update
+            dotX = origin.x + (px->value / 127.0f) * canvasSize;
+            dotY = origin.y + (py->value / 127.0f) * canvasSize;
+        }
+
+        if (hit || sDragging == i) hoveredPart = i;
+
+        // Draw dot
+        ImU32 col  = kPartColors[i];
+        float rDot = (sDragging == i) ? kDotR + 2.0f : kDotR;
+        dl->AddCircleFilled(ImVec2(dotX, dotY), rDot, col);
+        dl->AddCircle      (ImVec2(dotX, dotY), rDot, IM_COL32(255, 255, 255, 120));
+
+        // Part number label
+        char lbl[4];
+        snprintf(lbl, sizeof(lbl), "%d", i + 1);
+        ImVec2 ts = ImGui::CalcTextSize(lbl);
+        dl->AddText(ImVec2(dotX - ts.x * 0.5f, dotY - ts.y * 0.5f),
+                    IM_COL32(255, 255, 255, 230), lbl);
+    }
+
+    // Tooltip for hovered / dragged part
+    if (hoveredPart >= 0)
+    {
+        ParameterDef* px = ps[hoveredPart * 4 + 0];
+        ParameterDef* py = ps[hoveredPart * 4 + 1];
+        ParameterDef* pw = ps[hoveredPart * 4 + 2];
+        ParameterDef* pr = ps[hoveredPart * 4 + 3];
+        ImGui::BeginTooltip();
+        ImGui::Text("Part %d", hoveredPart + 1);
+        ImGui::Text("X: %d  Y: %d", (int)px->value, (int)py->value);
+        ImGui::Text("Width: %d  RevSend: %d", (int)pw->value, (int)pr->value);
+        ImGui::EndTooltip();
+    }
+
+    // Width and Ambience Send knobs for all 16 parts
+    constexpr float kKnobSize = 42.0f;
+    constexpr ImGuiKnobFlags kKF = ImGuiKnobFlags_AlwaysClamp;
+
+    auto renderWrappingKnobs = [&](int paramOffset, const char* label)
+    {
+        ImGui::Spacing();
+        ImGui::SeparatorText(label);
+        ImGui::Spacing();
+        for (int i = 0; i < 16; ++i)
+        {
+            ParameterDef* pk = ps[i * 4 + paramOffset];
+            if (i > 0)
+            {
+                float nextX    = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x;
+                float rightEdge = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
+                if (nextX + kKnobSize <= rightEdge)
+                    ImGui::SameLine();
+            }
+            if (ImGuiKnobs::Knob(pk->name().c_str(), &pk->value,
+                    pk->min(), pk->max(), 0.0f, "%.0f",
+                    ImGuiKnobVariant_Tick, kKnobSize, kKF))
+            {
+                valueChanged(ed, *pk);
+            }
+        }
+    };
+
+    renderWrappingKnobs(2, "Part Width");
+    renderWrappingKnobs(3, "Part Ambience Send");
+}
