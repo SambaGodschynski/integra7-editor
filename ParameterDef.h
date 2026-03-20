@@ -51,6 +51,8 @@ struct ParameterDef
         return 127;
     };
     FSetValue setValue;
+    // Optional: if set, called every frame to override param->value (no SysEx triggered)
+    FFloatGetter valueOverride;
     // PARAM_TYPE_ACTION only
     FGetAction getAction;
     // PARAM_TYPE_SAVE_SYSEX only

@@ -69,11 +69,7 @@ int main(int argc, const char** args)
     if (ed.args.printHelp)
     {
         std::cout << "Allowed options:\n"
-                  << "\t--inputs\n"
-                  << "\t--outputs\n"
                   << "\t--lua-main\n"
-                  << "\t--in-portnr\n"
-                  << "\t--out-portnr\n"
                   << std::endl;
         return 0;
     }
@@ -574,6 +570,10 @@ int main(int argc, const char** args)
             if (sec.layout == "eq3band")
             {
                 renderEq3Band(sec, e);
+            }
+            else if (sec.layout == "keyboard")
+            {
+                renderKeyboard(sec, e);
             }
             else
             {

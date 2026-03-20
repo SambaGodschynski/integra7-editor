@@ -93,8 +93,9 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
             param->max       = optional_key(luaParam, "max",       param->max);
             param->format    = optional_key(luaParam, "format",    param->format);
             param->value     = optional_key(luaParam, "default",   param->min ? param->min() : 0);
-            param->toI7Value = optional_key<ParameterDef::FToI7Value> (luaParam, "toI7Value",  nullptr);
-            param->toGuiValue= optional_key<ParameterDef::FToGuiValue>(luaParam, "toGuiValue", nullptr);
+            param->toI7Value     = optional_key<ParameterDef::FToI7Value>    (luaParam, "toI7Value",     nullptr);
+            param->toGuiValue    = optional_key<ParameterDef::FToGuiValue>   (luaParam, "toGuiValue",    nullptr);
+            param->valueOverride = optional_key<ParameterDef::FFloatGetter>  (luaParam, "valueOverride", nullptr);
             param->options   = optional_key<ParameterDef::SelectionOptions>(luaParam, "options",
                                     ParameterDef::SelectionOptions());
 

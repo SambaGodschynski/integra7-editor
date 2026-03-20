@@ -93,6 +93,220 @@ local function makeCommonSection(i)
     return s
 end
 
+-- Scale section ----------------------------------------------------------
+
+-- Preset tuning tables (GUI values, -64..+63) indexed by SCALE_TYPE (1-8).
+-- Row order: C, C#, D, D#, E, F, F#, G, G#, A, A#, B  (0-based note index)
+local scaleTbl = {
+    [1] = { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0 }, -- EQUAL
+    [2] = { 16, -14,  20,  31,   2,  14, -16,  18, -12,   0,  33,   4 }, -- JUST-MAJ
+    [3] = { 16,  49,  20,  31,   2,  14,  47,  18,  29,   0,  33,   4 }, -- JUST-MIN
+    [4] = { -6,   8,  -2, -12,   2,  -8,   6,  -4,  10,   0, -10,   4 }, -- PYTHAGORE
+    [5] = { 10,   0,   3,   4,  -3,   8,   0,   7,   2,   0,   6,  -1 }, -- KIRNBERGE
+    [6] = { 10, -14,   3,  21,  -3,  14, -10,   7, -17,   0,  17,  -7 }, -- MEANTONE
+    [7] = { 12,   2,   4,   6,   2,  10,   0,   8,   4,   0,   8,   4 }, -- WERCKMEIS
+    [8] = { -6,  45,  -2, -12,  51,  -8,  43,  -4,  47,   0, -10, -49 }, -- ARABIC
+}
+
+local scaleTypeOptions = {
+    [0]="CUSTOM",[1]="EQUAL",[2]="JUST-MAJ",[3]="JUST-MIN",[4]="PYTHAGORE",
+    [5]="KIRNBERGE",[6]="MEANTONE",[7]="WERCKMEIS",[8]="ARABIC"
+}
+local scaleKeyOptions = {
+    [0]="C",[1]="C#",[2]="D",[3]="D#",[4]="E",[5]="F",
+    [6]="F#",[7]="G",[8]="G#",[9]="A",[10]="A#",[11]="B"
+}
+local noteNames    = {"C","CS","D","DS","E","F","FS","G","GS","A","AS","B"}
+local noteDisplay  = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
+
+-- Per-part runtime state
+local scaleTypeState = {}
+local scaleKeyState  = {}
+local tuneState      = {} -- [part][1..12] = gui value (-64..+63)
+for i = 1, 16 do
+    scaleTypeState[i] = 1  -- EQUAL
+    scaleKeyState[i]  = 0  -- C
+    tuneState[i]      = {0,0,0,0,0,0,0,0,0,0,0,0}
+end
+
+-- Compute the 12 note gui-values for a given preset type and key.
+-- type: 1-8 (matches scaleTbl), key: 0-11
+local function computeTemperament(scaleType, key)
+    local tbl   = scaleTbl[scaleType]
+    local shift = (9 - key >= 0) and (9 - key) or (9 - key + 11)
+    local ofst  = tbl[9 + 1] - tbl[shift + 1]  -- 1-based Lua indexing
+    local result = {}
+    if scaleType == 8 then  -- ARABIC: rotate by key, no offset
+        for i = 0, 11 do
+            local v = (i - key >= 0) and (i - key) or (i - key + 12)
+            result[i + 1] = tbl[v + 1]
+        end
+    else
+        for i = 0, 11 do
+            local idx = (i + key < 12) and (i + key) or (i + key - 12)
+            result[idx + 1] = tbl[i + 1] + ofst
+        end
+    end
+    return result
+end
+
+local function makeScaleSection(partNr)
+    local partName = "Part " .. partNr
+    local fp       = "PRM-_PRF-_FP"..partNr.."-NEFP_"
+    local s        = { name = "Part " .. partNr .. " Scale", params = {} }
+
+    -- SCALE_TYPE: send only TYPE sysex; update tuneState (no TUNE sysex)
+    local typeId = fp.."SCALE_TYPE"
+    local typeParam = {
+        type    = "select",
+        id      = typeId,
+        name    = get(partName.." Scale Type"),
+        min     = get(0),
+        max     = get(8),
+        default = 1,
+        options = scaleTypeOptions,
+    }
+    p(typeParam, function(i7val)
+        local t = math.tointeger(i7val)
+        scaleTypeState[partNr] = t
+        if t ~= 0 then
+            tuneState[partNr] = computeTemperament(t, scaleKeyState[partNr])
+        end
+    end)
+    table.insert(s.params, typeParam)
+
+    -- SCALE_KEY: send only KEY sysex; recompute tuneState if type != CUSTOM
+    local keyId = fp.."SCALE_KEY"
+    local keyParam = {
+        type    = "select",
+        id      = keyId,
+        name    = get(partName.." Scale Key"),
+        min     = get(0),
+        max     = get(11),
+        default = 0,
+        options = scaleKeyOptions,
+    }
+    p(keyParam, function(i7val)
+        local k = math.tointeger(i7val)
+        scaleKeyState[partNr] = k
+        if scaleTypeState[partNr] ~= 0 then
+            tuneState[partNr] = computeTemperament(scaleTypeState[partNr], k)
+        end
+    end)
+    table.insert(s.params, keyParam)
+
+    -- 12 TUNE params: valueOverride reads tuneState (updated by preset selection).
+    -- setValue sends individual sysex and updates tuneState.
+    for noteIdx = 1, 12 do
+        local noteName = noteNames[noteIdx]
+        local tuneId   = fp.."TUNE_"..noteName
+        local nIdx     = noteIdx  -- capture
+        local tuneParam = {
+            type          = "range",
+            id            = tuneId,
+            name          = get(partName.." "..noteDisplay[noteIdx]),
+            min           = get(-64),
+            max           = get(63),
+            default       = 0,
+            toI7Value     = function(gui) return math.tointeger(64 + gui) end,
+            toGuiValue    = function(i7)  return math.tointeger(i7 - 64) end,
+            valueOverride = function() return tuneState[partNr][nIdx] end,
+        }
+        p(tuneParam, function(i7val)
+            tuneState[partNr][nIdx] = math.tointeger(i7val - 64)
+        end)
+        table.insert(s.params, tuneParam)
+    end
+
+    return s
+end
+
+-- MIDI section ----------------------------------------------------------
+
+local function makeMidiSection(i)
+    local partName = "Part " .. i
+    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
+    local s = { name = "Part " .. i .. " MIDI", layout = "inline_toggles", params = {} }
+    table.insert(s.params, p({type="toggle", id=fp.."RX_PC",   name=get(partName.." RX Prog Chg"),  min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_BS",   name=get(partName.." RX Bank Sel"),  min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_BEND", name=get(partName.." RX Pitch Bend"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_PAFT", name=get(partName.." RX Poly AfTch"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_CAFT", name=get(partName.." RX Chan AfTch"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_MOD",  name=get(partName.." RX Modulation"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_VOL",  name=get(partName.." RX Volume"),     min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_PAN",  name=get(partName.." RX Pan"),        min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_EXPR", name=get(partName.." RX Expression"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_HOLD", name=get(partName.." RX Hold-1"),     min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="range",  id=fp.."VELO_CRV_TYPE", name=get(partName.." Velo Crv"), min=get(0), max=get(4), default=0}))
+    return s
+end
+
+-- Pitch section ----------------------------------------------------------
+local function offsetToI7(gui) return math.tointeger(64 + gui) end
+local function offsetToGui(i7) return math.tointeger(i7 - 64) end
+
+local portSwOptions = {[0]="OFF",[1]="ON",[2]="TONE"}
+
+local portTimeOptions = {}
+for v = 0, 127 do portTimeOptions[v] = tostring(v) end
+portTimeOptions[128] = "TONE"
+
+local function makeOffsetSection(i)
+    local partName = "Part " .. i
+    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
+    local s = { name = "Part " .. i .. " Offset", params = {} }
+    table.insert(s.params, p({type="range", id=fp.."CUTOFF_OFST", name=get(partName.." Cutoff Ofs"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."RESO_OFST",   name=get(partName.." Reso Ofs"),     min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."ATK_OFST",    name=get(partName.." Attack Ofs"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."DCY_OFST",    name=get(partName.." Decay Ofs"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."REL_OFST",    name=get(partName.." Release Ofs"),  min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."VIB_RATE",    name=get(partName.." Vib Rate"),     min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."VIB_DEPTH",   name=get(partName.." Vib Depth"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."VIB_DELAY",   name=get(partName.." Vib Delay"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    return s
+end
+
+local function makePitchSection(i)
+    local partName = "Part " .. i
+    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
+    local s = { name = "Part " .. i .. " Pitch", params = {} }
+    table.insert(s.params, p({type="range",  id=fp.."OCTAVE",     name=get(partName.." Octave Shift"),  min=get(-3),  max=get(3),   default=0,  toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."PIT_CRS",    name=get(partName.." Coarse Tune"),   min=get(-48), max=get(48),  default=0,  toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."PIT_FINE",   name=get(partName.." Fine Tune"),     min=get(-50), max=get(50),  default=0,  toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."BEND_RANGE", name=get(partName.." Bend Range"),    min=get(0),   max=get(25),  default=25}))
+    table.insert(s.params, p({type="select", id=fp.."PORT_SW",    name=get(partName.." Porta SW"),      min=get(0),   max=get(2),   default=2,  options=portSwOptions}))
+    table.insert(s.params, p({type="select", id=fp.."PORT_TIME",  name=get(partName.." Porta Time"),    min=get(0),   max=get(128), default=128, options=portTimeOptions}))
+    return s
+end
+
+-- Keyboard section: offset mapping for Velo Sens Offset
+local function vSensToI7(gui)  return math.tointeger(64 + gui) end
+local function vSensToGui(i7)  return math.tointeger(i7 - 64) end
+
+-- Options for Velocity Curve Type: 0=OFF, 1-4 = curve 1..4
+local veloCrvOptions = {[0]="OFF",[1]="1",[2]="2",[3]="3",[4]="4"}
+
+local function makeKeyboardSection(i)
+    local partName = "Part " .. i
+    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
+    -- param order must match renderKeyboard:
+    -- KFADE_LO, KRANGE_LO, KRANGE_UP, KFADE_UP,
+    -- VFADE_LO, VRANGE_LO, VRANGE_UP, VFADE_UP, VSENS_OFST,
+    -- VELO_CRV_TYPE
+    local s = { name = "Part " .. i .. " Keyboard", layout = "keyboard", params = {} }
+    table.insert(s.params, p({type="range",  id=fp.."KFADE_LO",      name=get(partName.." Key Fade Lo"),   min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."KRANGE_LO",     name=get(partName.." Key Range Lo"),  min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."KRANGE_UP",     name=get(partName.." Key Range Hi"),  min=get(0),   max=get(127), default=127}))
+    table.insert(s.params, p({type="range",  id=fp.."KFADE_UP",      name=get(partName.." Key Fade Hi"),   min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."VFADE_LO",      name=get(partName.." Vel Fade Lo"),   min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."VRANGE_LO",     name=get(partName.." Vel Range Lo"),  min=get(1),   max=get(127), default=1}))
+    table.insert(s.params, p({type="range",  id=fp.."VRANGE_UP",     name=get(partName.." Vel Range Hi"),  min=get(1),   max=get(127), default=127}))
+    table.insert(s.params, p({type="range",  id=fp.."VFADE_UP",      name=get(partName.." Vel Fade Hi"),   min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."VSENS_OFST",    name=get(partName.." Vel Sens Ofs"),  min=get(-63), max=get(63),  default=0,  toI7Value=vSensToI7, toGuiValue=vSensToGui}))
+    table.insert(s.params, p({type="select", id=fp.."VELO_CRV_TYPE", name=get(partName.." Velo Crv"),      min=get(0),   max=get(4),   default=0,  options=veloCrvOptions}))
+    return s
+end
+
 local function makeEqSection(i)
     local partName = "Part " .. i
     local prefix = "PRM-_PRF-_FPEQ"..i.."-NEFPEQ_EQ_"
@@ -122,6 +336,11 @@ function CreatePartsSections(main)
     for i = 1, 16, 1 do
         table.insert(parts.grp, makeCommonSection(i))
         table.insert(parts.grp, makeEqSection(i))
+        table.insert(parts.grp, makeKeyboardSection(i))
+        table.insert(parts.grp, makePitchSection(i))
+        table.insert(parts.grp, makeOffsetSection(i))
+        table.insert(parts.grp, makeScaleSection(i))
+        table.insert(parts.grp, makeMidiSection(i))
     end
     main["parts"] = parts
 end

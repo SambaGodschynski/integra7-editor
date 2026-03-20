@@ -5,6 +5,7 @@
 #include "imgui_toggle.h"
 #include "imgui_envelope.h"
 #include "imgui_step_lfo.h"
+#include "imgui_range_slider.h"
 #include "imsearch.h"
 #include "ImGuiFileDialog.h"
 #include <iostream>
@@ -178,8 +179,9 @@ void renderSection(SectionDef& section, I7Ed& ed)
         {
             continue;
         }
+        bool inlineToggles = (section.layout == "inline_toggles");
         bool isBlock = param->type == PARAM_TYPE_SELECTION
-                    || param->type == PARAM_TYPE_TOGGLE
+                    || (!inlineToggles && param->type == PARAM_TYPE_TOGGLE)
                     || param->type == PARAM_TYPE_SOLO_TOGGLE
                     || param->type == PARAM_TYPE_ENVELOPE
                     || param->type == PARAM_TYPE_STEP_LFO;
@@ -202,6 +204,10 @@ void renderSection(SectionDef& section, I7Ed& ed)
 
         if (param->type == PARAM_TYPE_RANGE)
         {
+            if (param->valueOverride)
+            {
+                param->value = param->valueOverride();
+            }
             ImGuiKnobFlags knobFlags = ImGuiKnobFlags_AlwaysClamp;
             if (param->noTitle) { knobFlags |= ImGuiKnobFlags_NoTitle; }
             if (param->noInput) { knobFlags |= ImGuiKnobFlags_NoInput; }
@@ -246,7 +252,15 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 param->value = toggleVal ? 1.0f : 0.0f;
                 valueChanged(ed, *param);
             }
-            prevWasInline = false;
+            if (section.layout == "inline_toggles")
+            {
+                lastKnobWidth = ImGui::GetItemRectSize().x;
+                prevWasInline = true;
+            }
+            else
+            {
+                prevWasInline = false;
+            }
         }
         else if (param->type == PARAM_TYPE_ENVELOPE)
         {
@@ -506,4 +520,92 @@ void renderEq3Band(SectionDef& section, I7Ed& ed)
     renderVS(highGain);
     renderKnob(highFreq);
     ImGui::EndGroup();
+}
+
+void renderKeyboard(SectionDef& section, I7Ed& ed)
+{
+    // Expected param order (10 params):
+    //  0: KFADE_LO   1: KRANGE_LO  2: KRANGE_UP  3: KFADE_UP
+    //  4: VFADE_LO   5: VRANGE_LO  6: VRANGE_UP  7: VFADE_UP
+    //  8: VSENS_OFST 9: VELO_CRV_TYPE
+    std::vector<ParameterDef*> ps(section.params.begin(), section.params.end());
+    if (ps.size() < 10)
+    {
+        renderSection(section, ed);
+        return;
+    }
+
+    auto* kFadeLo   = ps[0];
+    auto* kRangeLo  = ps[1];
+    auto* kRangeHi  = ps[2];
+    auto* kFadeHi   = ps[3];
+    auto* vFadeLo   = ps[4];
+    auto* vRangeLo  = ps[5];
+    auto* vRangeHi  = ps[6];
+    auto* vFadeHi   = ps[7];
+    auto* vSensOfst = ps[8];
+    auto* veloCrv   = ps[9];
+
+    // Standard knob style (same as renderSection: title + input, default size)
+    constexpr ImGuiKnobFlags kKnobFlags = ImGuiKnobFlags_AlwaysClamp;
+
+    auto renderKnob = [&](ParameterDef* p)
+    {
+        if (ImGuiKnobs::Knob(p->name().c_str(), &p->value,
+                p->min(), p->max(), 0.0f, p->format.c_str(),
+                ImGuiKnobVariant_Tick, p->size, kKnobFlags))
+        {
+            valueChanged(ed, *p);
+        }
+    };
+
+    // Range slider helper: renders label + full-width slider on its own line
+    auto renderRange = [&](ParameterDef* pLo, ParameterDef* pHi, const char* lbl)
+    {
+        ImGui::TextUnformatted(lbl);
+        std::string wid = "##range_" + pLo->id;
+        int lo = (int)pLo->value;
+        int hi = (int)pHi->value;
+        ImGui::SetNextItemWidth(-FLT_MIN); // full remaining width
+        if (RangeSliderInt(wid.c_str(), &lo, &hi, (int)pLo->min(), (int)pHi->max()))
+        {
+            if (lo != (int)pLo->value)
+            {
+                pLo->value = (float)lo;
+                valueChanged(ed, *pLo);
+            }
+            if (hi != (int)pHi->value)
+            {
+                pHi->value = (float)hi;
+                valueChanged(ed, *pHi);
+            }
+        }
+    };
+
+    // ---- KEYBOARD ZONE ----
+    ImGui::SeparatorText("KEYBOARD");
+    ImGui::Spacing();
+
+    renderKnob(kFadeLo);
+    ImGui::SameLine();
+    renderKnob(kFadeHi);
+
+    ImGui::Spacing();
+    renderRange(kRangeLo, kRangeHi, "Key Range Lo/Hi");
+
+    ImGui::Spacing();
+    ImGui::SeparatorText("VELOCITY");
+    ImGui::Spacing();
+
+    renderKnob(vFadeLo);
+    ImGui::SameLine();
+    renderKnob(vFadeHi);
+    ImGui::SameLine();
+    renderKnob(vSensOfst);
+
+    ImGui::Spacing();
+    renderRange(vRangeLo, vRangeHi, "Vel Range Lo/Hi");
+
+    ImGui::Spacing();
+    renderCombo(*veloCrv, ed);
 }
