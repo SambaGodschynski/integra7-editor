@@ -1,11 +1,7 @@
 require "_integra7"
 require "_model"
 
-local default_device_id = 16 -- TODO: make it configurable
-
-function GetDeviceId()
-    return default_device_id
-end
+-- GetDeviceId() is provided by the C++ host
 
 I7Data = {}
 EmptySysex={0xf0, 0xf7}
@@ -22,7 +18,7 @@ function ParameterSetValueWrapper(param, visitor)
 end
 
 function CreateSysexMessage(node_id, value)
-    local sysex = Create_Sysex_Message_For_NodeId(node_id, value, default_device_id)
+    local sysex = Create_Sysex_Message_For_NodeId(node_id, value, GetDeviceId())
     print("(S): " .. Bytes_To_String(sysex))
     return sysex
 end

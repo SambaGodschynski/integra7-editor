@@ -162,6 +162,10 @@ int main(int argc, const char** args)
             ed.sidebar.selectedOutPort = idx;
             ed.midi.reopenOutput(idx);
         }
+        if (midiPortsData.pendingDeviceId >= 0)
+        {
+            ed.sidebar.deviceId = midiPortsData.pendingDeviceId;
+        }
     }
 
     ImGui::StyleColorsDark();
@@ -169,6 +173,8 @@ int main(int argc, const char** args)
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // ── Lua init ─────────────────────────────────────────────────────────────
+    ed.lua.set_function("GetDeviceId", [&ed]() -> int { return ed.sidebar.deviceId; });
+
     ed.lua.new_usertype<RequestMessage>("RequestMessage",
         "sysex", &RequestMessage::sysex,
         "onMessageReceived", &RequestMessage::onMessageReceived);

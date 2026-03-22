@@ -14,6 +14,7 @@ struct MidiPortsData
 {
     std::string   pendingInName;
     std::string   pendingOutName;
+    int           pendingDeviceId = -1;
     SidebarState* pSidebar = nullptr;
     Midi*         pMidi    = nullptr;
 };

@@ -46,6 +46,7 @@ struct SidebarState
     std::vector<std::string> outPortNames;
     int selectedInPort  = -1;
     int selectedOutPort = -1;
+    int deviceId = 16;
 };
 
 struct I7Ed

@@ -152,6 +152,15 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
 {
     if (ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen))
     {
+        ImGui::TextUnformatted("Device ID");
+        ImGui::SetNextItemWidth(-1.0f);
+        int deviceId = ed.sidebar.deviceId;
+        if (ImGui::InputInt("##DeviceId", &deviceId, 1, 1))
+        {
+            if (deviceId < 0)   { deviceId = 0;   }
+            if (deviceId > 127) { deviceId = 127; }
+            ed.sidebar.deviceId = deviceId;
+        }
         ImGui::TextUnformatted("In");
         renderMidiPortCombo("##MidiIn", ed.sidebar.inPortNames,
             ed.sidebar.selectedInPort,

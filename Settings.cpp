@@ -50,8 +50,9 @@ void registerMidiPortsHandler(MidiPortsData& data)
     h.ReadLineFn = [](ImGuiContext*, ImGuiSettingsHandler* handler, void*, const char* line)
     {
         auto* d = static_cast<MidiPortsData*>(handler->UserData);
-        if (strncmp(line, "In=",  3) == 0) { d->pendingInName  = line + 3; }
-        if (strncmp(line, "Out=", 4) == 0) { d->pendingOutName = line + 4; }
+        if (strncmp(line, "In=",       3) == 0) { d->pendingInName  = line + 3; }
+        if (strncmp(line, "Out=",      4) == 0) { d->pendingOutName = line + 4; }
+        if (strncmp(line, "DeviceId=", 9) == 0) { d->pendingDeviceId = atoi(line + 9); }
     };
     h.WriteAllFn = [](ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
     {
@@ -66,6 +67,7 @@ void registerMidiPortsHandler(MidiPortsData& data)
         {
             buf->appendf("Out=%s\n", sb.outPortNames[sb.selectedOutPort].c_str());
         }
+        buf->appendf("DeviceId=%d\n", sb.deviceId);
         buf->appendf("\n");
     };
     ImGui::AddSettingsHandler(&h);
