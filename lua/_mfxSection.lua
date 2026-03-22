@@ -6,6 +6,21 @@ require "_model"
 
 local get = GetWrapper
 
+local srcOptions = {[0] = "OFF"}
+do
+    for i = 1, 31 do
+        srcOptions[i] = "CC" .. string.format("%02d", i)
+    end
+    for i = 33, 95 do
+        srcOptions[i - 1] = "CC" .. tostring(i)
+    end
+    srcOptions[95] = "BEND"
+    srcOptions[96] = "AFT"
+    for i = 97, 101 do
+        srcOptions[i] = "---##src" .. tostring(i)
+    end
+end
+
 local function idTmpl(mfxId)
     return "PRM-_FPARTxxx-_SNTONE-_SNTF-" .. mfxId
 end
@@ -110,19 +125,28 @@ local mfxTemplate = {
                 {type="range", name=get("MFX Dry Send Level"), id=idTmpl("SNTF_MFX_DRY_SEND"), default=127, min=get(0), max=get(127)},
                 {type="range", name=get("MFX Chorus Send Level"), id=idTmpl("SNTF_MFX_CHO_SEND"), default=0, min=get(0), max=get(127)},
                 {type="range", name=get("MFX Reverb Send Level"), id=idTmpl("SNTF_MFX_REV_SEND"), default=0, min=get(0), max=get(127)},
-                {type="range", name=get("MFX Control 1 Source"), id=idTmpl("SNTF_MFX_CTRL1_SRC"), default=0, min=get(0), max=get(101)},
-                {type="range", name=get("MFX Control 1 Sens"), id=idTmpl("SNTF_MFX_CTRL1_SENS"), default=64, min=get(1), max=get(127)},
-                {type="range", name=get("MFX Control 2 Source"), id=idTmpl("SNTF_MFX_CTRL2_SRC"), default=0, min=get(0), max=get(101)},
-                {type="range", name=get("MFX Control 2 Sens"), id=idTmpl("SNTF_MFX_CTRL2_SENS"), default=64, min=get(1), max=get(127)},
-                {type="range", name=get("MFX Control 3 Source"), id=idTmpl("SNTF_MFX_CTRL3_SRC"), default=0, min=get(0), max=get(101)},
-                {type="range", name=get("MFX Control 3 Sens"), id=idTmpl("SNTF_MFX_CTRL3_SENS"), default=64, min=get(1), max=get(127)},
-                {type="range", name=get("MFX Control 4 Source"), id=idTmpl("SNTF_MFX_CTRL4_SRC"), default=0, min=get(0), max=get(101)},
-                {type="range", name=get("MFX Control 4 Sens"), id=idTmpl("SNTF_MFX_CTRL4_SENS"), default=64, min=get(1), max=get(127)},
             }
         },
         {
             name="Mfx",
             params = {}
+        },
+        {
+            name="Mfx Control",
+            params = {
+                {type="select", name=get("MFX Control 1 Source"), id=idTmpl("SNTF_MFX_CTRL1_SRC"), default=0, options=srcOptions},
+                {type="select", name=get("MFX Control 1 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN1"), default=0},
+                {type="range",  name=get("MFX Control 1 Sens"), id=idTmpl("SNTF_MFX_CTRL1_SENS"), default=64, min=get(1), max=get(127)},
+                {type="select", name=get("MFX Control 2 Source"), id=idTmpl("SNTF_MFX_CTRL2_SRC"), default=0, options=srcOptions},
+                {type="select", name=get("MFX Control 2 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN2"), default=0},
+                {type="range",  name=get("MFX Control 2 Sens"), id=idTmpl("SNTF_MFX_CTRL2_SENS"), default=64, min=get(1), max=get(127)},
+                {type="select", name=get("MFX Control 3 Source"), id=idTmpl("SNTF_MFX_CTRL3_SRC"), default=0, options=srcOptions},
+                {type="select", name=get("MFX Control 3 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN3"), default=0},
+                {type="range",  name=get("MFX Control 3 Sens"), id=idTmpl("SNTF_MFX_CTRL3_SENS"), default=64, min=get(1), max=get(127)},
+                {type="select", name=get("MFX Control 4 Source"), id=idTmpl("SNTF_MFX_CTRL4_SRC"), default=0, options=srcOptions},
+                {type="select", name=get("MFX Control 4 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN4"), default=0},
+                {type="range",  name=get("MFX Control 4 Sens"), id=idTmpl("SNTF_MFX_CTRL4_SENS"), default=64, min=get(1), max=get(127)},
+            }
         }
     }
 }
@@ -139,6 +163,7 @@ function CreateMfxSections(main)
         main[k] = mfxData
         local subCommon = mfxData.grp[1]
         local subMfx = mfxData.grp[2]
+        local subCtrl = mfxData.grp[3]
 
         local function mfxChangedHandler(leafNode, response)
             if not IsIdForPart(leafNode.fullid, partNr) then
@@ -162,6 +187,17 @@ function CreateMfxSections(main)
                 else
                     param = ParameterSetValueWrapper(param)
                 end
+        end
+        for _, param in ipairs(subCtrl.params) do
+                local isAsgn = string.find(param.id, "CTRL_ASGN") ~= nil
+                param.id = CreateId(param.id, partNr)
+                if isAsgn then
+                    local capturedPart = partNr
+                    param.options = function()
+                        return Mfx_CtrlAsgn[mfxNumberPartMap[capturedPart]] or {[0]="OFF"}
+                    end
+                end
+                param = ParameterSetValueWrapper(param)
         end
         for mfxNr = 0, 31, 1 do
             local id = idTmpl("SNTF_MFX_PRM" .. tostring(mfxNr+1))
