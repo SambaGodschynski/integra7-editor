@@ -153,13 +153,24 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
     if (ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::TextUnformatted("Device ID");
-        ImGui::SetNextItemWidth(-1.0f);
-        int deviceId = ed.sidebar.deviceId;
-        if (ImGui::InputInt("##DeviceId", &deviceId, 1, 1))
         {
-            if (deviceId < 0)   { deviceId = 0;   }
-            if (deviceId > 127) { deviceId = 127; }
-            ed.sidebar.deviceId = deviceId;
+            char preview[8];
+            snprintf(preview, sizeof(preview), "%d", ed.sidebar.deviceId);
+            ImGui::SetNextItemWidth(-1.0f);
+            if (ImGui::BeginCombo("##DeviceId", preview))
+            {
+                for (int i = 0; i < 32; ++i)
+                {
+                    char label[8];
+                    snprintf(label, sizeof(label), "%d", i);
+                    bool sel = (i == ed.sidebar.deviceId);
+                    if (ImGui::Selectable(label, sel))
+                    {
+                        ed.sidebar.deviceId = i;
+                    }
+                }
+                ImGui::EndCombo();
+            }
         }
         ImGui::TextUnformatted("In");
         renderMidiPortCombo("##MidiIn", ed.sidebar.inPortNames,
