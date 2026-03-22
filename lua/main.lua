@@ -43,6 +43,7 @@ require "_pcmdMfxSection"
 require "_pcmdTabsSection"
 require "_expansionSection"
 require "_rssSection"
+require "_studioSetEffectsSection"
 
 Main = {}
 
@@ -86,3 +87,4 @@ CreateMfxPcmdSections(Main)
 CreatePcmdTabSections(Main)
 CreateExpansionSection(Main)
 CreateRssSections(Main)
+CreateStudioSetEffectsSections(Main)
