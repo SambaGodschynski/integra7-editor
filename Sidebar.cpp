@@ -155,14 +155,14 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
         ImGui::TextUnformatted("Device ID");
         {
             char preview[8];
-            snprintf(preview, sizeof(preview), "%d", ed.sidebar.deviceId);
+            snprintf(preview, sizeof(preview), "%d", ed.sidebar.deviceId + 1);
             ImGui::SetNextItemWidth(-1.0f);
             if (ImGui::BeginCombo("##DeviceId", preview))
             {
-                for (int i = 0; i < 32; ++i)
+                for (int i = 16; i < 32; ++i)
                 {
                     char label[8];
-                    snprintf(label, sizeof(label), "%d", i);
+                    snprintf(label, sizeof(label), "%d", i + 1);
                     bool sel = (i == ed.sidebar.deviceId);
                     if (ImGui::Selectable(label, sel))
                     {
