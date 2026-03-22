@@ -44,6 +44,7 @@ require "_pcmdTabsSection"
 require "_expansionSection"
 require "_rssSection"
 require "_studioSetEffectsSection"
+require "_systemSection"
 
 Main = {}
 
@@ -88,3 +89,4 @@ CreatePcmdTabSections(Main)
 CreateExpansionSection(Main)
 CreateRssSections(Main)
 CreateStudioSetEffectsSections(Main)
+CreateSystemSections(Main)

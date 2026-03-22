@@ -25,7 +25,7 @@ struct ParameterDef
 {
     typedef std::list<ParameterDef*> Params;
     typedef std::function<int(float)> FToI7Value;
-    typedef std::function<int(float)> FToGuiValue;
+    typedef std::function<float(float)> FToGuiValue;
     typedef std::function<float()> FFloatGetter;
     typedef std::function<std::string()> FStringGetter;
     typedef std::function<std::vector<unsigned char>(float)> FSetValue;
