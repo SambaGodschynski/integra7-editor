@@ -36,15 +36,28 @@ Args parseArguments(int argc, const char** argv)
     for (int i = 1; i < argc; ++i)
     {
         const char *arg = argv[i];
-        if (std::string(arg) == "--lua-main")
+        auto requireNext = [&](const char* name) -> std::string
         {
             ++i;
             if (i >= argc)
             {
-                std::cerr << "missing argument for " << arg << std::endl;
+                std::cerr << "missing argument for " << name << std::endl;
                 exit(-1);
             }
-            result.mainLuaFilePath = std::string(argv[i]);
+            return std::string(argv[i]);
+        };
+
+        if (std::string(arg) == "--lua-main")
+        {
+            result.mainLuaFilePath = requireNext(arg);
+        }
+        else if (std::string(arg) == "--midi-in")
+        {
+            result.midiInName = requireNext(arg);
+        }
+        else if (std::string(arg) == "--midi-out")
+        {
+            result.midiOutName = requireNext(arg);
         }
         else if (std::string(arg) == "--help")
         {
@@ -69,7 +82,9 @@ int main(int argc, const char** args)
     if (ed.args.printHelp)
     {
         std::cout << "Allowed options:\n"
-                  << "\t--lua-main\n"
+                  << "\t--lua-main <file>   replace main.lua with <file>\n"
+                  << "\t--midi-in  <name>   MIDI input port name\n"
+                  << "\t--midi-out <name>   MIDI output port name\n"
                   << std::endl;
         return 0;
     }
@@ -148,6 +163,10 @@ int main(int argc, const char** args)
             {
                 if (names[i] == name) { return i; }
             }
+            for (int i = 0; i < (int)names.size(); ++i)
+            {
+                if (names[i].find(name) != std::string::npos) { return i; }
+            }
             return names.empty() ? -1 : 0;
         };
         if (!midiPortsData.pendingInName.empty())
@@ -166,6 +185,30 @@ int main(int argc, const char** args)
         {
             ed.sidebar.deviceId = midiPortsData.pendingDeviceId;
         }
+
+        // Command-line args override ini settings
+        if (!ed.args.midiInName.empty())
+        {
+            int idx = findPort(ed.sidebar.inPortNames, ed.args.midiInName);
+            if (idx < 0)
+            {
+                std::cerr << "MIDI input port not found: " << ed.args.midiInName << std::endl;
+                exit(-1);
+            }
+            ed.sidebar.selectedInPort = idx;
+            ed.midi.reopenInput(idx);
+        }
+        if (!ed.args.midiOutName.empty())
+        {
+            int idx = findPort(ed.sidebar.outPortNames, ed.args.midiOutName);
+            if (idx < 0)
+            {
+                std::cerr << "MIDI output port not found: " << ed.args.midiOutName << std::endl;
+                exit(-1);
+            }
+            ed.sidebar.selectedOutPort = idx;
+            ed.midi.reopenOutput(idx);
+        }
     }
 
     ImGui::StyleColorsDark();
@@ -183,10 +226,49 @@ int main(int argc, const char** args)
         "i7Value", &ValueChangedMessage::i7Value);
 
     ed.lua.open_libraries();
+
+    // Prepend the script's own directory to package.path so require works
+    // regardless of the working directory (fixes device-tests.lua and removes
+    // the hardcoded path in main.lua).
+    {
+        std::string scriptDir(luaFile);
+        auto slash = scriptDir.find_last_of("/\\");
+        scriptDir = (slash != std::string::npos) ? scriptDir.substr(0, slash) : ".";
+        std::string addPath = scriptDir + "/?.lua";
+        ed.lua.script("package.path = \"" + addPath + ";\" .. package.path");
+    }
+
     ed.lua.script_file(luaFile);
 
     getDefs(ed, sections);
     ed.pSections = &sections;
+
+    // ── Lua test API ──────────────────────────────────────────────────────────
+    ed.lua.set_function("SetParam", [&ed](const std::string& id, float guiValue)
+    {
+        auto* p = getParameterDef(ed, id);
+        if (!p) { std::cerr << "SetParam: unknown param: " << id << std::endl; return; }
+        p->value = guiValue;
+        valueChanged(ed, *p);
+    });
+    ed.lua.set_function("RequestParam", [&ed](const std::string& id)
+    {
+        auto* p = getParameterDef(ed, id);
+        if (!p) { std::cerr << "RequestParam: unknown param: " << id << std::endl; return; }
+        triggerReceive(ed, { [&ed, p]() -> std::vector<RequestMessage>
+        {
+            return buildParamRequests(ed, {p});
+        }});
+    });
+    ed.lua.set_function("GetParam", [&ed](const std::string& id) -> float
+    {
+        auto* p = getParameterDef(ed, id);
+        return p ? p->value : 0.f;
+    });
+    ed.lua.set_function("IsReceiving", [&ed]() -> bool
+    {
+        return ed.isReceiving.load();
+    });
 
     // Restore sections that were open in the previous session
     for (auto& [key, section] : sections)
@@ -500,6 +582,12 @@ int main(int argc, const char** args)
                     saveSysexToFile(ed);
                 }
             }
+        }
+
+        // ── Lua test frame step ───────────────────────────────────────────────
+        {
+            sol::optional<sol::function> onFrame = ed.lua["OnFrame"];
+            if (onFrame) { (*onFrame)(); }
         }
 
         // ── Indeterminate receive progress bar ────────────────────────────────

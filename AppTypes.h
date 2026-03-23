@@ -20,6 +20,8 @@ struct Args
 {
     bool printHelp   = false;
     std::string mainLuaFilePath;
+    std::string midiInName;
+    std::string midiOutName;
 };
 
 struct PendingReceive

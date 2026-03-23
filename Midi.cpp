@@ -217,12 +217,20 @@ void Midi::runThread()
 
 void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midiOut)
 {
+    if (item.callback)
+    {
+        // Sleep briefly so any echo from a preceding DT1 (sendMessage) has time
+        // to arrive at MIDI in, then flush it before sending the RQ1.
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        { Bytes stale; do { midiIn.getMessage(&stale); } while (!stale.empty()); }
+    }
     onSend();
     midiOut.sendMessage(&item.rq);
     if (!item.callback)
     {
         return;
     }
+
     Bytes answer;
     const int idleMillis = 10;
     const int timeOutSeconds = 5;
@@ -238,6 +246,5 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(idleMillis));
     }
-    std::cerr << "MIDI receive timed out." << std::endl;
     item.callback(Bytes(), nullptr);
 }

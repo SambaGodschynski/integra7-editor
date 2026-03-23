@@ -68,6 +68,7 @@ function CreateReceiveMessageForLeafId(node_id)
         if response == nil or response.addr ~= nodeinfo.addr then
             return {EmptyValueChangedMessage}
         end
+        print("[R]: " .. Bytes_To_String(received_msg))
         local vcm = ValueChangedMessage.new()
         vcm.id = node_id
         vcm.i7Value = Bytes_To_Value(response.payload)
@@ -105,6 +106,7 @@ function CreateReceiveMessageForBranch(branch_node_id)
             if #response == nil or response.addr ~= leaf.addr then
                 return {EmptyValueChangedMessage}
             end
+            print("(R): " .. Bytes_To_String(received_msg))
             local handledMessages = notifyHandlers(leaf, response)
             if handledMessages ~=nil and #handledMessages > 0 then
                 return handledMessages

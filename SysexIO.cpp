@@ -97,7 +97,8 @@ std::vector<RequestMessage> buildParamRequests(
         }
         if (param->type == PARAM_TYPE_RANGE
          || param->type == PARAM_TYPE_SELECTION
-         || param->type == PARAM_TYPE_TOGGLE)
+         || param->type == PARAM_TYPE_TOGGLE
+         || param->type == PARAM_TYPE_VSLIDER)
         {
             tryAdd(param->id);
         }
