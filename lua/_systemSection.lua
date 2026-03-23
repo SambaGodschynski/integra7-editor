@@ -50,7 +50,7 @@ function CreateSystemSections(main)
             toI7Value  = function(hz)  return math.tointeger(math.log(hz / 440.0) / math.log(2) * 12000.0 + 1024) end,
             toGuiValue = function(i7)  return 440.0 * (2 ^ ((i7 - 1024) / 12000.0)) end,
         }),
-        p({type="range",  name=get("Master Key Shift"), id=sc.."NESC_KEY_SHIFT", default=64,  min=get(-24), max=get(24),
+        p({type="range",  name=get("Master Key Shift"), id=sc.."NESC_KEY_SHIFT", default=0,   min=get(-24), max=get(24),
             toI7Value  = function(gui) return math.tointeger(gui + 64) end,
             toGuiValue = function(i7)  return math.tointeger(i7 - 64)  end,
         }),

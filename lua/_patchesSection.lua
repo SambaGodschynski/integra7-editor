@@ -73,7 +73,7 @@ function CreatePatchesSections(main)
         local grp = {
             name = "Part " .. string.format("%02d", partNr) .. " Presets",
             params = {
-                {type="select", id="PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB", name=get("Part " .. partNr), default=0, options = patches, setValue = onNewValue}
+                {type="select", id="PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB", name=get("Part " .. partNr), default=1, options = patches, setValue = onNewValue}
             }
         }
         table.insert(section.grp, grp)
