@@ -67,11 +67,7 @@ Args parseArguments(int argc, const char** argv)
         {
             result.verbose = true;
         }        
-        else
-        {
-            std::cout << "unknown argument: " << arg << std::endl;
-            exit(-1);
-        }
+        // unknown args are forwarded to the Lua script's Init()
     }
     return result;
 }
@@ -83,6 +79,39 @@ int main(int argc, const char** args)
     I7Ed ed;
     ed.args = parseArguments(argc, args);
     ed.midi.verbose = ed.args.verbose;
+
+    // ── Early Lua init: load script and call Init(args) if defined ───────────
+    const char* luaFile = ed.args.mainLuaFilePath.empty()
+        ? "./lua/main.lua"
+        : ed.args.mainLuaFilePath.c_str();
+
+    ed.lua.open_libraries();
+    ed.lua.new_usertype<RequestMessage>("RequestMessage",
+        "sysex", &RequestMessage::sysex,
+        "onMessageReceived", &RequestMessage::onMessageReceived);
+    ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
+        "id",      &ValueChangedMessage::id,
+        "i7Value", &ValueChangedMessage::i7Value);
+    {
+        std::string scriptDir(luaFile);
+        auto slash = scriptDir.find_last_of("/\\");
+        scriptDir = (slash != std::string::npos) ? scriptDir.substr(0, slash) : ".";
+        ed.lua.script("package.path = \"" + scriptDir + "/?.lua;\" .. package.path");
+    }
+    ed.lua.script_file(luaFile);
+
+    {
+        sol::optional<sol::function> initFn = ed.lua["Init"];
+        if (initFn)
+        {
+            sol::table luaArgs = ed.lua.create_table();
+            for (int i = 1; i < argc; ++i)
+            {
+                luaArgs[i] = std::string(args[i]);
+            }
+            (*initFn)(luaArgs);
+        }
+    }
 
     if (ed.args.printHelp)
     {
@@ -116,10 +145,6 @@ int main(int argc, const char** args)
             std::chrono::steady_clock::now().time_since_epoch().count(),
             std::memory_order_relaxed);
     };
-
-    const char* luaFile = ed.args.mainLuaFilePath.empty()
-        ? "./lua/main.lua"
-        : ed.args.mainLuaFilePath.c_str();
 
     if (!glfwInit())
     {
@@ -221,30 +246,8 @@ int main(int argc, const char** args)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    // ── Lua init ─────────────────────────────────────────────────────────────
+    // ── Lua bindings (script already loaded above) ────────────────────────────
     ed.lua.set_function("GetDeviceId", [&ed]() -> int { return ed.sidebar.deviceId; });
-
-    ed.lua.new_usertype<RequestMessage>("RequestMessage",
-        "sysex", &RequestMessage::sysex,
-        "onMessageReceived", &RequestMessage::onMessageReceived);
-    ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
-        "id",      &ValueChangedMessage::id,
-        "i7Value", &ValueChangedMessage::i7Value);
-
-    ed.lua.open_libraries();
-
-    // Prepend the script's own directory to package.path so require works
-    // regardless of the working directory (fixes device-tests.lua and removes
-    // the hardcoded path in main.lua).
-    {
-        std::string scriptDir(luaFile);
-        auto slash = scriptDir.find_last_of("/\\");
-        scriptDir = (slash != std::string::npos) ? scriptDir.substr(0, slash) : ".";
-        std::string addPath = scriptDir + "/?.lua";
-        ed.lua.script("package.path = \"" + addPath + ";\" .. package.path");
-    }
-
-    ed.lua.script_file(luaFile);
 
     getDefs(ed, sections);
     ed.pSections = &sections;

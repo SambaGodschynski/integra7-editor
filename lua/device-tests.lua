@@ -8,8 +8,8 @@
 -- ── Config ────────────────────────────────────────────────────────────────────
 
 local Config = {
-    -- Which part to use for tone-specific tests (1–16).
-    test_part = 1,
+    -- Which parts to test. Overridden by Init() based on command-line args.
+    test_parts = {1},
 
     -- Enable/disable entire groups.
     -- Turn off a group to skip it (e.g. when debugging a specific area).
@@ -148,10 +148,10 @@ local function request_param(id)
     return GetParam(id)
 end
 
--- Set tone type for test_part.
+-- Set tone type for a specific part.
 -- idx: 1=SNA, 2=SNS, 3=SND, 4=PCMS, 5=PCMD
-local function set_tone_type(idx)
-    local id = "PRM-_PRF-_FP" .. Config.test_part .. "-NEFP_TYPE_DUMMY"
+local function set_tone_type(partNr, idx)
+    local id = "PRM-_PRF-_FP" .. partNr .. "-NEFP_TYPE_DUMMY"
     SetParam(id, idx)
     coroutine.yield()  -- give device a moment
 end
@@ -253,55 +253,86 @@ end
 -- Tone-type groups that need a precondition: index into NEFP_TYPE_DUMMY options
 local TONE_TYPE_IDX = { SNA=1, SNS=2, SND=3, PCMS=4, PCMD=5 }
 
--- Collect sections per group for the test part (+ global sections).
-local by_group = {}   -- group_name → list of {key, section}
-
-for key, section in pairs(Main) do
-    local group, partNr = classify(key)
-    if group == nil then goto continue_classify end
-    if partNr ~= nil and partNr ~= Config.test_part then goto continue_classify end
-
-    if by_group[group] == nil then by_group[group] = {} end
-    table.insert(by_group[group], {key=key, section=section})
-    ::continue_classify::
-end
-
 -- Fixed group order so we set the tone type as rarely as possible.
 local GROUP_ORDER = {"SNA", "SNS", "SND", "PCMS", "PCMD", "Parts", "System", "StudioSet"}
 
-for _, group_name in ipairs(GROUP_ORDER) do
-    if not Config.groups[group_name] then goto continue_order end
-    local sections = by_group[group_name]
-    if sections == nil or #sections == 0 then goto continue_order end
+local function build_groups()
+    for _, part in ipairs(Config.test_parts) do
+        local by_group = {}
 
-    local coro = coroutine.create(function()
-        log(string.format("\n══ Group: %s ══", group_name))
+        for key, section in pairs(Main) do
+            local group, partNr = classify(key)
+            if group == nil then goto continue_classify end
+            if partNr == nil and part ~= Config.test_parts[1] then goto continue_classify end
+            if partNr ~= nil and partNr ~= part then goto continue_classify end
 
-        -- Set tone type precondition if needed.
-        local tone_idx = TONE_TYPE_IDX[group_name]
-        if tone_idx ~= nil then
-            log(string.format("  → setting tone type %s for Part %d",
-                group_name, Config.test_part))
-            set_tone_type(tone_idx)
+            if by_group[group] == nil then by_group[group] = {} end
+            table.insert(by_group[group], {key=key, section=section})
+            ::continue_classify::
         end
 
-        local section_count = 0
-        for _, entry in ipairs(sections) do
-            if test_section(entry.key, entry.section) then
-                section_count = section_count + 1
-            end
-        end
-        log(string.format("  sections tested: %d", section_count))
-    end)
+        for _, group_name in ipairs(GROUP_ORDER) do
+            if not Config.groups[group_name] then goto continue_order end
+            local sections = by_group[group_name]
+            if sections == nil or #sections == 0 then goto continue_order end
 
-    table.insert(groups, {name=group_name, coro=coro})
-    ::continue_order::
+            local cur_part = part
+            local cur_group = group_name
+
+            local coro = coroutine.create(function()
+                log(string.format("\n══ Part %d  Group: %s ══", cur_part, cur_group))
+
+                local tone_idx = TONE_TYPE_IDX[cur_group]
+                if tone_idx ~= nil then
+                    log(string.format("  → setting tone type %s for Part %d",
+                        cur_group, cur_part))
+                    set_tone_type(cur_part, tone_idx)
+                end
+
+                local section_count = 0
+                for _, entry in ipairs(sections) do
+                    if test_section(entry.key, entry.section) then
+                        section_count = section_count + 1
+                    end
+                end
+                log(string.format("  sections tested: %d", section_count))
+            end)
+
+            table.insert(groups, {name=string.format("Part%d/%s", cur_part, cur_group), coro=coro})
+            ::continue_order::
+        end
+    end
+end
+
+-- ── Argument handling ────────────────────────────────────────────────────────
+
+function Init(args)
+    for _, v in ipairs(args) do
+        if v == "--help" then
+            print("device-tests.lua options:")
+            print("  --test-type-complete   test all 16 parts (default: part 1 only)")
+            return
+        end
+    end
+    for _, v in ipairs(args) do
+        if v == "--test-type-complete" then
+            Config.test_parts = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}
+            return
+        end
+    end
 end
 
 -- ── Frame driver (called by C++ every render frame) ──────────────────────────
 
+local built = false
+
 function OnFrame()
     if done then return end
+
+    if not built then
+        build_groups()
+        built = true
+    end
 
     if current == nil then
         if #groups == 0 then
