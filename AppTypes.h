@@ -22,6 +22,7 @@ struct Args
     std::string mainLuaFilePath;
     std::string midiInName;
     std::string midiOutName;
+    bool verbose = false;
 };
 
 struct PendingReceive

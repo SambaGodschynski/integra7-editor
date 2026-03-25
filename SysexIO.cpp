@@ -19,7 +19,10 @@ void valueChanged(I7Ed& ed, const ParameterDef& paramDef)
 {
     try
     {
-        std::cout << paramDef.id << std::endl;
+        if (ed.args.verbose)
+        {
+            std::cout << "[changed] " << paramDef.id << std::endl;
+        }
         int i7Value = (int)paramDef.value;
         if (paramDef.toI7Value)
         {

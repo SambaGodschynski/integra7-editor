@@ -2,7 +2,7 @@
 #include <ostream>
 #include "Com.h"
 #include <functional>
-#include <list> // TODO: use queue
+#include <queue>
 #include <mutex>
 #include <thread>
 #include <atomic>
@@ -24,7 +24,7 @@ private:
     std::atomic<int> pendingInPort{-2};   // -2 = no-op sentinel
     std::atomic<int> pendingOutPort{-2};
     typedef std::mutex Lock;
-    typedef std::list<QueueItem> Queue;
+    typedef std::queue<QueueItem> Queue;
     std::thread *thread = nullptr;
     Lock lock;
     Queue queue;
@@ -32,6 +32,7 @@ private:
     void runThread();
     void handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midiOut);
 public:
+    bool verbose = false;
     std::function<void()> onSend = [](){};
     std::function<void()> onReceive = [](){};
     virtual ~Midi();

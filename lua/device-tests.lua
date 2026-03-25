@@ -15,13 +15,13 @@ local Config = {
     -- Turn off a group to skip it (e.g. when debugging a specific area).
     groups = {
         SNA       = true,   -- SN-A tone sections + SNA MFX
-        SNS       = false,   -- SN-S tone sections + SNS MFX
-        SND       = false,   -- SN-D tone sections + SND MFX
-        PCMS      = false,   -- PCM Synth sections + PCMS MFX
-        PCMD      = false,   -- PCM Drum sections  + PCMD MFX
-        Parts     = false,   -- Studio Set part params (level, pan, EQ, …)
-        System    = false,   -- System section
-        StudioSet = false,   -- Studio Set Effects / RSS / Expansion
+        SNS       = true,   -- SN-S tone sections + SNS MFX
+        SND       = true,   -- SN-D tone sections + SND MFX
+        PCMS      = true,   -- PCM Synth sections + PCMS MFX
+        PCMD      = true,   -- PCM Drum sections  + PCMD MFX
+        Parts     = true,   -- Studio Set part params (level, pan, EQ, …)
+        System    = true,   -- System section
+        StudioSet = true,   -- Studio Set Effects / RSS / Expansion
     },
 }
 

@@ -47,22 +47,26 @@ Args parseArguments(int argc, const char** argv)
             return std::string(argv[i]);
         };
 
-        if (std::string(arg) == "--lua-main")
+        if (arg == std::string("--lua-main"))
         {
             result.mainLuaFilePath = requireNext(arg);
         }
-        else if (std::string(arg) == "--midi-in")
+        else if (arg == std::string("--midi-in"))
         {
             result.midiInName = requireNext(arg);
         }
-        else if (std::string(arg) == "--midi-out")
+        else if (arg == std::string("--midi-out"))
         {
             result.midiOutName = requireNext(arg);
         }
-        else if (std::string(arg) == "--help")
+        else if (arg == std::string("--help"))
         {
             result.printHelp = true;
         }
+        else if (arg == std::string("--verbose"))
+        {
+            result.verbose = true;
+        }        
         else
         {
             std::cout << "unknown argument: " << arg << std::endl;
@@ -78,6 +82,7 @@ int main(int argc, const char** args)
 {
     I7Ed ed;
     ed.args = parseArguments(argc, args);
+    ed.midi.verbose = ed.args.verbose;
 
     if (ed.args.printHelp)
     {
@@ -85,6 +90,7 @@ int main(int argc, const char** args)
                   << "\t--lua-main <file>   replace main.lua with <file>\n"
                   << "\t--midi-in  <name>   MIDI input port name\n"
                   << "\t--midi-out <name>   MIDI output port name\n"
+                  << "\t--verbose           detailed communication log\n"
                   << std::endl;
         return 0;
     }

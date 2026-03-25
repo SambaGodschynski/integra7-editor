@@ -1,34 +1,48 @@
 #include "Midi.h"
 #include <chrono>
+#include <iomanip>
 
 namespace
 {
     const int ThreadIdleMillis = 1;
-}
-
-template<class TMidiIO>
-void printMidiIo(std::ostream &os)
-{
-    TMidiIO midiIo;
-    auto nIos = midiIo.getPortCount();
-    for (size_t idx = 0; idx < nIos; ++idx)
+    template<class TMidiIO>
+    void printMidiIo(std::ostream &os)
     {
-        os << (idx) << ": " << midiIo.getPortName(idx) << std::endl;
+        TMidiIO midiIo;
+        auto nIos = midiIo.getPortCount();
+        for (size_t idx = 0; idx < nIos; ++idx)
+        {
+            os << (idx) << ": " << midiIo.getPortName(idx) << std::endl;
+        }
+    }
+    template<class TMidiIO>
+    void openPort(TMidiIO &port, size_t portNr)
+    {
+        auto nIos = port.getPortCount();
+        if (portNr >= nIos)
+        {
+            std::cerr << "invalid port number: " << portNr << std::endl;
+            exit(1);
+        }
+        port.openPort(portNr);
+        std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
+    }
+    std::ostream & operator <<(std::ostream &os, const Bytes &bytes)
+    {
+        if (bytes.empty())
+        {
+            return os;
+        }
+        os << std::hex << std::setfill('0');
+        for (auto byte : bytes)
+        {
+            os << " " << std::setw(2) << (int)byte;
+        }
+        os << std::dec;
+        return os;
     }
 }
 
-template<class TMidiIO>
-void openPort(TMidiIO &port, size_t portNr)
-{
-    auto nIos = port.getPortCount();
-    if (portNr >= nIos)
-    {
-        std::cerr << "invalid port number: " << portNr << std::endl;
-        exit(1);
-    }
-    port.openPort(portNr);
-    std::cout << "open: (" << portNr << ") " << port.getPortName(portNr) << std::endl;
-}
 
  Midi::~Midi()
  {
@@ -92,7 +106,7 @@ void Midi::sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback)
 void Midi::enqueue(QueueItem item)
 {
     std::lock_guard<Lock> _lock(lock);
-    queue.emplace_front(std::move(item));
+    queue.push(std::move(item));
 }
 
 int Midi::getInputPortCount()
@@ -195,11 +209,11 @@ void Midi::runThread()
         {
             while(!queue.empty())
             {
-                const QueueItem &item = queue.back();
+                const QueueItem &item = queue.front();
                 handle(item, midiIn, midiOut);
                 {
                     std::lock_guard<Lock> _lock(lock);
-                    queue.pop_back();
+                    queue.pop();
                 }
             }
         }
@@ -225,6 +239,10 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
         { Bytes stale; do { midiIn.getMessage(&stale); } while (!stale.empty()); }
     }
     onSend();
+    if (verbose)
+    {
+        std::cout << "[TX]" << item.rq << std::endl;
+    }
     midiOut.sendMessage(&item.rq);
     if (!item.callback)
     {
@@ -240,6 +258,10 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
         midiIn.getMessage(&answer);
         if (!answer.empty())
         {
+            if (verbose)
+            {
+                std::cout << "[RX]" << answer << std::endl;
+            }
             onReceive();
             item.callback(std::move(answer), item.userData);
             return;
