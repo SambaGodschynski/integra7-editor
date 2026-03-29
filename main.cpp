@@ -88,7 +88,8 @@ int main(int argc, const char** args)
     ed.lua.open_libraries();
     ed.lua.new_usertype<RequestMessage>("RequestMessage",
         "sysex", &RequestMessage::sysex,
-        "onMessageReceived", &RequestMessage::onMessageReceived);
+        "onMessageReceived", &RequestMessage::onMessageReceived,
+        "multiResponse", &RequestMessage::multiResponse);
     ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
         "id",      &ValueChangedMessage::id,
         "i7Value", &ValueChangedMessage::i7Value);
@@ -277,6 +278,15 @@ int main(int argc, const char** args)
     ed.lua.set_function("IsReceiving", [&ed]() -> bool
     {
         return ed.isReceiving.load();
+    });
+    ed.lua.set_function("SendDirectMessage", [&ed](sol::table bytes)
+    {
+        Bytes sysex;
+        for (const auto& kv : bytes)
+        {
+            sysex.push_back(static_cast<unsigned char>(kv.second.as<int>()));
+        }
+        sendMessage(ed, sysex);
     });
 
     // Restore sections that were open in the previous session
@@ -544,16 +554,46 @@ int main(int argc, const char** args)
         {
             for (auto it = ed.pendingReceives.begin(); it != ed.pendingReceives.end();)
             {
+                if (it->multiResponse)
                 {
-                    std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                    if (it->data.empty()) { ++it; continue; }
+                    std::deque<Bytes> toProcess;
+                    {
+                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                        it->dataQueue.swap(toProcess);
+                    }
+                    if (toProcess.empty()) { ++it; continue; }
+                    bool done = false;
+                    for (auto& bytes : toProcess)
+                    {
+                        if (bytes.empty()) { done = true; break; }
+                        auto msgs = it->handler(bytes);
+                        for (const auto& msg : msgs)
+                        {
+                            if (!msg.id.empty()) { valueChanged(ed, msg); }
+                        }
+                    }
+                    if (done)
+                    {
+                        it = ed.pendingReceives.erase(it);
+                    }
+                    else
+                    {
+                        ++it;
+                    }
                 }
-                auto msgs = it->handler(it->data);
-                for (const auto& msg : msgs)
+                else
                 {
-                    if (!msg.id.empty()) { valueChanged(ed, msg); }
+                    {
+                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                        if (it->data.empty()) { ++it; continue; }
+                    }
+                    auto msgs = it->handler(it->data);
+                    for (const auto& msg : msgs)
+                    {
+                        if (!msg.id.empty()) { valueChanged(ed, msg); }
+                    }
+                    it = ed.pendingReceives.erase(it);
                 }
-                it = ed.pendingReceives.erase(it);
             }
             if (ed.pendingReceives.empty())
             {

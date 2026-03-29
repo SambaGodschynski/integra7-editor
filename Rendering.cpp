@@ -363,15 +363,45 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         else if (param->type == PARAM_TYPE_ACTION)
         {
-            if (ImGui::Button(param->name().c_str()))
+            if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
                 triggerReceive(ed, {param->getAction});
             }
             prevWasInline = false;
         }
+        else if (param->type == PARAM_TYPE_INPUTTEXT)
+        {
+            char buf[17] = {};
+            strncpy(buf, param->stringValue.c_str(), 16);
+            float w = ImGui::CalcTextSize("AAAAAAAAAAAAAAAA").x
+                    + ImGui::GetStyle().FramePadding.x * 2.0f;
+            ImGui::SetNextItemWidth(w);
+            ImGui::InputText(("##it_" + param->id).c_str(), buf, sizeof(buf));
+            bool active = ImGui::IsItemActive();
+            if (active)
+            {
+                param->stringValue = buf;
+            }
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                param->stringValue = buf;
+                if (param->setStringValue)
+                {
+                    auto sysex = param->setStringValue(param->stringValue);
+                    sendMessage(ed, sysex);
+                }
+            }
+            if (!active && param->stringValueGetter)
+            {
+                param->stringValue = param->stringValueGetter();
+            }
+            ImGui::SameLine();
+            ImGui::TextUnformatted(param->name().c_str());
+            prevWasInline = false;
+        }
         else if (param->type == PARAM_TYPE_SAVE_SYSEX)
         {
-            if (ImGui::Button(param->name().c_str()))
+            if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
                 ed.saveSysex.partPrefix = param->partPrefix;
                 IGFD::FileDialogConfig cfg;
@@ -386,7 +416,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         else if (param->type == PARAM_TYPE_LOAD_SYSEX)
         {
-            if (ImGui::Button(param->name().c_str()))
+            if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
                 IGFD::FileDialogConfig cfg;
                 cfg.path      = ".";

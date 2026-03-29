@@ -81,6 +81,12 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
             {
                 // no fields needed
             }
+            else if (param->type == PARAM_TYPE_INPUTTEXT)
+            {
+                param->setStringValue = require_key<ParameterDef::FSetStringValue>(luaParam, "setStringValue");
+                param->stringValueGetter = optional_key<ParameterDef::FStringGetter>(luaParam, "stringValueGetter", nullptr);
+                param->stringValue = optional_key<std::string>(luaParam, "stringValue", "");
+            }
             else
             {
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");

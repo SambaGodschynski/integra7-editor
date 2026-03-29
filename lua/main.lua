@@ -40,6 +40,7 @@ require "_pcmdCompEqSection"
 require "_pcmdMfxSection"
 require "_pcmdTabsSection"
 require "_expansionSection"
+require "_studioManagementSection"
 require "_rssSection"
 require "_studioSetEffectsSection"
 require "_systemSection"
@@ -85,6 +86,7 @@ CreatePcmdCompEqSections(Main)
 CreateMfxPcmdSections(Main)
 CreatePcmdTabSections(Main)
 CreateExpansionSection(Main)
+CreateStudioManagementSection(Main)
 CreateRssSections(Main)
 CreateStudioSetEffectsSections(Main)
 CreateSystemSections(Main)

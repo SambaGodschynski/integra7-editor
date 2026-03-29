@@ -154,25 +154,46 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
             {
                 break;
             }
-            ed.pendingReceives.push_back({
-                .handler = req.onMessageReceived
-            });
-            ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
-                [&ed, &break_](Bytes received, void* userData)
-                {
-                    if (received.empty())
-                    {
-                        break_ = true;
-                        return;
-                    }
-                    std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                    if (userData == nullptr)
-                    {
-                        return;
-                    }
-                    PendingReceive* pData = (PendingReceive*)userData;
-                    pData->data.swap(received);
+            if (req.multiResponse)
+            {
+                ed.pendingReceives.push_back({
+                    .handler = req.onMessageReceived,
+                    .multiResponse = true
                 });
+                ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
+                    [&ed](Bytes received, void* userData)
+                    {
+                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                        if (userData == nullptr)
+                        {
+                            return;
+                        }
+                        PendingReceive* pData = (PendingReceive*)userData;
+                        pData->dataQueue.push_back(std::move(received));
+                    }, true);
+            }
+            else
+            {
+                ed.pendingReceives.push_back({
+                    .handler = req.onMessageReceived
+                });
+                ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
+                    [&ed, &break_](Bytes received, void* userData)
+                    {
+                        if (received.empty())
+                        {
+                            break_ = true;
+                            return;
+                        }
+                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                        if (userData == nullptr)
+                        {
+                            return;
+                        }
+                        PendingReceive* pData = (PendingReceive*)userData;
+                        pData->data.swap(received);
+                    });
+            }
         }
     }
 }

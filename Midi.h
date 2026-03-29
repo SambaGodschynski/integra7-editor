@@ -17,6 +17,7 @@ public:
         Bytes rq;
         OnReceivedCallback callback;
         void *userData = nullptr;
+        bool multiResponse = false;
     };
 private:
     int inport = -1, outport = -1;
@@ -42,7 +43,7 @@ public:
     void openInput(int index);
     void openOutput(int index);
     void sendMessage(const Bytes& message);
-    void sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback);
+    void sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse = false);
     int  getInputPortCount();
     std::string getInputPortName(int index);
     int  getOutputPortCount();

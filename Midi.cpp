@@ -92,13 +92,14 @@ void Midi::sendMessage(const Bytes& message)
     enqueue(std::move(item));
 }
 
-void Midi::sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback)
+void Midi::sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse)
 {
     QueueItem item
     {
         .rq = std::move(rq),
         .callback = std::move(callback),
-        .userData = usrData
+        .userData = usrData,
+        .multiResponse = multiResponse
     };
     enqueue(std::move(item));
 }
@@ -251,6 +252,39 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
 
     Bytes answer;
     const int idleMillis = 10;
+
+    if (item.multiResponse)
+    {
+        // Collect multiple responses until a 300 ms gap (no new message).
+        const int gapTimeoutMs  = 300;
+        const int totalTimeoutMs = 15000;
+        int gapMs   = 0;
+        int totalMs = 0;
+        while (totalMs < totalTimeoutMs && gapMs < gapTimeoutMs)
+        {
+            midiIn.getMessage(&answer);
+            if (!answer.empty())
+            {
+                if (verbose)
+                {
+                    std::cout << "[RX]" << answer << std::endl;
+                }
+                onReceive();
+                item.callback(answer, item.userData);
+                answer.clear();
+                gapMs = 0;
+            }
+            else
+            {
+                gapMs   += idleMillis;
+                totalMs += idleMillis;
+                std::this_thread::sleep_for(std::chrono::milliseconds(idleMillis));
+            }
+        }
+        item.callback(Bytes(), item.userData);
+        return;
+    }
+
     const int timeOutSeconds = 5;
     int maxTries = (int(1000 / (double)idleMillis) * timeOutSeconds);
     while (maxTries-- > 0)

@@ -18,6 +18,7 @@
 #define PARAM_TYPE_SOLO_TOGGLE "solotoggle"
 #define PARAM_TYPE_VSLIDER     "vslider"
 #define PARAM_TYPE_NEWLINE     "newline"
+#define PARAM_TYPE_INPUTTEXT   "inputtext"
 
 struct RequestMessage; // forward declaration for FGetAction
 
@@ -31,6 +32,7 @@ struct ParameterDef
     typedef std::function<std::vector<unsigned char>(float)> FSetValue;
     typedef std::map<int, std::string> SelectionOptions;
     typedef std::function<std::vector<RequestMessage>()> FGetAction;
+    typedef std::function<std::vector<unsigned char>(std::string)> FSetStringValue;
     typedef std::function<SelectionOptions()> FGetOptions;
     std::string id;
     FStringGetter name;
@@ -55,6 +57,9 @@ struct ParameterDef
     FFloatGetter valueOverride;
     // PARAM_TYPE_ACTION only
     FGetAction getAction;
+    // PARAM_TYPE_INPUTTEXT only
+    FSetStringValue setStringValue;
+    FStringGetter stringValueGetter;
     // PARAM_TYPE_SAVE_SYSEX only
     std::string partPrefix;
     // PARAM_TYPE_SOLO_TOGGLE only
@@ -80,11 +85,12 @@ struct ValueChangedMessage
     float i7Value = 0;
 };
 
-struct RequestMessage 
+struct RequestMessage
 {
     typedef std::function<std::vector<ValueChangedMessage>(std::vector<unsigned char>)> FOnMessageReceived;
     Bytes sysex;
     FOnMessageReceived onMessageReceived;
+    bool multiResponse = false;
 };
 
 struct SectionDef

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <deque>
 #include <mutex>
 #include <atomic>
 #include <chrono>
@@ -29,6 +30,8 @@ struct PendingReceive
 {
     RequestMessage::FOnMessageReceived handler;
     Bytes data;
+    std::deque<Bytes> dataQueue;
+    bool multiResponse = false;
 };
 
 enum class ToneType
