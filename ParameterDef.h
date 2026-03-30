@@ -18,6 +18,7 @@
 #define PARAM_TYPE_SOLO_TOGGLE "solotoggle"
 #define PARAM_TYPE_VSLIDER     "vslider"
 #define PARAM_TYPE_NEWLINE     "newline"
+#define PARAM_TYPE_SEPARATOR   "separator"
 #define PARAM_TYPE_INPUTTEXT   "inputtext"
 
 struct RequestMessage; // forward declaration for FGetAction

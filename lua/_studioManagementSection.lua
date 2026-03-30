@@ -191,7 +191,7 @@ function CreateStudioManagementSection(main)
     end
 
     main["Studio Management"] = {
-        name                  = "Studio Management",
+        name                  = "Studio Set Management",
         accordion             = true,
         params                = topParams,
         grp                   = grp,

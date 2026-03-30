@@ -41,6 +41,7 @@ require "_pcmdMfxSection"
 require "_pcmdTabsSection"
 require "_expansionSection"
 require "_studioManagementSection"
+require "_toneManagementSection"
 require "_rssSection"
 require "_studioSetEffectsSection"
 require "_systemSection"
@@ -87,6 +88,7 @@ CreateMfxPcmdSections(Main)
 CreatePcmdTabSections(Main)
 CreateExpansionSection(Main)
 CreateStudioManagementSection(Main)
+CreateToneManagementSection(Main)
 CreateRssSections(Main)
 CreateStudioSetEffectsSections(Main)
 CreateSystemSections(Main)

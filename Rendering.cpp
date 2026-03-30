@@ -43,7 +43,8 @@ static void comboSearchBar(const std::string& paramId)
 
 void renderCombo(ParameterDef& param, I7Ed& ed)
 {
-    if (ImGui::BeginCombo(param.name().c_str(), param.stringValue.c_str()))
+    std::string comboLabel = param.name() + "##" + param.id;
+    if (ImGui::BeginCombo(comboLabel.c_str(), param.stringValue.c_str()))
     {
         if (ImSearch::BeginSearch())
         {
@@ -175,12 +176,21 @@ void renderSection(SectionDef& section, I7Ed& ed)
             isFirst = true;
             continue;
         }
+        if (param->type == PARAM_TYPE_SEPARATOR)
+        {
+            if (prevWasInline) { ImGui::NewLine(); }
+            ImGui::SeparatorText(param->name().c_str());
+            prevWasInline = false;
+            isFirst = true;
+            continue;
+        }
         if (param->name() == HIDDEN_PARAM_NAME)
         {
             continue;
         }
         bool inlineToggles = (section.layout == "inline_toggles");
-        bool isBlock = param->type == PARAM_TYPE_SELECTION
+        bool isInlineSelect = param->type == PARAM_TYPE_SELECTION && param->size > 0.0f;
+        bool isBlock = (param->type == PARAM_TYPE_SELECTION && !isInlineSelect)
                     || (!inlineToggles && param->type == PARAM_TYPE_TOGGLE)
                     || param->type == PARAM_TYPE_SOLO_TOGGLE
                     || param->type == PARAM_TYPE_ENVELOPE
@@ -241,8 +251,20 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         else if (param->type == PARAM_TYPE_SELECTION)
         {
+            if (isInlineSelect)
+            {
+                ImGui::SetNextItemWidth(param->size);
+            }
             renderCombo(*param, ed);
-            prevWasInline = false;
+            if (isInlineSelect)
+            {
+                lastKnobWidth = param->size;
+                prevWasInline = true;
+            }
+            else
+            {
+                prevWasInline = false;
+            }
         }
         else if (param->type == PARAM_TYPE_TOGGLE)
         {
