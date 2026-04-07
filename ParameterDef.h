@@ -105,10 +105,15 @@ struct SectionDef
     FGetReceiveSysex getReceiveSysex;
     bool isOpen = false;
     // Tab-group section (tabs over per-partial sections)
+    struct SectionRef
+    {
+        std::string key;
+        std::string accordionLabel; // non-empty: wrap in CollapsingHeader with this label
+    };
     struct TabEntry
     {
         std::string              label;
-        std::vector<std::string> sectionKeys;
+        std::vector<SectionRef>  sectionKeys;
     };
     std::string            tabCommonKey;    // optional section rendered above the tab bar
     std::vector<TabEntry>  tabs;            // non-empty → render as tab bar

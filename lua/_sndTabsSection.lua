@@ -3,6 +3,10 @@ function CreateSndTabSections(main)
         local pn     = string.format("%02d", partNr)
         local prefix = "Part " .. pn .. " SN-D "
 
+        -- Hide old Inst section from palette (merged into Common)
+        local instKey = prefix .. "Inst"
+        if main[instKey] then main[instKey].hideFromPalette = true end
+
         -- CompEq tabs (6 channels)
         local compEqTabs = {}
         for ch = 1, 6, 1 do

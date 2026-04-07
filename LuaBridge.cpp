@@ -191,7 +191,21 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
             sol::table keys = luaTab["keys"];
             for (const auto& kp : keys)
             {
-                entry.sectionKeys.push_back(kp.second.as<std::string>());
+                SectionDef::SectionRef ref;
+                if (kp.second.get_type() == sol::type::string)
+                {
+                    ref.key = kp.second.as<std::string>();
+                }
+                else if (kp.second.get_type() == sol::type::table)
+                {
+                    sol::table kt = kp.second.as<sol::table>();
+                    ref.key = kt["key"].get<std::string>();
+                    if (kt["accordion"] != sol::nil)
+                    {
+                        ref.accordionLabel = kt["accordion"].get<std::string>();
+                    }
+                }
+                entry.sectionKeys.push_back(ref);
             }
             outSectionDef.tabs.push_back(entry);
         }

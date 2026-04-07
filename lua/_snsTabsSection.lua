@@ -3,17 +3,7 @@ function CreateSnsTabSections(main)
         local pn     = string.format("%02d", partNr)
         local prefix = "Part " .. pn .. " SN-S "
 
-        local function tabsForPartials(group)
-            local tabs = {}
-            for i = 1, 3, 1 do
-                table.insert(tabs, {
-                    label = "Partial " .. i,
-                    keys  = {prefix .. group .. " Partial " .. i}
-                })
-            end
-            return tabs
-        end
-
+        -- Hide individual partial sections from palette (embedded in Tone tabs)
         local function hidePartials(group)
             for i = 1, 3, 1 do
                 local s = main[prefix .. group .. " Partial " .. i]
@@ -21,29 +11,39 @@ function CreateSnsTabSections(main)
             end
         end
 
-        -- OSC
         hidePartials("OSC")
-        local k = prefix .. "OSC"
-        main[k] = {name = k, tabs = tabsForPartials("OSC")}
-
-        -- Pitch
         hidePartials("Pitch")
-        k = prefix .. "Pitch"
-        main[k] = {name = k, tabs = tabsForPartials("Pitch")}
-
-        -- Filter
         hidePartials("Filter")
-        k = prefix .. "Filter"
-        main[k] = {name = k, tabs = tabsForPartials("Filter")}
-
-        -- Amp
         hidePartials("Amp")
-        k = prefix .. "Amp"
-        main[k] = {name = k, tabs = tabsForPartials("Amp")}
-
-        -- LFO
         hidePartials("LFO")
-        k = prefix .. "LFO"
-        main[k] = {name = k, tabs = tabsForPartials("LFO")}
+
+        -- Hide Misc from palette (merged into Common)
+        local miscKey = prefix .. "Misc"
+        if main[miscKey] then main[miscKey].hideFromPalette = true end
+
+        -- Hide per-partial Ctrl sections from palette (shown inside Tone tabs)
+        for i = 1, 3, 1 do
+            local ctrlKey = prefix .. "Partial " .. i .. " Ctrl"
+            if main[ctrlKey] then main[ctrlKey].hideFromPalette = true end
+        end
+
+        -- Tone tab group: Switch/Select header + OSC/Pitch/Filter/Amp/LFO accordions per Partial
+        local toneKey = prefix .. "Tone"
+        local tabs = {}
+        for i = 1, 3, 1 do
+            local pi = tostring(i)
+            table.insert(tabs, {
+                label = "Partial " .. i,
+                keys = {
+                    {key = prefix .. "Partial " .. pi .. " Ctrl"},
+                    {key = prefix .. "OSC Partial "    .. pi, accordion = "OSC"},
+                    {key = prefix .. "Pitch Partial "  .. pi, accordion = "Pitch"},
+                    {key = prefix .. "Filter Partial " .. pi, accordion = "Filter"},
+                    {key = prefix .. "Amp Partial "    .. pi, accordion = "Amp"},
+                    {key = prefix .. "LFO Partial "    .. pi, accordion = "LFO"},
+                }
+            })
+        end
+        main[toneKey] = {name = toneKey, tabs = tabs}
     end
 end

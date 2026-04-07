@@ -329,9 +329,9 @@ int main(int argc, const char** args)
             }
             for (const auto& tab : tSec.tabs)
             {
-                for (const auto& sKey : tab.sectionKeys)
+                for (const auto& ref : tab.sectionKeys)
                 {
-                    hiddenToParent[sKey] = &sections.at(tKey);
+                    hiddenToParent[ref.key] = &sections.at(tKey);
                 }
             }
         }

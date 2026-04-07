@@ -63,21 +63,15 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         {
             std::string pfx = base + "SN-S ";
             viewButton("Common", pfx + "Common");
-            viewButton("Misc",   pfx + "Misc");
-            viewButton("OSC",    pfx + "OSC");
-            viewButton("Pitch",  pfx + "Pitch");
-            viewButton("Filter", pfx + "Filter");
-            viewButton("Amp",    pfx + "Amp");
-            viewButton("LFO",    pfx + "LFO");
+            viewButton("Tone",   pfx + "Tone");
             viewButton("MFX",    pfx + "MFX");
             break;
         }
         case ToneType::SND:
         {
             std::string pfx = base + "SN-D ";
-            viewButton("Common", pfx + "Common");
-            viewButton("Inst",   pfx + "Inst");
-            viewButton("CompEq", pfx + "CompEq");
+            viewButton("Instrument", pfx + "Instrument");
+            viewButton("CompEq",     pfx + "CompEq");
             viewButton("MFX",    pfx + "MFX");
             break;
         }

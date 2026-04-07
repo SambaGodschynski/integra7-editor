@@ -111,9 +111,9 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
     }
     for (const auto& tab : section.tabs)
     {
-        for (const auto& key : tab.sectionKeys)
+        for (const auto& ref : tab.sectionKeys)
         {
-            collectGetter(key);
+            collectGetter(ref.key);
         }
     }
     if (!getters.empty())
@@ -139,15 +139,23 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
             if (ImGui::BeginTabItem(tab.label.c_str()))
             {
                 ImGui::PushID(ti);
-                for (const auto& key : tab.sectionKeys)
+                for (const auto& ref : tab.sectionKeys)
                 {
-                    auto it = sections.find(key);
+                    auto it = sections.find(ref.key);
                     if (it != sections.end())
                     {
-                        renderSection(it->second, ed);
-                        for (auto& sub : it->second.subSections)
+                        bool visible = true;
+                        if (!ref.accordionLabel.empty())
                         {
-                            renderSection(sub, ed);
+                            visible = ImGui::CollapsingHeader(ref.accordionLabel.c_str());
+                        }
+                        if (visible)
+                        {
+                            renderSection(it->second, ed);
+                            for (auto& sub : it->second.subSections)
+                            {
+                                renderSection(sub, ed);
+                            }
                         }
                     }
                 }
