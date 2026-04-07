@@ -78,22 +78,9 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::PCMS:
         {
             std::string pfx = base + "PCM-S ";
-            viewButton("Common",   pfx + "Common");
-            viewButton("Wave",     pfx + "Wave");
-            viewButton("PMT",      pfx + "PMT");
-            viewButton("Pitch",    pfx + "Pitch All");
-            viewButton("PitchEnv", pfx + "Pitch Env");
-            viewButton("TVF",      pfx + "TVF");
-            viewButton("TVFEnv",   pfx + "TVF Env");
-            viewButton("TVA",      pfx + "TVA");
-            viewButton("TVAEnv",   pfx + "TVA Env");
-            viewButton("LFO1",     pfx + "LFO1");
-            viewButton("LFO2",     pfx + "LFO2");
-            viewButton("StepLFO",  pfx + "Step LFO");
-            viewButton("CTRL",     pfx + "CTRL");
-            viewButton("MTRX",     pfx + "MTRX CTRL");
-            viewButton("Output",   pfx + "Output");
-            viewButton("MFX",      pfx + "MFX");
+            viewButton("Common", pfx + "Common");
+            viewButton("Tone",   pfx + "Tone");
+            viewButton("MFX",    pfx + "MFX");
             break;
         }
         case ToneType::PCMD:

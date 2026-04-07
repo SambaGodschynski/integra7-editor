@@ -26,11 +26,18 @@ local function idPc2(name)
     return "PRM-_FPARTxxx-_PAT-_PC2-RFPC2_" .. name
 end
 
+local function idPx(name)
+    return "PRM-_FPARTxxx-_PAT-_PX-RFPX_" .. name
+end
+
 local Priority    = {[0]="Normal", [1]="High"}
 local StretchTune = {[0]="Off", [1]="1", [2]="2", [3]="3"}
 local PortMode    = {[0]="Normal", [1]="Legato"}
 local PortType    = {[0]="Rate", [1]="Time"}
 local PortStart   = {[0]="Pitch", [1]="Note"}
+local StructureType = {[0]="1",[1]="2",[2]="3",[3]="4",[4]="5",[5]="6",[6]="7",[7]="8",[8]="9",[9]="10"}
+local Booster       = {[0]="0dB",[1]="+6dB",[2]="+12dB",[3]="+18dB"}
+local VeloCtrl      = {[0]="OFF",[1]="ON",[2]="RANDOM",[3]="CYCLE"}
 
 local pcmsCommonTemplate = {
     name = "PCM-S Common",
@@ -76,7 +83,29 @@ local pcmsCommonTemplate = {
                 {type="select", id=idPc("PORT_START"),    name=get("Portamento Start"),  default=0, options=PortStart},
                 {type="range",  id=idPc("PORT_TIME"),     name=get("Portamento Time"),   default=20, min=get(0), max=get(127), format="%.0f"},
             }
-        }
+        },
+        {
+            name = "Pitch Common",
+            params =
+            {
+                {type="separator", id="PCMS_PITCH_SEP_xxx",       name=get("Pitch")},
+                {type="range", id=idPc("BEND_RANGE_UP"), name=get("Pitch Bend Range Up"),   default=2, min=get(0), max=get(48), format="%.0f"},
+                {type="range", id=idPc("BEND_RANGE_DW"), name=get("Pitch Bend Range Down"), default=2, min=get(0), max=get(48), format="%.0f"},
+            }
+        },
+        {
+            name = "PMT Common",
+            params =
+            {
+                {type="separator", id="PCMS_PMT_SEP_xxx",          name=get("PMT")},
+                {type="select", id=idPx("STRUCT1"),       name=get("Structure Type 1&2"),   default=0, options=StructureType},
+                {type="select", id=idPx("STRUCT3"),       name=get("Structure Type 3&4"),   default=0, options=StructureType},
+                {type="select", id=idPx("BOOST1"),        name=get("Booster 1&2"),          default=0, options=Booster},
+                {type="select", id=idPx("BOOST3"),        name=get("Booster 3&4"),          default=0, options=Booster},
+                {type="select", id=idPx("TMT_VELO_CTRL"), name=get("PMT Velocity Control"), default=1, options=VeloCtrl},
+                {type="toggle", id=idPc("TMT_CTRL_SW"),   name=get("PMT Control Switch"),   default=0, min=get(0), max=get(1)},
+            }
+        },
     }
 }
 
@@ -89,7 +118,8 @@ function CreatePcmsCommonSections(main)
         sectionData.getReceiveValueSysex = function()
             local msgsPC  = CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PC")
             local msgsPC2 = CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PC2")
-            return Concat(msgsPC, msgsPC2)
+            local msgsPX  = CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PX")
+            return Concat(Concat(msgsPC, msgsPC2), msgsPX)
         end
 
         for _, subSection in ipairs(sectionData.grp) do
