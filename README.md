@@ -11,3 +11,10 @@ https://github.com/ocornut/imgui/wiki/Useful-Extensions
 
 ### Knwon Issues
 * open presets; Search for "e piano"; scroll down -> app crashes: `T& ImVector<T>::operator[](int) [with T = short unsigned int]: Assertion i >= 0 && i < Size' failed.`
+
+
+
+### Credits
+"Control Knobs - Anil" (https://skfb.ly/onXy8) by aniljaco is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+"Audio Mixer" (https://skfb.ly/MLDu) by Rayan is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).

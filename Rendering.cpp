@@ -2,6 +2,7 @@
 #include "SysexIO.h"
 #include "imgui.h"
 #include "imgui-knobs.h"
+#include "imgui_knob_image.h"
 #include "imgui_toggle.h"
 #include "imgui_envelope.h"
 #include "imgui_step_lfo.h"
@@ -229,9 +230,9 @@ void renderSection(SectionDef& section, I7Ed& ed)
             ImGuiKnobFlags knobFlags = ImGuiKnobFlags_AlwaysClamp;
             if (param->noTitle) { knobFlags |= ImGuiKnobFlags_NoTitle; }
             if (param->noInput) { knobFlags |= ImGuiKnobFlags_NoInput; }
-            if (ImGuiKnobs::Knob(param->name().c_str(), &param->value,
+            if (ImKnobImage::Knob(param->name().c_str(), &param->value,
                     param->min(), param->max(), 0.0f, param->format.c_str(),
-                    ImGuiKnobVariant_Tick, param->size, knobFlags))
+                    ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, param->size, knobFlags))
             {
                 valueChanged(ed, *param);
             }
@@ -542,9 +543,9 @@ void renderEq3Band(SectionDef& section, I7Ed& ed)
 
     auto renderKnob = [&](ParameterDef* p)
     {
-        if (ImGuiKnobs::Knob(p->name().c_str(), &p->value,
+        if (ImKnobImage::Knob(p->name().c_str(), &p->value,
                 p->min(), p->max(), 0.0f, "%.0f",
-                ImGuiKnobVariant_Tick, kKnobSize, kKnobFlags))
+                ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, kKnobSize, kKnobFlags))
         {
             valueChanged(ed, *p);
         }
@@ -611,9 +612,9 @@ void renderKeyboard(SectionDef& section, I7Ed& ed)
 
     auto renderKnob = [&](ParameterDef* p)
     {
-        if (ImGuiKnobs::Knob(p->name().c_str(), &p->value,
+        if (ImKnobImage::Knob(p->name().c_str(), &p->value,
                 p->min(), p->max(), 0.0f, p->format.c_str(),
-                ImGuiKnobVariant_Tick, p->size, kKnobFlags))
+                ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, p->size, kKnobFlags))
         {
             valueChanged(ed, *p);
         }
@@ -817,9 +818,9 @@ void renderRssXY(SectionDef& section, I7Ed& ed)
                 if (nextX + kKnobSize <= rightEdge)
                     ImGui::SameLine();
             }
-            if (ImGuiKnobs::Knob(pk->name().c_str(), &pk->value,
+            if (ImKnobImage::Knob(pk->name().c_str(), &pk->value,
                     pk->min(), pk->max(), 0.0f, "%.0f",
-                    ImGuiKnobVariant_Tick, kKnobSize, kKF))
+                    ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, kKnobSize, kKF))
             {
                 valueChanged(ed, *pk);
             }
@@ -828,4 +829,152 @@ void renderRssXY(SectionDef& section, I7Ed& ed)
 
     renderWrappingKnobs(2, "Part Width");
     renderWrappingKnobs(3, "Part Ambience Send");
+}
+
+void renderMixer(SectionDef& /*section*/, I7Ed& ed)
+{
+    constexpr float kStripW   = 68.0f;
+    constexpr float kSliderW  = 20.0f;
+    constexpr float kSliderH  = 100.0f;
+    constexpr float kKnobPan  = 44.0f;
+    constexpr float kKnobSend = 32.0f;
+    constexpr int   kParts    = 16;
+
+    const std::string soloId = "PRM-_PRF-_FC-NEFC_SOLO_PART";
+    auto* soloParam = getParameterDef(ed, soloId);
+
+    // helper: push active-button color when condition holds
+    auto pushActive = [](bool active)
+    {
+        if (active)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button,
+                ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+        return active;
+    };
+
+    ImGui::BeginChild("##mixer", ImVec2(0.0f, 0.0f), false,
+                      ImGuiWindowFlags_HorizontalScrollbar);
+
+    for (int n = 1; n <= kParts; ++n)
+    {
+        std::string fp = "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_";
+        auto* pLevel = getParameterDef(ed, fp + "LEVEL");
+        auto* pPan   = getParameterDef(ed, fp + "PAN");
+        auto* pCho   = getParameterDef(ed, fp + "CHO_SEND");
+        auto* pRev   = getParameterDef(ed, fp + "REV_SEND");
+        auto* pMute  = getParameterDef(ed, fp + "MUTE_SW");
+
+        if (n > 1) { ImGui::SameLine(0.0f, 12.0f); }
+
+        ImGui::PushID(n);
+        ImGui::BeginGroup();
+
+        float groupX = ImGui::GetCursorPosX();
+
+        // ── Part label ─────────────────────────────────────────────────────
+        char label[8];
+        snprintf(label, sizeof(label), "%02d", n);
+        float labelW = ImGui::CalcTextSize(label).x;
+        ImGui::SetCursorPosX(groupX + (kStripW - labelW) * 0.5f);
+        ImGui::TextUnformatted(label);
+
+        // ── Volume VSlider ─────────────────────────────────────────────────
+        ImGui::SetCursorPosX(groupX + (kStripW - kSliderW) * 0.5f);
+        if (pLevel)
+        {
+            std::string slId = "##vol" + std::to_string(n);
+            if (ImGui::VSliderFloat(slId.c_str(), ImVec2(kSliderW, kSliderH),
+                    &pLevel->value, pLevel->min(), pLevel->max(), ""))
+            {
+                valueChanged(ed, *pLevel);
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Vol: %.0f", pLevel->value);
+            }
+        }
+
+        // ── Pan knob ───────────────────────────────────────────────────────
+        ImGui::SetCursorPosX(groupX + (kStripW - kKnobPan) * 0.5f);
+        if (pPan)
+        {
+            if (ImKnobImage::Knob("##pan", &pPan->value,
+                    pPan->min(), pPan->max(), 0.0f, "%+.0f",
+                    ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, kKnobPan,
+                    ImGuiKnobFlags_NoTitle))
+            {
+                valueChanged(ed, *pPan);
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Pan: %+.0f", pPan->value);
+            }
+        }
+
+        // ── Rev + Cho small knobs side by side ─────────────────────────────
+        float sendsW = kKnobSend * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetCursorPosX(groupX + (kStripW - sendsW) * 0.5f);
+        if (pRev)
+        {
+            if (ImKnobImage::Knob("##rev", &pRev->value,
+                    pRev->min(), pRev->max(), 0.0f, "%.0f",
+                    ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, kKnobSend,
+                    ImGuiKnobFlags_NoTitle))
+            {
+                valueChanged(ed, *pRev);
+            }
+            if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Rev: %.0f", pRev->value); }
+        }
+        ImGui::SameLine();
+        if (pCho)
+        {
+            if (ImKnobImage::Knob("##cho", &pCho->value,
+                    pCho->min(), pCho->max(), 0.0f, "%.0f",
+                    ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, kKnobSend,
+                    ImGuiKnobFlags_NoTitle))
+            {
+                valueChanged(ed, *pCho);
+            }
+            if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Cho: %.0f", pCho->value); }
+        }
+
+        // ── Mute / Solo buttons ────────────────────────────────────────────
+        float btnW  = (kStripW - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+        ImGui::SetCursorPosX(groupX);
+
+        bool isMuted = pMute && pMute->value != 0.0f;
+        bool pushed  = pushActive(isMuted);
+        if (ImGui::Button("M##m", ImVec2(btnW, 0.0f)))
+        {
+            if (pMute)
+            {
+                pMute->value = isMuted ? 0.0f : 1.0f;
+                valueChanged(ed, *pMute);
+            }
+        }
+        if (pushed) { ImGui::PopStyleColor(); }
+        if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Mute"); }
+
+        ImGui::SameLine();
+
+        bool isSoloed = soloParam && soloParam->value == (float)n;
+        pushed = pushActive(isSoloed);
+        if (ImGui::Button("S##s", ImVec2(btnW, 0.0f)))
+        {
+            if (soloParam)
+            {
+                soloParam->value = isSoloed ? 0.0f : (float)n;
+                valueChanged(ed, *soloParam);
+            }
+        }
+        if (pushed) { ImGui::PopStyleColor(); }
+        if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Solo"); }
+
+        ImGui::EndGroup();
+        ImGui::PopID();
+    }
+
+    ImGui::EndChild();
 }

@@ -45,6 +45,7 @@ require "_toneManagementSection"
 require "_rssSection"
 require "_studioSetEffectsSection"
 require "_systemSection"
+require "_mixerSection"
 
 Main = {}
 
@@ -92,3 +93,4 @@ CreateToneManagementSection(Main)
 CreateRssSections(Main)
 CreateStudioSetEffectsSections(Main)
 CreateSystemSections(Main)
+CreateMixerSection(Main)

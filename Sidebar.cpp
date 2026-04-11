@@ -164,6 +164,26 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
     }
     ImGui::Separator();
 
+    {
+        auto it = sections.find("Mixer");
+        if (it != sections.end())
+        {
+            SectionDef& mixSec = it->second;
+            bool wasOpen = mixSec.isOpen;
+            if (wasOpen)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button,
+                    ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            }
+            if (ImGui::SmallButton("Mixer"))
+            {
+                mixSec.isOpen = !mixSec.isOpen;
+            }
+            if (wasOpen) { ImGui::PopStyleColor(); }
+        }
+    }
+    ImGui::Separator();
+
     for (int partIdx = 0; partIdx < 16; ++partIdx)
     {
         int partNr = partIdx + 1;

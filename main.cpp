@@ -8,6 +8,7 @@
 #include "Rendering.h"
 #include "Sidebar.h"
 #include "Settings.h"
+#include "imgui_knob_image.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -382,6 +383,8 @@ int main(int argc, const char** args)
     DragState vDrag, hDrag;
     constexpr float kSbW = 13.0f;
 
+    ed.knobTexture = LoadKnobTexture("assets/images/knob01.png");
+
     // ── Main loop ─────────────────────────────────────────────────────────────
     while (!glfwWindowShouldClose(window))
     {
@@ -721,6 +724,10 @@ int main(int argc, const char** args)
             else if (sec.layout == "rss_xy")
             {
                 renderRssXY(sec, e);
+            }
+            else if (sec.layout == "mixer")
+            {
+                renderMixer(sec, e);
             }
             else
             {

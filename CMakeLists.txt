@@ -100,6 +100,7 @@ add_executable(i7ed
     Rendering.cpp
     Sidebar.cpp
     Settings.cpp
+    imgui_knob_image.cpp
 )
 target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
 
@@ -108,4 +109,10 @@ add_custom_command(
     TARGET i7ed POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${LUA_SRC}" "${LUA_SRC_DST}"
+)
+
+add_custom_command(
+    TARGET i7ed POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/assets/images" "${CMAKE_BINARY_DIR}/assets/images"
 )

@@ -87,4 +87,7 @@ struct I7Ed
         std::vector<std::string> tonePrefixes;
     } saveSysex;
     SidebarState sidebar;
+    ImTextureID knobTexture     = 0;
+    int         knobAtlasFrames = 128;
+    int         knobAtlasCols   = 16;
 };
