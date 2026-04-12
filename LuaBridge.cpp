@@ -25,19 +25,22 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
             auto luaParam = luaParamPair.second.as<sol::table>();
             sol::object paramName = luaParam["name"];
             sol::object paramId   = luaParam["id"];
-            // Resolve the name immediately to a plain string instead of keeping
-            // a sol::function (and its lua_State*) alive on the heap indefinitely.
+            // If name is a plain string, capture it by value.
+            // If name is a Lua function (dynamic, e.g. __HIDDEN__ logic), keep it
+            // callable so the render loop can query it every frame.
+            // sol::state lives in I7Ed for the entire app lifetime, so holding a
+            // sol::function here is safe -- the lua_State* never becomes invalid.
             {
-                std::string resolvedName;
                 if (paramName.get_type() == sol::type::function)
                 {
-                    resolvedName = paramName.as<sol::function>().call<std::string>();
+                    sol::function fn = paramName.as<sol::function>();
+                    param->name = [fn]() mutable { return fn.call<std::string>(); };
                 }
                 else
                 {
-                    resolvedName = paramName.as<std::string>();
+                    std::string resolvedName = paramName.as<std::string>();
+                    param->name = [resolvedName]() { return resolvedName; };
                 }
-                param->name = [resolvedName]() { return resolvedName; };
             }
             param->id   = paramId.as<std::string>();
             param->type = require_key<std::string>(luaParam, "type");
