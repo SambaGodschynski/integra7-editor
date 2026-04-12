@@ -25,7 +25,20 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
             auto luaParam = luaParamPair.second.as<sol::table>();
             sol::object paramName = luaParam["name"];
             sol::object paramId   = luaParam["id"];
-            param->name = paramName.as<ParameterDef::FStringGetter>();
+            // Resolve the name immediately to a plain string instead of keeping
+            // a sol::function (and its lua_State*) alive on the heap indefinitely.
+            {
+                std::string resolvedName;
+                if (paramName.get_type() == sol::type::function)
+                {
+                    resolvedName = paramName.as<sol::function>().call<std::string>();
+                }
+                else
+                {
+                    resolvedName = paramName.as<std::string>();
+                }
+                param->name = [resolvedName]() { return resolvedName; };
+            }
             param->id   = paramId.as<std::string>();
             param->type = require_key<std::string>(luaParam, "type");
 
@@ -139,8 +152,17 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                 }
             }
 
-            outSectionDef.params.push_back(param.get());
-            ed.parameterDefs[param->id] = param;
+            auto [it, inserted] = ed.parameterDefs.emplace(param->id, param);
+            if (!inserted)
+            {
+                // ID already registered: reuse the existing ParameterDef so
+                // both sections share the same instance (no dangling pointer).
+                outSectionDef.params.push_back(it->second.get());
+            }
+            else
+            {
+                outSectionDef.params.push_back(param.get());
+            }
         }
     }
 

@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui-knobs.h"
 #include "imgui_knob_image.h"
+#include "imgui_vslider_image.h"
 #include "imgui_toggle.h"
 #include "imgui_envelope.h"
 #include "imgui_step_lfo.h"
@@ -13,6 +14,12 @@
 #include <algorithm>
 #include <unordered_map>
 #include <string>
+
+// VSlider dimensions
+constexpr float kVSliderTrackW     = 20.0f;
+constexpr float kVSliderTrackH     = 80.0f;
+constexpr float kVSliderHandleFactor = 0.25f;  // handle height as fraction of track height
+constexpr float kVSliderHandleAspect = 1.0f;  // handle width = height * aspect
 
 // Persistent search text per param ID – survives across combo open/close cycles.
 static std::unordered_map<std::string, std::string> gComboSearchText;
@@ -246,8 +253,10 @@ void renderSection(SectionDef& section, I7Ed& ed)
         else if (param->type == PARAM_TYPE_VSLIDER)
         {
             std::string vsLabel = "##" + param->id;
-            if (ImGui::VSliderFloat(vsLabel.c_str(), ImVec2(20, 80), &param->value,
-                    param->min(), param->max(), ""))
+            if (ImVSliderImage::VSlider(vsLabel.c_str(), ImVec2(kVSliderTrackW, kVSliderTrackH), &param->value,
+                    param->min(), param->max(), ed.sliderHandleTex,
+                    kVSliderTrackH * kVSliderHandleFactor * kVSliderHandleAspect,
+                    kVSliderTrackH * kVSliderHandleFactor))
             {
                 valueChanged(ed, *param);
             }
@@ -531,7 +540,10 @@ void renderEq3Band(SectionDef& section, I7Ed& ed)
     auto renderVS = [&](ParameterDef* p)
     {
         std::string lbl = "##" + p->id;
-        if (ImGui::VSliderFloat(lbl.c_str(), ImVec2(20, 80), &p->value, p->min(), p->max(), ""))
+        if (ImVSliderImage::VSlider(lbl.c_str(), ImVec2(kVSliderTrackW, kVSliderTrackH), &p->value,
+                p->min(), p->max(), ed.sliderHandleTex,
+                kVSliderTrackH * kVSliderHandleFactor * kVSliderHandleAspect,
+                kVSliderTrackH * kVSliderHandleFactor))
         {
             valueChanged(ed, *p);
         }
@@ -833,9 +845,9 @@ void renderRssXY(SectionDef& section, I7Ed& ed)
 
 void renderMixer(SectionDef& /*section*/, I7Ed& ed)
 {
-    constexpr float kStripW   = 68.0f;
-    constexpr float kSliderW  = 20.0f;
-    constexpr float kSliderH  = 100.0f;
+    constexpr float kStripW  = 68.0f;
+    constexpr float kSliderW = 20.0f;
+    constexpr float kSliderH = 150.0f;
     constexpr float kKnobPan  = 44.0f;
     constexpr float kKnobSend = 32.0f;
     constexpr int   kParts    = 16;
@@ -885,8 +897,11 @@ void renderMixer(SectionDef& /*section*/, I7Ed& ed)
         if (pLevel)
         {
             std::string slId = "##vol" + std::to_string(n);
-            if (ImGui::VSliderFloat(slId.c_str(), ImVec2(kSliderW, kSliderH),
-                    &pLevel->value, pLevel->min(), pLevel->max(), ""))
+            if (ImVSliderImage::VSlider(slId.c_str(), ImVec2(kSliderW, kSliderH),
+                    &pLevel->value, pLevel->min(), pLevel->max(),
+                    ed.sliderHandleTex,
+                    kSliderH * kVSliderHandleFactor * kVSliderHandleAspect,
+                    kSliderH * kVSliderHandleFactor))
             {
                 valueChanged(ed, *pLevel);
             }

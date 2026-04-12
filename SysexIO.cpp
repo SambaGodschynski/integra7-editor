@@ -140,7 +140,6 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
     }
     ed.receiveStartTime = std::chrono::steady_clock::now();
 
-    bool break_ = false;
     for (const auto& getter : getters)
     {
         if (!getter)
@@ -150,10 +149,6 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
         std::vector<RequestMessage> reqs = getter();
         for (const RequestMessage& req : reqs)
         {
-            if (break_)
-            {
-                break;
-            }
             if (req.multiResponse)
             {
                 ed.pendingReceives.push_back({
@@ -178,11 +173,10 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
                     .handler = req.onMessageReceived
                 });
                 ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
-                    [&ed, &break_](Bytes received, void* userData)
+                    [&ed](Bytes received, void* userData)
                     {
                         if (received.empty())
                         {
-                            break_ = true;
                             return;
                         }
                         std::lock_guard<std::mutex> lock(ed.pendingMutex);

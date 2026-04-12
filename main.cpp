@@ -383,7 +383,8 @@ int main(int argc, const char** args)
     DragState vDrag, hDrag;
     constexpr float kSbW = 13.0f;
 
-    ed.knobTexture = LoadKnobTexture("assets/images/knob01.png");
+    ed.knobTexture      = LoadKnobTexture("assets/images/knob01.png");
+    ed.sliderHandleTex  = LoadKnobTexture("assets/images/mixer_handle01.png");
 
     // ── Main loop ─────────────────────────────────────────────────────────────
     while (!glfwWindowShouldClose(window))

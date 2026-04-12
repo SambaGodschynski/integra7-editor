@@ -104,6 +104,12 @@ add_executable(i7ed
 )
 target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
 
+option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
+if(ENABLE_ASAN)
+    target_compile_options(i7ed PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+    target_link_options(i7ed PRIVATE -fsanitize=address)
+endif()
+
 
 add_custom_command(
     TARGET i7ed POST_BUILD
