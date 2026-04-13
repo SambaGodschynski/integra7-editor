@@ -850,6 +850,7 @@ int main(int argc, const char** args)
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImCmd::RemoveAllCaches();
     ImCmd::DestroyContext();
     ImSearch::DestroyContext();
     ImGui::DestroyContext();
