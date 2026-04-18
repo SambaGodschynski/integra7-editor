@@ -67,7 +67,7 @@ function CreatePcmsTvaEnvSections(main)
                 end
             end
             main[kPartial] = {
-                name   = "Part " .. partNr .. " PCM-S TVA Env Partial " .. partialNr,
+                name   = "Part " .. string.format("%02d", partNr) .. " PCM-S TVA Env Partial " .. partialNr,
                 params = partialParams,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PT"..partialNr)

@@ -62,7 +62,7 @@ function CreateSnsLfoSections(main)
             end
 
             main[k] = {
-                name = "Part " .. partNr .. " SN-S LFO Partial " .. partialNr,
+                name = "Part " .. string.format("%02d", partNr) .. " SN-S LFO Partial " .. partialNr,
                 params = params,
                 getReceiveValueSysex = receiveFunc,
             }

@@ -24,7 +24,7 @@ function CreatePcmsPitchSections(main)
             param = ParameterSetValueWrapper(param)
         end
         main[kCommon] = {
-            name   = "Part " .. partNr .. " PCM-S Pitch",
+            name   = "Part " .. string.format("%02d", partNr) .. " PCM-S Pitch",
             params = commonParams,
             getReceiveValueSysex = function()
                 return CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PC")
@@ -48,7 +48,7 @@ function CreatePcmsPitchSections(main)
                 param = ParameterSetValueWrapper(param)
             end
             main[kPartial] = {
-                name   = "Part " .. partNr .. " PCM-S Pitch Partial " .. partialNr,
+                name   = "Part " .. string.format("%02d", partNr) .. " PCM-S Pitch Partial " .. partialNr,
                 params = partialParams,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PT"..partialNr)

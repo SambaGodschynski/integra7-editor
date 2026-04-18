@@ -71,7 +71,7 @@ function CreatePcmsMtrxCtrlSections(main)
             }
             for _, param in ipairs(params) do ParameterSetValueWrapper(param) end
             main[kMtrx] = {
-                name                 = "Part " .. partNr .. " PCM-S MTRX CTRL " .. ctrlNr,
+                name                 = "Part " .. string.format("%02d", partNr) .. " PCM-S MTRX CTRL " .. ctrlNr,
                 params               = params,
                 getReceiveValueSysex = receiveFunc,
             }

@@ -39,7 +39,7 @@ function CreatePcmsCtrlSections(main)
 
             for _, param in ipairs(params) do ParameterSetValueWrapper(param) end
             main[kCtrl] = {
-                name                 = "Part " .. partNr .. " PCM-S CTRL Partial " .. partialNr,
+                name                 = "Part " .. string.format("%02d", partNr) .. " PCM-S CTRL Partial " .. partialNr,
                 params               = params,
                 getReceiveValueSysex = receiveFunc,
             }

@@ -31,23 +31,6 @@ local function partTypeChange(part)
     end
 end
 
--- Collect all RequestMessages for a given part by iterating Main at call time.
--- Uses the "Part NN " prefix to find all matching sections with getReceiveValueSysex.
-local function buildReceiveAllAction(partNr)
-    local prefix = "Part " .. string.format("%02d", partNr) .. " "
-    return function()
-        local result = {}
-        for key, section in pairs(Main) do
-            if string.sub(key, 1, #prefix) == prefix and section.getReceiveValueSysex then
-                for _, msg in ipairs(section.getReceiveValueSysex()) do
-                    table.insert(result, msg)
-                end
-            end
-        end
-        return result
-    end
-end
-
 -- Common params
 local function panToI7(gui) return math.tointeger(64 + gui) end
 local function panToGui(i7) return math.tointeger(i7 - 64) end
@@ -73,39 +56,58 @@ local eqMidQOptions     = {[0]="0.5",[1]="1.0",[2]="2.0",[3]="4.0",[4]="8.0"}
 local eqHighFreqOptions = {[0]="2000",[1]="4000",[2]="8000"}
 
 local function makeCommonSection(i)
+    local pn = string.format("%02d", i)
     local partName = "Part " .. i
-    local s = { name = "Part " .. i .. " Common", params = {} }
-    table.insert(s.params, p({type="range",  id="PRM-_PRF-_FP"..i.."-NEFP_LEVEL",        name=get(partName.." Level"),        min=get(0),   max=get(127), default=100}))
-    table.insert(s.params, p({type="range",  id="PRM-_PRF-_FP"..i.."-NEFP_PAN",          name=get(partName.." Pan"),          min=get(-64), max=get(63),  default=0,  toI7Value=panToI7, toGuiValue=panToGui}))
-    table.insert(s.params, p({type="range",  id="PRM-_PRF-_FP"..i.."-NEFP_CHO_SEND",     name=get(partName.." Chorus"),       min=get(0),   max=get(127), default=0}))
-    table.insert(s.params, p({type="range",  id="PRM-_PRF-_FP"..i.."-NEFP_REV_SEND",     name=get(partName.." Reverb"),       min=get(0),   max=get(127), default=20}))
-    table.insert(s.params, p({type="toggle", id="PRM-_PRF-_FP"..i.."-NEFP_MUTE_SW",      name=get(partName.." Mute"),         min=get(0),   max=get(1)}))
-    table.insert(s.params,  {type="solotoggle", id="SOLO_TOGGLE_PART_"..i,                name=get(partName.." Solo"),         linkedParamId=SOLO_PARAM_ID, linkedValue=i})
-    table.insert(s.params, p({type="toggle", id="PRM-_PRF-_FP"..i.."-NEFP_RX_SW",        name=get(partName.." RX SW"),        min=get(0),   max=get(1),   default=1}))
-    table.insert(s.params, p({type="select", id="PRM-_PRF-_FP"..i.."-NEFP_RX_CH",        name=get(partName.." RX CH"),        min=get(0),   max=get(15),  default=0,  options=rxChOptions}))
-    table.insert(s.params, p({type="select", id="PRM-_PRF-_FP"..i.."-NEFP_OUT_ASGN",     name=get(partName.." Output"),       min=get(0),   max=get(11),  default=0,  options=outAssignOptions}))
-    table.insert(s.params, p({type="select", id="PRM-_PRF-_FP"..i.."-NEFP_MONO_POLY",    name=get(partName.." Mono/Poly"),    min=get(0),   max=get(2),   default=2,  options=monoPolyOptions}))
-    table.insert(s.params, p({type="select", id="PRM-_PRF-_FP"..i.."-NEFP_LEGATO_SW",    name=get(partName.." Legato"),       min=get(0),   max=get(2),   default=2,  options=legatoOptions}))
-    table.insert(s.params, p({type="select", id="PRM-_PRF-_FC-NEFC_VOICE_RESERV"..i,     name=get(partName.." Voice Reserve"),min=get(0),   max=get(64),  default=0,  options=voiceReservOptions}))
-    table.insert(s.params,  {type="select",  id="PRM-_PRF-_FP"..i.."-NEFP_TYPE_DUMMY",   name=get(partName.." Type"),         default=1,    options=toneTypes, setValue=partTypeChange(i)})
-    table.insert(s.params,  {type="savesysex", id="SAVE_SYSEX_PART_"..i,                 name=get("Save SysEx Part "..string.format("%02d", i)),
-                              partPrefix="Part " .. string.format("%02d", i) .. " "})
+    local fp = "PRM-_PRF-_FP"..i.."-"
+    local s = {
+        name = "Part " .. pn .. " Common",
+        params = {},
+        getReceiveValueSysex = function()
+            local result = {}
+            for _, suffix in ipairs({
+                "NEFP_LEVEL","NEFP_PAN","NEFP_CHO_SEND","NEFP_REV_SEND",
+                "NEFP_MUTE_SW","NEFP_RX_SW","NEFP_RX_CH","NEFP_OUT_ASGN",
+                "NEFP_MONO_POLY","NEFP_LEGATO_SW",
+            }) do
+                local msg = CreateReceiveMessageForLeafId(fp..suffix)
+                if msg then table.insert(result, msg) end
+            end
+            local msg = CreateReceiveMessageForLeafId("PRM-_PRF-_FC-NEFC_VOICE_RESERV"..i)
+            if msg then table.insert(result, msg) end
+            return result
+        end,
+    }
+    if i == 1 then
+        table.insert(s.params, p({type="range", id=SOLO_PARAM_ID, name=get("__HIDDEN__"), min=get(0), max=get(16), default=0}))
+    end
+    table.insert(s.params, p({type="range",  id=fp.."NEFP_LEVEL",        name=get(partName.." Level"),        min=get(0),   max=get(127), default=100}))
+    table.insert(s.params, p({type="range",  id=fp.."NEFP_PAN",          name=get(partName.." Pan"),          min=get(-64), max=get(63),  default=0,  toI7Value=panToI7, toGuiValue=panToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."NEFP_CHO_SEND",     name=get(partName.." Chorus"),       min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."NEFP_REV_SEND",     name=get(partName.." Reverb"),       min=get(0),   max=get(127), default=20}))
+    table.insert(s.params, p({type="toggle", id=fp.."NEFP_MUTE_SW",      name=get(partName.." Mute"),         min=get(0),   max=get(1)}))
+    table.insert(s.params,  {type="solotoggle", id="SOLO_TOGGLE_PART_"..i, name=get(partName.." Solo"),       linkedParamId=SOLO_PARAM_ID, linkedValue=i})
+    table.insert(s.params, p({type="toggle", id=fp.."NEFP_RX_SW",        name=get(partName.." RX SW"),        min=get(0),   max=get(1),   default=1}))
+    table.insert(s.params, p({type="select", id=fp.."NEFP_RX_CH",        name=get(partName.." RX CH"),        min=get(0),   max=get(15),  default=0,  options=rxChOptions}))
+    table.insert(s.params, p({type="select", id=fp.."NEFP_OUT_ASGN",     name=get(partName.." Output"),       min=get(0),   max=get(11),  default=0,  options=outAssignOptions}))
+    table.insert(s.params, p({type="select", id=fp.."NEFP_MONO_POLY",    name=get(partName.." Mono/Poly"),    min=get(0),   max=get(2),   default=2,  options=monoPolyOptions}))
+    table.insert(s.params, p({type="select", id=fp.."NEFP_LEGATO_SW",    name=get(partName.." Legato"),       min=get(0),   max=get(2),   default=2,  options=legatoOptions}))
+    table.insert(s.params, p({type="select", id="PRM-_PRF-_FC-NEFC_VOICE_RESERV"..i, name=get(partName.." Voice Reserve"), min=get(0), max=get(64), default=0, options=voiceReservOptions}))
+    table.insert(s.params,  {type="select",  id=fp.."NEFP_TYPE_DUMMY",   name=get(partName.." Type"),         default=1,    options=toneTypes, setValue=partTypeChange(i)})
+    table.insert(s.params,  {type="savesysex", id="SAVE_SYSEX_PART_"..i, name=get("Save SysEx Part "..pn),   partPrefix="Part " .. pn .. " "})
     return s
 end
 
 -- Scale section ----------------------------------------------------------
 
--- Preset tuning tables (GUI values, -64..+63) indexed by SCALE_TYPE (1-8).
--- Row order: C, C#, D, D#, E, F, F#, G, G#, A, A#, B  (0-based note index)
 local scaleTbl = {
-    [1] = { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0 }, -- EQUAL
-    [2] = { 16, -14,  20,  31,   2,  14, -16,  18, -12,   0,  33,   4 }, -- JUST-MAJ
-    [3] = { 16,  49,  20,  31,   2,  14,  47,  18,  29,   0,  33,   4 }, -- JUST-MIN
-    [4] = { -6,   8,  -2, -12,   2,  -8,   6,  -4,  10,   0, -10,   4 }, -- PYTHAGORE
-    [5] = { 10,   0,   3,   4,  -3,   8,   0,   7,   2,   0,   6,  -1 }, -- KIRNBERGE
-    [6] = { 10, -14,   3,  21,  -3,  14, -10,   7, -17,   0,  17,  -7 }, -- MEANTONE
-    [7] = { 12,   2,   4,   6,   2,  10,   0,   8,   4,   0,   8,   4 }, -- WERCKMEIS
-    [8] = { -6,  45,  -2, -12,  51,  -8,  43,  -4,  47,   0, -10, -49 }, -- ARABIC
+    [1] = { 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0 },
+    [2] = { 16, -14,  20,  31,   2,  14, -16,  18, -12,   0,  33,   4 },
+    [3] = { 16,  49,  20,  31,   2,  14,  47,  18,  29,   0,  33,   4 },
+    [4] = { -6,   8,  -2, -12,   2,  -8,   6,  -4,  10,   0, -10,   4 },
+    [5] = { 10,   0,   3,   4,  -3,   8,   0,   7,   2,   0,   6,  -1 },
+    [6] = { 10, -14,   3,  21,  -3,  14, -10,   7, -17,   0,  17,  -7 },
+    [7] = { 12,   2,   4,   6,   2,  10,   0,   8,   4,   0,   8,   4 },
+    [8] = { -6,  45,  -2, -12,  51,  -8,  43,  -4,  47,   0, -10, -49 },
 }
 
 local scaleTypeOptions = {
@@ -119,24 +121,21 @@ local scaleKeyOptions = {
 local noteNames    = {"C","CS","D","DS","E","F","FS","G","GS","A","AS","B"}
 local noteDisplay  = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
 
--- Per-part runtime state
 local scaleTypeState = {}
 local scaleKeyState  = {}
-local tuneState      = {} -- [part][1..12] = gui value (-64..+63)
+local tuneState      = {}
 for i = 1, 16 do
-    scaleTypeState[i] = 1  -- EQUAL
-    scaleKeyState[i]  = 0  -- C
+    scaleTypeState[i] = 1
+    scaleKeyState[i]  = 0
     tuneState[i]      = {0,0,0,0,0,0,0,0,0,0,0,0}
 end
 
--- Compute the 12 note gui-values for a given preset type and key.
--- type: 1-8 (matches scaleTbl), key: 0-11
 local function computeTemperament(scaleType, key)
     local tbl   = scaleTbl[scaleType]
     local shift = (9 - key >= 0) and (9 - key) or (9 - key + 11)
-    local ofst  = tbl[9 + 1] - tbl[shift + 1]  -- 1-based Lua indexing
+    local ofst  = tbl[9 + 1] - tbl[shift + 1]
     local result = {}
-    if scaleType == 8 then  -- ARABIC: rotate by key, no offset
+    if scaleType == 8 then
         for i = 0, 11 do
             local v = (i - key >= 0) and (i - key) or (i - key + 12)
             result[i + 1] = tbl[v + 1]
@@ -150,12 +149,30 @@ local function computeTemperament(scaleType, key)
     return result
 end
 
-local function makeScaleSection(partNr)
-    local partName = "Part " .. partNr
-    local fp       = "PRM-_PRF-_FP"..partNr.."-NEFP_"
-    local s        = { name = "Part " .. partNr .. " Scale", params = {} }
+local function makeScaleSection(i)
+    local pn = string.format("%02d", i)
+    local partName = "Part " .. i
+    local fp       = "PRM-_PRF-_FP"..i.."-NEFP_"
+    local scaleSuffixes = {
+        "NEFP_SCALE_TYPE","NEFP_SCALE_KEY",
+        "NEFP_TUNE_C","NEFP_TUNE_CS","NEFP_TUNE_D","NEFP_TUNE_DS",
+        "NEFP_TUNE_E","NEFP_TUNE_F","NEFP_TUNE_FS","NEFP_TUNE_G",
+        "NEFP_TUNE_GS","NEFP_TUNE_A","NEFP_TUNE_AS","NEFP_TUNE_B",
+    }
+    local s = {
+        name = "Part " .. pn .. " Scale",
+        params = {},
+        getReceiveValueSysex = function()
+            local result = {}
+            local fpBase = "PRM-_PRF-_FP"..i.."-"
+            for _, suffix in ipairs(scaleSuffixes) do
+                local msg = CreateReceiveMessageForLeafId(fpBase..suffix)
+                if msg then table.insert(result, msg) end
+            end
+            return result
+        end,
+    }
 
-    -- SCALE_TYPE: send only TYPE sysex; update tuneState (no TUNE sysex)
     local typeId = fp.."SCALE_TYPE"
     local typeParam = {
         type    = "select",
@@ -168,14 +185,13 @@ local function makeScaleSection(partNr)
     }
     p(typeParam, function(i7val)
         local t = math.tointeger(i7val)
-        scaleTypeState[partNr] = t
+        scaleTypeState[i] = t
         if t ~= 0 then
-            tuneState[partNr] = computeTemperament(t, scaleKeyState[partNr])
+            tuneState[i] = computeTemperament(t, scaleKeyState[i])
         end
     end)
     table.insert(s.params, typeParam)
 
-    -- SCALE_KEY: send only KEY sysex; recompute tuneState if type != CUSTOM
     local keyId = fp.."SCALE_KEY"
     local keyParam = {
         type    = "select",
@@ -188,19 +204,17 @@ local function makeScaleSection(partNr)
     }
     p(keyParam, function(i7val)
         local k = math.tointeger(i7val)
-        scaleKeyState[partNr] = k
-        if scaleTypeState[partNr] ~= 0 then
-            tuneState[partNr] = computeTemperament(scaleTypeState[partNr], k)
+        scaleKeyState[i] = k
+        if scaleTypeState[i] ~= 0 then
+            tuneState[i] = computeTemperament(scaleTypeState[i], k)
         end
     end)
     table.insert(s.params, keyParam)
 
-    -- 12 TUNE params: valueOverride reads tuneState (updated by preset selection).
-    -- setValue sends individual sysex and updates tuneState.
     for noteIdx = 1, 12 do
         local noteName = noteNames[noteIdx]
         local tuneId   = fp.."TUNE_"..noteName
-        local nIdx     = noteIdx  -- capture
+        local nIdx     = noteIdx
         local tuneParam = {
             type          = "range",
             id            = tuneId,
@@ -210,10 +224,10 @@ local function makeScaleSection(partNr)
             default       = 0,
             toI7Value     = function(gui) return math.tointeger(64 + gui) end,
             toGuiValue    = function(i7)  return math.tointeger(i7 - 64) end,
-            valueOverride = function() return tuneState[partNr][nIdx] end,
+            valueOverride = function() return tuneState[i][nIdx] end,
         }
         p(tuneParam, function(i7val)
-            tuneState[partNr][nIdx] = math.tointeger(i7val - 64)
+            tuneState[i][nIdx] = math.tointeger(i7val - 64)
         end)
         table.insert(s.params, tuneParam)
     end
@@ -224,20 +238,39 @@ end
 -- MIDI section ----------------------------------------------------------
 
 local function makeMidiSection(i)
+    local pn = string.format("%02d", i)
     local partName = "Part " .. i
     local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
-    local s = { name = "Part " .. i .. " MIDI", layout = "inline_toggles", params = {} }
-    table.insert(s.params, p({type="toggle", id=fp.."RX_PC",   name=get(partName.." RX Prog Chg"),  min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_BS",   name=get(partName.." RX Bank Sel"),  min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_BEND", name=get(partName.." RX Pitch Bend"), min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_PAFT", name=get(partName.." RX Poly AfTch"), min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_CAFT", name=get(partName.." RX Chan AfTch"), min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_MOD",  name=get(partName.." RX Modulation"), min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_VOL",  name=get(partName.." RX Volume"),     min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_PAN",  name=get(partName.." RX Pan"),        min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_EXPR", name=get(partName.." RX Expression"), min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="toggle", id=fp.."RX_HOLD", name=get(partName.." RX Hold-1"),     min=get(0), max=get(1), default=1}))
-    table.insert(s.params, p({type="range",  id=fp.."VELO_CRV_TYPE", name=get(partName.." Velo Crv"), min=get(0), max=get(4), default=0}))
+    local midiSuffixes = {
+        "NEFP_RX_PC","NEFP_RX_BS","NEFP_RX_BEND","NEFP_RX_PAFT",
+        "NEFP_RX_CAFT","NEFP_RX_MOD","NEFP_RX_VOL","NEFP_RX_PAN",
+        "NEFP_RX_EXPR","NEFP_RX_HOLD","NEFP_VELO_CRV_TYPE",
+    }
+    local s = {
+        name = "Part " .. pn .. " MIDI",
+        layout = "inline_toggles",
+        params = {},
+        getReceiveValueSysex = function()
+            local result = {}
+            local fpBase = "PRM-_PRF-_FP"..i.."-"
+            for _, suffix in ipairs(midiSuffixes) do
+                local msg = CreateReceiveMessageForLeafId(fpBase..suffix)
+                if msg then table.insert(result, msg) end
+            end
+            return result
+        end,
+    }
+    table.insert(s.params, p({type="toggle", id=fp.."RX_PC",         name=get(partName.." RX Prog Chg"),   min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_BS",         name=get(partName.." RX Bank Sel"),   min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_BEND",       name=get(partName.." RX Pitch Bend"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_PAFT",       name=get(partName.." RX Poly AfTch"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_CAFT",       name=get(partName.." RX Chan AfTch"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_MOD",        name=get(partName.." RX Modulation"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_VOL",        name=get(partName.." RX Volume"),     min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_PAN",        name=get(partName.." RX Pan"),        min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_EXPR",       name=get(partName.." RX Expression"), min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="toggle", id=fp.."RX_HOLD",       name=get(partName.." RX Hold-1"),     min=get(0), max=get(1), default=1}))
+    table.insert(s.params, p({type="range",  id=fp.."VELO_CRV_TYPE", name=get(partName.." Velo Crv"),      min=get(0), max=get(4), default=0}))
     return s
 end
 
@@ -252,131 +285,139 @@ for v = 0, 127 do portTimeOptions[v] = tostring(v) end
 portTimeOptions[128] = "TONE"
 
 local function makeOffsetSection(i)
+    local pn = string.format("%02d", i)
     local partName = "Part " .. i
     local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
-    local s = { name = "Part " .. i .. " Offset", params = {} }
-    table.insert(s.params, p({type="range", id=fp.."CUTOFF_OFST", name=get(partName.." Cutoff Ofs"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."RESO_OFST",   name=get(partName.." Reso Ofs"),     min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."ATK_OFST",    name=get(partName.." Attack Ofs"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."DCY_OFST",    name=get(partName.." Decay Ofs"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."REL_OFST",    name=get(partName.." Release Ofs"),  min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."VIB_RATE",    name=get(partName.." Vib Rate"),     min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."VIB_DEPTH",   name=get(partName.." Vib Depth"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range", id=fp.."VIB_DELAY",   name=get(partName.." Vib Delay"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    return s
-end
-
-local function makePitchSection(i)
-    local partName = "Part " .. i
-    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
-    local s = { name = "Part " .. i .. " Pitch", params = {} }
-    table.insert(s.params, p({type="range",  id=fp.."OCTAVE",     name=get(partName.." Octave Shift"),  min=get(-3),  max=get(3),   default=0,  toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range",  id=fp.."PIT_CRS",    name=get(partName.." Coarse Tune"),   min=get(-48), max=get(48),  default=0,  toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range",  id=fp.."PIT_FINE",   name=get(partName.." Fine Tune"),     min=get(-50), max=get(50),  default=0,  toI7Value=offsetToI7, toGuiValue=offsetToGui}))
-    table.insert(s.params, p({type="range",  id=fp.."BEND_RANGE", name=get(partName.." Bend Range"),    min=get(0),   max=get(25),  default=25}))
-    table.insert(s.params, p({type="select", id=fp.."PORT_SW",    name=get(partName.." Porta SW"),      min=get(0),   max=get(2),   default=2,  options=portSwOptions}))
-    table.insert(s.params, p({type="select", id=fp.."PORT_TIME",  name=get(partName.." Porta Time"),    min=get(0),   max=get(128), default=128, options=portTimeOptions}))
-    return s
-end
-
--- Keyboard section: offset mapping for Velo Sens Offset
-local function vSensToI7(gui)  return math.tointeger(64 + gui) end
-local function vSensToGui(i7)  return math.tointeger(i7 - 64) end
-
--- Options for Velocity Curve Type: 0=OFF, 1-4 = curve 1..4
-local veloCrvOptions = {[0]="OFF",[1]="1",[2]="2",[3]="3",[4]="4"}
-
-local function makeKeyboardSection(i)
-    local partName = "Part " .. i
-    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
-    -- param order must match renderKeyboard:
-    -- KFADE_LO, KRANGE_LO, KRANGE_UP, KFADE_UP,
-    -- VFADE_LO, VRANGE_LO, VRANGE_UP, VFADE_UP, VSENS_OFST,
-    -- VELO_CRV_TYPE
-    local s = { name = "Part " .. i .. " Keyboard", layout = "keyboard", params = {} }
-    table.insert(s.params, p({type="range",  id=fp.."KFADE_LO",      name=get(partName.." Key Fade Lo"),   min=get(0),   max=get(127), default=0}))
-    table.insert(s.params, p({type="range",  id=fp.."KRANGE_LO",     name=get(partName.." Key Range Lo"),  min=get(0),   max=get(127), default=0}))
-    table.insert(s.params, p({type="range",  id=fp.."KRANGE_UP",     name=get(partName.." Key Range Hi"),  min=get(0),   max=get(127), default=127}))
-    table.insert(s.params, p({type="range",  id=fp.."KFADE_UP",      name=get(partName.." Key Fade Hi"),   min=get(0),   max=get(127), default=0}))
-    table.insert(s.params, p({type="range",  id=fp.."VFADE_LO",      name=get(partName.." Vel Fade Lo"),   min=get(0),   max=get(127), default=0}))
-    table.insert(s.params, p({type="range",  id=fp.."VRANGE_LO",     name=get(partName.." Vel Range Lo"),  min=get(1),   max=get(127), default=1}))
-    table.insert(s.params, p({type="range",  id=fp.."VRANGE_UP",     name=get(partName.." Vel Range Hi"),  min=get(1),   max=get(127), default=127}))
-    table.insert(s.params, p({type="range",  id=fp.."VFADE_UP",      name=get(partName.." Vel Fade Hi"),   min=get(0),   max=get(127), default=0}))
-    table.insert(s.params, p({type="range",  id=fp.."VSENS_OFST",    name=get(partName.." Vel Sens Ofs"),  min=get(-63), max=get(63),  default=0,  toI7Value=vSensToI7, toGuiValue=vSensToGui}))
-    table.insert(s.params, p({type="select", id=fp.."VELO_CRV_TYPE", name=get(partName.." Velo Crv"),      min=get(0),   max=get(4),   default=0,  options=veloCrvOptions}))
-    return s
-end
-
-local function makeEqSection(i)
-    local partName = "Part " .. i
-    local prefix = "PRM-_PRF-_FPEQ"..i.."-NEFPEQ_EQ_"
-    -- param order must match renderEq3Band: SW, LowGain, MidGain, HighGain, LowFreq, MidFreq, MidQ, HighFreq
-    local s = { name = "Part " .. i .. " EQ", layout = "eq3band", params = {} }
-    table.insert(s.params, p({type="toggle",  id=prefix.."SW",       name=get(partName.." EQ SW"),       min=get(0),   max=get(1),   default=0}))
-    table.insert(s.params, p({type="vslider", id=prefix.."LOWGAIN",  name=get(partName.." Low Gain"),    min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
-    table.insert(s.params, p({type="vslider", id=prefix.."MIDGAIN",  name=get(partName.." Mid Gain"),    min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
-    table.insert(s.params, p({type="vslider", id=prefix.."HIGHGAIN", name=get(partName.." High Gain"),   min=get(-15), max=get(15),  default=0,  toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
-    table.insert(s.params, p({type="range",   id=prefix.."LOWFREQ",  name=get(partName.." Low Freq"),    min=get(0),   max=get(1),   default=1}))
-    table.insert(s.params, p({type="range",   id=prefix.."MIDFREQ",  name=get(partName.." Mid Freq"),    min=get(0),   max=get(16),  default=7}))
-    table.insert(s.params, p({type="range",   id=prefix.."MIDQ",     name=get(partName.." Mid Q"),       min=get(0),   max=get(4),   default=0}))
-    table.insert(s.params, p({type="range",   id=prefix.."HIGHFREQ", name=get(partName.." High Freq"),   min=get(0),   max=get(2),   default=1}))
-    return s
-end
-
-function CreatePartsSections(main)
-    local parts = {
-        name = "Parts View",
-        accordion = true,
-        params = {
-            {type="loadsysex", id="LOAD_SYSEX", name=get("Load SysEx")},
-            p({type="range", id=SOLO_PARAM_ID, name=get("__HIDDEN__"), min=get(0), max=get(16), default=0})
-        },
+    local s = {
+        name = "Part " .. pn .. " Offset",
+        params = {},
         getReceiveValueSysex = function()
             local result = {}
-            local fpSuffixes = {
-                "NEFP_LEVEL", "NEFP_PAN", "NEFP_CHO_SEND", "NEFP_REV_SEND",
-                "NEFP_MUTE_SW", "NEFP_RX_SW", "NEFP_RX_CH", "NEFP_OUT_ASGN",
-                "NEFP_MONO_POLY", "NEFP_LEGATO_SW",
-                "NEFP_OCTAVE", "NEFP_PIT_CRS", "NEFP_PIT_FINE",
-                "NEFP_BEND_RANGE", "NEFP_PORT_SW", "NEFP_PORT_TIME",
-                "NEFP_CUTOFF_OFST", "NEFP_RESO_OFST", "NEFP_ATK_OFST",
-                "NEFP_DCY_OFST", "NEFP_REL_OFST",
-                "NEFP_VIB_RATE", "NEFP_VIB_DEPTH", "NEFP_VIB_DELAY",
-                "NEFP_KFADE_LO", "NEFP_KRANGE_LO", "NEFP_KRANGE_UP", "NEFP_KFADE_UP",
-                "NEFP_VFADE_LO", "NEFP_VRANGE_LO", "NEFP_VRANGE_UP", "NEFP_VFADE_UP",
-                "NEFP_VSENS_OFST",
-                "NEFP_SCALE_TYPE", "NEFP_SCALE_KEY",
-                "NEFP_TUNE_C", "NEFP_TUNE_CS", "NEFP_TUNE_D", "NEFP_TUNE_DS",
-                "NEFP_TUNE_E", "NEFP_TUNE_F", "NEFP_TUNE_FS", "NEFP_TUNE_G",
-                "NEFP_TUNE_GS", "NEFP_TUNE_A", "NEFP_TUNE_AS", "NEFP_TUNE_B",
-                "NEFP_RX_PC", "NEFP_RX_BS", "NEFP_RX_BEND", "NEFP_RX_PAFT",
-                "NEFP_RX_CAFT", "NEFP_RX_MOD", "NEFP_RX_VOL", "NEFP_RX_PAN",
-                "NEFP_RX_EXPR", "NEFP_RX_HOLD", "NEFP_VELO_CRV_TYPE",
-            }
-            for i = 1, 16 do
-                local fp = "PRM-_PRF-_FP"..i.."-"
-                for _, suffix in ipairs(fpSuffixes) do
-                    local msg = CreateReceiveMessageForLeafId(fp..suffix)
-                    if msg then table.insert(result, msg) end
-                end
-                for _, msg in ipairs(CreateReceiveMessageForBranch("PRM-_PRF-_FPEQ"..i)) do
-                    table.insert(result, msg)
-                end
-                local msg = CreateReceiveMessageForLeafId("PRM-_PRF-_FC-NEFC_VOICE_RESERV"..i)
+            local fpBase = "PRM-_PRF-_FP"..i.."-"
+            for _, suffix in ipairs({
+                "NEFP_CUTOFF_OFST","NEFP_RESO_OFST","NEFP_ATK_OFST",
+                "NEFP_DCY_OFST","NEFP_REL_OFST",
+                "NEFP_VIB_RATE","NEFP_VIB_DEPTH","NEFP_VIB_DELAY",
+            }) do
+                local msg = CreateReceiveMessageForLeafId(fpBase..suffix)
                 if msg then table.insert(result, msg) end
             end
             return result
         end,
-        grp = {}
     }
+    table.insert(s.params, p({type="range", id=fp.."CUTOFF_OFST", name=get(partName.." Cutoff Ofs"),  min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."RESO_OFST",   name=get(partName.." Reso Ofs"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."ATK_OFST",    name=get(partName.." Attack Ofs"),  min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."DCY_OFST",    name=get(partName.." Decay Ofs"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."REL_OFST",    name=get(partName.." Release Ofs"), min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."VIB_RATE",    name=get(partName.." Vib Rate"),    min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."VIB_DEPTH",   name=get(partName.." Vib Depth"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range", id=fp.."VIB_DELAY",   name=get(partName.." Vib Delay"),   min=get(-64), max=get(63), default=0, toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    return s
+end
+
+local function makePitchSection(i)
+    local pn = string.format("%02d", i)
+    local partName = "Part " .. i
+    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
+    local s = {
+        name = "Part " .. pn .. " Pitch",
+        params = {},
+        getReceiveValueSysex = function()
+            local result = {}
+            local fpBase = "PRM-_PRF-_FP"..i.."-"
+            for _, suffix in ipairs({
+                "NEFP_OCTAVE","NEFP_PIT_CRS","NEFP_PIT_FINE",
+                "NEFP_BEND_RANGE","NEFP_PORT_SW","NEFP_PORT_TIME",
+            }) do
+                local msg = CreateReceiveMessageForLeafId(fpBase..suffix)
+                if msg then table.insert(result, msg) end
+            end
+            return result
+        end,
+    }
+    table.insert(s.params, p({type="range",  id=fp.."OCTAVE",     name=get(partName.." Octave Shift"), min=get(-3),  max=get(3),   default=0,   toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."PIT_CRS",    name=get(partName.." Coarse Tune"),  min=get(-48), max=get(48),  default=0,   toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."PIT_FINE",   name=get(partName.." Fine Tune"),    min=get(-50), max=get(50),  default=0,   toI7Value=offsetToI7, toGuiValue=offsetToGui}))
+    table.insert(s.params, p({type="range",  id=fp.."BEND_RANGE", name=get(partName.." Bend Range"),   min=get(0),   max=get(25),  default=25}))
+    table.insert(s.params, p({type="select", id=fp.."PORT_SW",    name=get(partName.." Porta SW"),     min=get(0),   max=get(2),   default=2,   options=portSwOptions}))
+    table.insert(s.params, p({type="select", id=fp.."PORT_TIME",  name=get(partName.." Porta Time"),   min=get(0),   max=get(128), default=128, options=portTimeOptions}))
+    return s
+end
+
+-- Keyboard section ----------------------------------------------------------
+local function vSensToI7(gui)  return math.tointeger(64 + gui) end
+local function vSensToGui(i7)  return math.tointeger(i7 - 64) end
+
+local veloCrvOptions = {[0]="OFF",[1]="1",[2]="2",[3]="3",[4]="4"}
+
+local function makeKeyboardSection(i)
+    local pn = string.format("%02d", i)
+    local partName = "Part " .. i
+    local fp = "PRM-_PRF-_FP"..i.."-NEFP_"
+    local s = {
+        name = "Part " .. pn .. " Keyboard",
+        layout = "keyboard",
+        params = {},
+        getReceiveValueSysex = function()
+            local result = {}
+            local fpBase = "PRM-_PRF-_FP"..i.."-"
+            for _, suffix in ipairs({
+                "NEFP_KFADE_LO","NEFP_KRANGE_LO","NEFP_KRANGE_UP","NEFP_KFADE_UP",
+                "NEFP_VFADE_LO","NEFP_VRANGE_LO","NEFP_VRANGE_UP","NEFP_VFADE_UP",
+                "NEFP_VSENS_OFST","NEFP_VELO_CRV_TYPE",
+            }) do
+                local msg = CreateReceiveMessageForLeafId(fpBase..suffix)
+                if msg then table.insert(result, msg) end
+            end
+            return result
+        end,
+    }
+    table.insert(s.params, p({type="range",  id=fp.."KFADE_LO",      name=get(partName.." Key Fade Lo"),  min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."KRANGE_LO",     name=get(partName.." Key Range Lo"), min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."KRANGE_UP",     name=get(partName.." Key Range Hi"), min=get(0),   max=get(127), default=127}))
+    table.insert(s.params, p({type="range",  id=fp.."KFADE_UP",      name=get(partName.." Key Fade Hi"),  min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."VFADE_LO",      name=get(partName.." Vel Fade Lo"),  min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."VRANGE_LO",     name=get(partName.." Vel Range Lo"), min=get(1),   max=get(127), default=1}))
+    table.insert(s.params, p({type="range",  id=fp.."VRANGE_UP",     name=get(partName.." Vel Range Hi"), min=get(1),   max=get(127), default=127}))
+    table.insert(s.params, p({type="range",  id=fp.."VFADE_UP",      name=get(partName.." Vel Fade Hi"),  min=get(0),   max=get(127), default=0}))
+    table.insert(s.params, p({type="range",  id=fp.."VSENS_OFST",    name=get(partName.." Vel Sens Ofs"), min=get(-63), max=get(63),  default=0,  toI7Value=vSensToI7, toGuiValue=vSensToGui}))
+    table.insert(s.params, p({type="select", id=fp.."VELO_CRV_TYPE", name=get(partName.." Velo Crv"),     min=get(0),   max=get(4),   default=0,  options=veloCrvOptions}))
+    return s
+end
+
+local function makeEqSection(i)
+    local pn = string.format("%02d", i)
+    local partName = "Part " .. i
+    local prefix = "PRM-_PRF-_FPEQ"..i.."-NEFPEQ_EQ_"
+    local s = {
+        name = "Part " .. pn .. " EQ",
+        layout = "eq3band",
+        params = {},
+        getReceiveValueSysex = function()
+            return CreateReceiveMessageForBranch("PRM-_PRF-_FPEQ"..i)
+        end,
+    }
+    table.insert(s.params, p({type="toggle",  id=prefix.."SW",       name=get(partName.." EQ SW"),     min=get(0),   max=get(1),  default=0}))
+    table.insert(s.params, p({type="vslider", id=prefix.."LOWGAIN",  name=get(partName.." Low Gain"),  min=get(-15), max=get(15), default=0, toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
+    table.insert(s.params, p({type="vslider", id=prefix.."MIDGAIN",  name=get(partName.." Mid Gain"),  min=get(-15), max=get(15), default=0, toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
+    table.insert(s.params, p({type="vslider", id=prefix.."HIGHGAIN", name=get(partName.." High Gain"), min=get(-15), max=get(15), default=0, toI7Value=eqGainToI7, toGuiValue=eqGainToGui}))
+    table.insert(s.params, p({type="range",   id=prefix.."LOWFREQ",  name=get(partName.." Low Freq"),  min=get(0),   max=get(1),  default=1}))
+    table.insert(s.params, p({type="range",   id=prefix.."MIDFREQ",  name=get(partName.." Mid Freq"),  min=get(0),   max=get(16), default=7}))
+    table.insert(s.params, p({type="range",   id=prefix.."MIDQ",     name=get(partName.." Mid Q"),     min=get(0),   max=get(4),  default=0}))
+    table.insert(s.params, p({type="range",   id=prefix.."HIGHFREQ", name=get(partName.." High Freq"), min=get(0),   max=get(2),  default=1}))
+    return s
+end
+
+function CreatePartsSections(main)
     for i = 1, 16, 1 do
-        table.insert(parts.grp, makeCommonSection(i))
-        table.insert(parts.grp, makeEqSection(i))
-        table.insert(parts.grp, makeKeyboardSection(i))
-        table.insert(parts.grp, makePitchSection(i))
-        table.insert(parts.grp, makeOffsetSection(i))
-        table.insert(parts.grp, makeScaleSection(i))
-        table.insert(parts.grp, makeMidiSection(i))
+        local pn = string.format("%02d", i)
+        main["Part " .. pn .. " Common"]   = makeCommonSection(i)
+        main["Part " .. pn .. " EQ"]       = makeEqSection(i)
+        main["Part " .. pn .. " Keyboard"] = makeKeyboardSection(i)
+        main["Part " .. pn .. " Pitch"]    = makePitchSection(i)
+        main["Part " .. pn .. " Offset"]   = makeOffsetSection(i)
+        main["Part " .. pn .. " Scale"]    = makeScaleSection(i)
+        main["Part " .. pn .. " MIDI"]     = makeMidiSection(i)
     end
-    main["parts"] = parts
 end

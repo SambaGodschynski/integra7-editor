@@ -33,7 +33,7 @@ function CreatePcmsPmtSections(main)
             param = ParameterSetValueWrapper(param)
         end
         main[kCommon] = {
-            name   = "Part " .. partNr .. " PCM-S PMT Common",
+            name   = "Part " .. string.format("%02d", partNr) .. " PCM-S PMT Common",
             params = commonParams,
             getReceiveValueSysex = function()
                 local msgs = CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PX")
@@ -61,7 +61,7 @@ function CreatePcmsPmtSections(main)
                 param = ParameterSetValueWrapper(param)
             end
             main[kPartial] = {
-                name   = "Part " .. partNr .. " PCM-S PMT Partial " .. partialNr,
+                name   = "Part " .. string.format("%02d", partNr) .. " PCM-S PMT Partial " .. partialNr,
                 params = partialParams,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch("PRM-_FPART"..partNr.."-_PAT-_PX")

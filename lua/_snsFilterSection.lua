@@ -45,7 +45,7 @@ function CreateSnsFilterSections(main)
             end
 
             main[k] = {
-                name = "Part " .. partNr .. " SN-S Filter Partial " .. partialNr,
+                name = "Part " .. string.format("%02d", partNr) .. " SN-S Filter Partial " .. partialNr,
                 params = params,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SHPAT-_SHPT" .. partialNr)

@@ -75,7 +75,7 @@ function CreatePcmsWaveSections(main)
             end
 
             main[k] = {
-                name = "Part " .. partNr .. " PCM-S Wave Partial " .. partialNr,
+                name = "Part " .. string.format("%02d", partNr) .. " PCM-S Wave Partial " .. partialNr,
                 params = params,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch(

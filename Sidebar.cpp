@@ -51,6 +51,17 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         ImGui::SameLine();
     };
 
+    // Part sections (always visible)
+    viewButton("Common",   base + "Common");
+    viewButton("EQ",       base + "EQ");
+    viewButton("Keys",     base + "Keyboard");
+    viewButton("Pitch",    base + "Pitch");
+    viewButton("Offset",   base + "Offset");
+    viewButton("Scale",    base + "Scale");
+    viewButton("MIDI",     base + "MIDI");
+    ImGui::NewLine();
+
+    // Tone-type specific sections
     switch (type)
     {
         case ToneType::SNA:
@@ -72,7 +83,7 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
             std::string pfx = base + "SN-D ";
             viewButton("Instrument", pfx + "Instrument");
             viewButton("CompEq",     pfx + "CompEq");
-            viewButton("MFX",    pfx + "MFX");
+            viewButton("MFX",        pfx + "MFX");
             break;
         }
         case ToneType::PCMS:

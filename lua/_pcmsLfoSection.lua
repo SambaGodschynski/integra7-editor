@@ -54,7 +54,7 @@ function CreatePcmsLfoSections(main)
             local params1 = lfoParams("LFO1", p)
             for _, param in ipairs(params1) do ParameterSetValueWrapper(param) end
             main[kLfo1] = {
-                name   = "Part " .. partNr .. " PCM-S LFO1 Partial " .. partialNr,
+                name   = "Part " .. string.format("%02d", partNr) .. " PCM-S LFO1 Partial " .. partialNr,
                 params = params1,
                 getReceiveValueSysex = receiveFunc,
             }
@@ -64,7 +64,7 @@ function CreatePcmsLfoSections(main)
             local params2 = lfoParams("LFO2", p)
             for _, param in ipairs(params2) do ParameterSetValueWrapper(param) end
             main[kLfo2] = {
-                name   = "Part " .. partNr .. " PCM-S LFO2 Partial " .. partialNr,
+                name   = "Part " .. string.format("%02d", partNr) .. " PCM-S LFO2 Partial " .. partialNr,
                 params = params2,
                 getReceiveValueSysex = receiveFunc,
             }
@@ -93,7 +93,7 @@ function CreatePcmsLfoSections(main)
                 if param.type ~= "steplfo" then ParameterSetValueWrapper(param) end
             end
             main[kStep] = {
-                name   = "Part " .. partNr .. " PCM-S Step LFO Partial " .. partialNr,
+                name   = "Part " .. string.format("%02d", partNr) .. " PCM-S Step LFO Partial " .. partialNr,
                 params = stepsParams,
                 getReceiveValueSysex = receiveFunc,
             }

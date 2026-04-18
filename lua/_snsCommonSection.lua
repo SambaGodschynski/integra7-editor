@@ -48,7 +48,7 @@ function CreateSnsCommonSections(main)
                 ParameterSetValueWrapper(param)
             end
             main[swKey] = {
-                name   = "Part " .. partNr .. " SN-S Partial " .. i .. " Ctrl",
+                name   = "Part " .. string.format("%02d", partNr) .. " SN-S Partial " .. i .. " Ctrl",
                 params = swParams,
                 layout = "inline_toggles",
             }
@@ -91,7 +91,7 @@ function CreateSnsCommonSections(main)
         end
 
         main[k] = {
-            name = "Part " .. partNr .. " SN-S Common",
+            name = "Part " .. string.format("%02d", partNr) .. " SN-S Common",
             params = params,
             getReceiveValueSysex = function()
                 local result = {}

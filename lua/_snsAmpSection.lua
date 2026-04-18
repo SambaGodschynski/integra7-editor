@@ -41,7 +41,7 @@ function CreateSnsAmpSections(main)
             end
 
             main[k] = {
-                name = "Part " .. partNr .. " SN-S Amp Partial " .. partialNr,
+                name = "Part " .. string.format("%02d", partNr) .. " SN-S Amp Partial " .. partialNr,
                 params = params,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SHPAT-_SHPT" .. partialNr)

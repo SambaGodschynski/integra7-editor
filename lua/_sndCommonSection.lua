@@ -122,7 +122,7 @@ function CreateSndCommonSections(main)
         end
 
         main[k] = {
-            name = "Part " .. partNr .. " SN-D Instrument",
+            name = "Part " .. string.format("%02d", partNr) .. " SN-D Instrument",
             params = params,
             getReceiveValueSysex = function()
                 local result = {}

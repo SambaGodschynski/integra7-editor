@@ -34,7 +34,7 @@ function CreateSnsOscSections(main)
             end
 
             main[k] = {
-                name = "Part " .. partNr .. " SN-S OSC Partial " .. partialNr,
+                name = "Part " .. string.format("%02d", partNr) .. " SN-S OSC Partial " .. partialNr,
                 params = params,
                 getReceiveValueSysex = function()
                     return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SHPAT-_SHPT" .. partialNr)
