@@ -27,6 +27,9 @@
 namespace
 {
     const float HighlightSeconds = 15.0f;
+
+    constexpr float kDefaultWindowW = 640.0f;
+    constexpr float kDefaultWindowH = 480.0f;
 }
 
 // ── Argument parsing ─────────────────────────────────────────────────────────
@@ -760,6 +763,7 @@ int main(int argc, const char** args)
             }
             else
             {
+                ImGui::SetNextWindowSize(ImVec2(kDefaultWindowW, kDefaultWindowH), ImGuiCond_FirstUseEver);
                 if (ImGui::Begin(section.name.c_str(), &section.isOpen))
                 {
                     {

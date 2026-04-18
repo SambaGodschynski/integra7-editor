@@ -113,109 +113,112 @@ local function guiOffsetValue(part, mfxNr)
     end
 end
 
-
-local mfxTemplate = {
-    name = "Mfx",
-    getReceiveValueSysex = nil,
-    grp = {
-        {
-            name="Mfx Common",
-            params = {
-                {type="select", id=idTmpl("SNTF_MFX_TYPE"), name=get("MFX Type"), default=0, options=mfxTypes},
-                {type="range", name=get("MFX Dry Send Level"), id=idTmpl("SNTF_MFX_DRY_SEND"), default=127, min=get(0), max=get(127)},
-                {type="range", name=get("MFX Chorus Send Level"), id=idTmpl("SNTF_MFX_CHO_SEND"), default=0, min=get(0), max=get(127)},
-                {type="range", name=get("MFX Reverb Send Level"), id=idTmpl("SNTF_MFX_REV_SEND"), default=0, min=get(0), max=get(127)},
-            }
-        },
-        {
-            name="Mfx",
-            params = {}
-        },
-        {
-            name="Mfx Control",
-            params = {
-                {type="select", name=get("MFX Control 1 Source"), id=idTmpl("SNTF_MFX_CTRL1_SRC"), default=0, options=srcOptions},
-                {type="select", name=get("MFX Control 1 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN1"), default=0},
-                {type="range",  name=get("MFX Control 1 Sens"), id=idTmpl("SNTF_MFX_CTRL1_SENS"), default=64, min=get(1), max=get(127)},
-                {type="select", name=get("MFX Control 2 Source"), id=idTmpl("SNTF_MFX_CTRL2_SRC"), default=0, options=srcOptions},
-                {type="select", name=get("MFX Control 2 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN2"), default=0},
-                {type="range",  name=get("MFX Control 2 Sens"), id=idTmpl("SNTF_MFX_CTRL2_SENS"), default=64, min=get(1), max=get(127)},
-                {type="select", name=get("MFX Control 3 Source"), id=idTmpl("SNTF_MFX_CTRL3_SRC"), default=0, options=srcOptions},
-                {type="select", name=get("MFX Control 3 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN3"), default=0},
-                {type="range",  name=get("MFX Control 3 Sens"), id=idTmpl("SNTF_MFX_CTRL3_SENS"), default=64, min=get(1), max=get(127)},
-                {type="select", name=get("MFX Control 4 Source"), id=idTmpl("SNTF_MFX_CTRL4_SRC"), default=0, options=srcOptions},
-                {type="select", name=get("MFX Control 4 Destination"), id=idTmpl("SNTF_MFX_CTRL_ASGN4"), default=0},
-                {type="range",  name=get("MFX Control 4 Sens"), id=idTmpl("SNTF_MFX_CTRL4_SENS"), default=64, min=get(1), max=get(127)},
-            }
-        }
-    }
+local mfxCtrlIds = {
+    { src = "SNTF_MFX_CTRL1_SRC", asgn = "SNTF_MFX_CTRL_ASGN1", sens = "SNTF_MFX_CTRL1_SENS" },
+    { src = "SNTF_MFX_CTRL2_SRC", asgn = "SNTF_MFX_CTRL_ASGN2", sens = "SNTF_MFX_CTRL2_SENS" },
+    { src = "SNTF_MFX_CTRL3_SRC", asgn = "SNTF_MFX_CTRL_ASGN3", sens = "SNTF_MFX_CTRL3_SENS" },
+    { src = "SNTF_MFX_CTRL4_SRC", asgn = "SNTF_MFX_CTRL_ASGN4", sens = "SNTF_MFX_CTRL4_SENS" },
 }
 
 function CreateMfxSections(main)
     for partNr = 1, 16, 1 do
-        local k = "Part " .. string.format("%02d", partNr) .. " MFX"
-        local name = k
-        local mfxData = DeepCopy(mfxTemplate)
-        mfxData.name = name
-        mfxData.getReceiveValueSysex = function()
-            return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SNTONE-_SNTF")
-        end
-        main[k] = mfxData
-        local subCommon = mfxData.grp[1]
-        local subMfx = mfxData.grp[2]
-        local subCtrl = mfxData.grp[3]
+        local pn     = string.format("%02d", partNr)
+        local prefix = "Part " .. pn .. " SN-A MFX"
+
+        -- Common section: MFX Type, Sends, 32 dynamic MFX params
+        local commonKey     = prefix .. " Common"
+        local commonSection = {
+            name               = commonKey,
+            hideFromPalette    = true,
+            getReceiveValueSysex = function ()
+                return CreateReceiveMessageForBranch("PRM-_FPART" .. partNr .. "-_SNTONE-_SNTF")
+            end,
+            grp = {
+                {
+                    name   = "Mfx Common",
+                    params = {
+                        {type="select", id=idTmpl("SNTF_MFX_TYPE"),     name=get("MFX Type"),              default=0,   options=mfxTypes},
+                        {type="range",  id=idTmpl("SNTF_MFX_DRY_SEND"), name=get("MFX Dry Send Level"),    default=127, min=get(0), max=get(127)},
+                        {type="range",  id=idTmpl("SNTF_MFX_CHO_SEND"), name=get("MFX Chorus Send Level"), default=0,   min=get(0), max=get(127)},
+                        {type="range",  id=idTmpl("SNTF_MFX_REV_SEND"), name=get("MFX Reverb Send Level"), default=0,   min=get(0), max=get(127)},
+                    }
+                },
+                {
+                    name   = "Mfx",
+                    params = {}
+                }
+            }
+        }
+        main[commonKey] = commonSection
+        local subCommon = commonSection.grp[1]
+        local subMfx    = commonSection.grp[2]
 
         local function mfxChangedHandler(leafNode, response)
             if not IsIdForPart(leafNode.fullid, partNr) then
                 return nil
             end
             if leafNode.node.id == "SNTF_MFX_TYPE" then
-                local mfxType = Bytes_To_Value(response.payload)
-                mfxNumberPartMap[partNr] = mfxType
+                mfxNumberPartMap[partNr] = Bytes_To_Value(response.payload)
             end
             return nil
         end
         AddReceiveHandler(mfxChangedHandler)
 
         for _, param in ipairs(subCommon.params) do
-                local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
-                param.id = CreateId(param.id, partNr)
-                if isMfxChangeType then
-                    param.setValue = function (value)
-                        return mfxTypeChange(param, partNr, value)
-                    end
-                else
-                    param = ParameterSetValueWrapper(param)
+            local isMfxChangeType = param.id == idTmpl("SNTF_MFX_TYPE")
+            param.id = CreateId(param.id, partNr)
+            if isMfxChangeType then
+                param.setValue = function (value)
+                    return mfxTypeChange(param, partNr, value)
                 end
+            else
+                param = ParameterSetValueWrapper(param)
+            end
         end
-        for _, param in ipairs(subCtrl.params) do
-                local isAsgn = string.find(param.id, "CTRL_ASGN") ~= nil
+        for mfxNr = 0, 31, 1 do
+            local id = idTmpl("SNTF_MFX_PRM" .. tostring(mfxNr + 1))
+            id = CreateId(id, partNr)
+            local p = {type="range", id=id, default=0}
+            p = ParameterSetValueWrapper(p)
+            p.toI7Value  = i7offsetValue(partNr, mfxNr)
+            p.toGuiValue = guiOffsetValue(partNr, mfxNr)
+            p.name = function () return mfxName(partNr, mfxNr) end
+            p.min  = function () return mfxMin(partNr, mfxNr) end
+            p.max  = function () return mfxMax(partNr, mfxNr) end
+            table.insert(subMfx.params, p)
+        end
+
+        -- MFX Control 1-4 sections (one tab each)
+        local tabs = {
+            {label = "Common", keys = { {key = commonKey} }},
+        }
+        for ctrlNr = 1, 4, 1 do
+            local ctrlKey = prefix .. " Control " .. ctrlNr
+            local ids     = mfxCtrlIds[ctrlNr]
+            local ctrlSection = {
+                name            = ctrlKey,
+                hideFromPalette = true,
+                params          = {
+                    {type="select", name=get("Source"),      id=idTmpl(ids.src),  default=0,  options=srcOptions},
+                    {type="select", name=get("Destination"), id=idTmpl(ids.asgn), default=0},
+                    {type="range",  name=get("Sens"),        id=idTmpl(ids.sens), default=64, min=get(1), max=get(127)},
+                }
+            }
+            for _, param in ipairs(ctrlSection.params) do
+                local isAsgn = param.id == idTmpl(ids.asgn)
                 param.id = CreateId(param.id, partNr)
                 if isAsgn then
                     local capturedPart = partNr
-                    param.options = function()
+                    param.options = function ()
                         return Mfx_CtrlAsgn[mfxNumberPartMap[capturedPart]] or {[0]="OFF"}
                     end
                 end
                 param = ParameterSetValueWrapper(param)
+            end
+            main[ctrlKey] = ctrlSection
+            table.insert(tabs, {label = "Control " .. ctrlNr, keys = { {key = ctrlKey} }})
         end
-        for mfxNr = 0, 31, 1 do
-            local id = idTmpl("SNTF_MFX_PRM" .. tostring(mfxNr+1))
-            id = CreateId(id, partNr)
-            local p = {type="range", id=id, default=0}
-            p = ParameterSetValueWrapper(p)
-            p.toI7Value = i7offsetValue(partNr, mfxNr)
-            p.toGuiValue = guiOffsetValue(partNr, mfxNr)
-            p.name = function ()
-                return mfxName(partNr, mfxNr)
-            end
-            p.min = function ()
-                return mfxMin(partNr, mfxNr)
-            end
-            p.max = function ()
-                return mfxMax(partNr, mfxNr)
-            end
-            table.insert(subMfx.params, p)
-        end
+
+        main[prefix] = {name = prefix, tabs = tabs}
     end
 end

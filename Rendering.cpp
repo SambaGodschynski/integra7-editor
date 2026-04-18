@@ -15,6 +15,10 @@
 #include <unordered_map>
 #include <string>
 
+// Default window size for views without persisted dimensions
+constexpr float kDefaultWindowW = 640.0f;
+constexpr float kDefaultWindowH = 480.0f;
+
 // VSlider dimensions
 constexpr float kVSliderTrackW     = 20.0f;
 constexpr float kVSliderTrackH     = 80.0f;
@@ -93,6 +97,7 @@ void drawReceiveButton(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>
 void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& sections,
                          I7Ed& ed, ImVec2& canvasMax)
 {
+    ImGui::SetNextWindowSize(ImVec2(kDefaultWindowW, kDefaultWindowH), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(section.name.c_str(), &section.isOpen))
     {
         ImGui::End();

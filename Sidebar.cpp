@@ -56,7 +56,7 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::SNA:
         {
             viewButton("SNA", base + "SNA");
-            viewButton("MFX", base + "MFX");
+            viewButton("MFX", base + "SN-A MFX");
             break;
         }
         case ToneType::SNS:
