@@ -4,6 +4,9 @@ require "_sysex"
 require "_com"
 require "_model"
 
+-- Drawbar colors for Hammond organ (MOD_PRM1-9 = 9 drawbars)
+local kDrawbarColors = { "br", "br", "wt", "wt", "bk", "wt", "bk", "bk", "wt" }
+
 local idInstNr = "PRM-_FPARTxxx_InstNr"
 local instrumentNumberPartMap = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 local get = GetWrapper
@@ -112,6 +115,7 @@ local snaTemplate = {
         },
         {
             name = "Instrument",
+            layout = "drawbars",
             params =
             {
               {type="select", id=idInstNr, name=get("Inst. Number"), default=1, options = SnaInstPresets},
@@ -213,6 +217,16 @@ function CreateSnaSections(main)
                         end
                         param.max = function ()
                             return modMax(partNr, modNr);
+                        end
+                        if kDrawbarColors[modNr] ~= nil then
+                            local color = kDrawbarColors[modNr]
+                            param.drawbarColor = function()
+                                local instrData = getInstrumentData(partNr)
+                                if instrData ~= nil and instrData.modData == MOD_TW then
+                                    return color
+                                end
+                                return ""
+                            end
                         end
                     end
                 end

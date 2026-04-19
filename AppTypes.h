@@ -91,4 +91,7 @@ struct I7Ed
     int         knobAtlasFrames  = 128;
     int         knobAtlasCols    = 16;
     ImTextureID sliderHandleTex  = 0;
+    ImTextureID drawbarTexBk     = 0;
+    ImTextureID drawbarTexWt     = 0;
+    ImTextureID drawbarTexBr     = 0;
 };

@@ -78,6 +78,8 @@ struct ParameterDef
     // PARAM_TYPE_STEP_LFO only
     std::string stepTypeId;
     std::vector<std::string> stepIds;
+    // PARAM_TYPE_RANGE drawbar display: returns "bk", "wt", or "br"; null = normal knob
+    FStringGetter drawbarColor;
 };
 
 struct ValueChangedMessage

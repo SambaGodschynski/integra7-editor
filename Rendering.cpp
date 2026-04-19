@@ -4,6 +4,7 @@
 #include "imgui-knobs.h"
 #include "imgui_knob_image.h"
 #include "imgui_vslider_image.h"
+#include "imgui_drawbar.h"
 #include "imgui_toggle.h"
 #include "imgui_envelope.h"
 #include "imgui_step_lfo.h"
@@ -997,4 +998,110 @@ void renderMixer(SectionDef& /*section*/, I7Ed& ed)
     }
 
     ImGui::EndChild();
+}
+
+void renderDrawbars(SectionDef& section, I7Ed& ed)
+{
+    constexpr float kImgW          = 38.0f;
+    constexpr float kSlotH         = 220.0f;   // >= img_disp_h (232px) so full shaft is reachable
+    constexpr float kImgNativeH    = 256.0f;
+    constexpr float kHandleNativeH = 45.0f;   // handle height at bottom of image (native px)
+    constexpr float kGap           =  6.0f;
+
+    // Fallback to normal rendering when no drawbar params are active (non-TW-Organ instrument)
+    bool hasDrawbars = false;
+    for (auto* p : section.params)
+    {
+        if (p->drawbarColor && !p->drawbarColor().empty())
+        {
+            hasDrawbars = true;
+            break;
+        }
+    }
+    if (!hasDrawbars)
+    {
+        renderSection(section, ed);
+        return;
+    }
+
+    // Render select params (Inst. Number) above the drawbars
+    for (auto* param : section.params)
+    {
+        if (param->drawbarColor) { continue; }
+        if (param->name() == HIDDEN_PARAM_NAME) { continue; }
+        if (param->type == PARAM_TYPE_SELECTION)
+        {
+            renderCombo(*param, ed);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.0f);
+        }
+    }
+
+    // Drawbar row
+    bool firstDb = true;
+    for (auto* param : section.params)
+    {
+        if (!param->drawbarColor) { continue; }
+
+        std::string color = param->drawbarColor();
+        if (color.empty()) { continue; }
+
+        if (!firstDb) { ImGui::SameLine(0.0f, kGap); }
+        firstDb = false;
+
+        if (param->valueOverride) { param->value = param->valueOverride(); }
+
+        ImTextureID tex = 0;
+        if      (color == "bk") { tex = ed.drawbarTexBk; }
+        else if (color == "wt") { tex = ed.drawbarTexWt; }
+        else if (color == "br") { tex = ed.drawbarTexBr; }
+
+        // Extract short pitch label from "Harmonic Bar X", prettify fractions
+        std::string fullName = param->name();
+        const std::string pfx = "Harmonic Bar ";
+        std::string shortName = (fullName.rfind(pfx, 0) == 0)
+            ? fullName.substr(pfx.size())
+            : fullName;
+        // Replace "-" separator before fractions with a space: "5-1/3" -> "5 1/3"
+        {
+            auto pos = shortName.find('-');
+            if (pos != std::string::npos) { shortName[pos] = ' '; }
+        }
+
+        ImGui::BeginGroup();
+
+        std::string lbl = "##db_" + param->id;
+        if (ImDrawbar::Drawbar(lbl.c_str(), &param->value,
+                param->min(), param->max(),
+                tex, kImgW, kSlotH, kImgNativeH, kHandleNativeH))
+        {
+            valueChanged(ed, *param);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s: %.0f", fullName.c_str(), param->value);
+        }
+
+        // Centered pitch label below the drawbar
+        float labelW = ImGui::CalcTextSize(shortName.c_str()).x;
+        float indent = (kImgW - labelW) * 0.5f;
+        if (indent > 0.0f) { ImGui::SetCursorPosX(ImGui::GetCursorPosX() + indent); }
+        ImGui::TextUnformatted(shortName.c_str());
+
+        ImGui::EndGroup();
+    }
+    ImGui::NewLine();
+
+    // Render remaining non-drawbar range params below
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.0f);
+    SectionDef remainder;
+    for (auto* param : section.params)
+    {
+        if (param->drawbarColor) { continue; }
+        if (param->type == PARAM_TYPE_SELECTION) { continue; }
+        remainder.params.push_back(param);
+    }
+    if (!remainder.params.empty())
+    {
+        renderSection(remainder, ed);
+    }
 }

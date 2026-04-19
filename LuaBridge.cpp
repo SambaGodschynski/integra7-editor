@@ -108,6 +108,7 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                 param->setValue = require_key<ParameterDef::FSetValue>(luaParam, "setValue");
             }
 
+            param->drawbarColor = optional_key<ParameterDef::FStringGetter>(luaParam, "drawbarColor", nullptr);
             param->size      = optional_key<float>(luaParam, "size", 0.0f);
             param->noTitle   = optional_key<bool>(luaParam, "noTitle", false);
             param->noInput   = optional_key<bool>(luaParam, "noInput", false);

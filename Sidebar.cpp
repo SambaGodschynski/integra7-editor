@@ -146,7 +146,7 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
     {
         ImGui::TextUnformatted("Device ID");
         {
-            char preview[8];
+            char preview[12];
             snprintf(preview, sizeof(preview), "%d", ed.sidebar.deviceId + 1);
             ImGui::SetNextItemWidth(-1.0f);
             if (ImGui::BeginCombo("##DeviceId", preview))

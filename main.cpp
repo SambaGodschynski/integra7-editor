@@ -388,6 +388,9 @@ int main(int argc, const char** args)
 
     ed.knobTexture      = LoadKnobTexture("assets/images/knob01.png");
     ed.sliderHandleTex  = LoadKnobTexture("assets/images/mixer_handle01.png");
+    ed.drawbarTexBk     = LoadKnobTexture("assets/images/drawbar_bk.png");
+    ed.drawbarTexWt     = LoadKnobTexture("assets/images/drawbar_wt.png");
+    ed.drawbarTexBr     = LoadKnobTexture("assets/images/drawbar_br.png");
 
     // ── Main loop ─────────────────────────────────────────────────────────────
     while (!glfwWindowShouldClose(window))
@@ -732,6 +735,10 @@ int main(int argc, const char** args)
             else if (sec.layout == "mixer")
             {
                 renderMixer(sec, e);
+            }
+            else if (sec.layout == "drawbars")
+            {
+                renderDrawbars(sec, e);
             }
             else
             {
