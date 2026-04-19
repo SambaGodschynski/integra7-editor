@@ -462,12 +462,21 @@ int main(int argc, const char** args)
                 && rawMouse.x <= handleX + 4.0f
                 && rawMouse.y >= 0.0f
                 && rawMouse.y <= fh;
+
+            // Only START a resize on a fresh click while hovering the handle and
+            // while ImGui is not already processing something (e.g. a window drag).
+            if (sidebarHandleHovering
+                && ImGui::IsMouseClicked(0)
+                && !ImGui::IsAnyItemActive())
+            {
+                ed.sidebar.isResizing = true;
+            }
+
             if (sidebarHandleHovering || ed.sidebar.isResizing)
             {
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-                if (ioRef.MouseDown[0])
+                if (ioRef.MouseDown[0] && ed.sidebar.isResizing)
                 {
-                    ed.sidebar.isResizing = true;
                     ed.sidebar.width += ioRef.MouseDelta.x;
                     ed.sidebar.width = std::max(120.0f, std::min(600.0f, ed.sidebar.width));
                 }
