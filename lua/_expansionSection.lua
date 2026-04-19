@@ -148,15 +148,19 @@ function CreateExpansionSection(main)
             local readMsg = buildSilentReadMessage()
             -- Step 2 (onDone): compare and conditionally load
             readMsg.onDone = function()
-                if not slotsChangedFromDevice() then
+                if lastReadSlots ~= nil and not slotsChangedFromDevice() then
                     return {}  -- device already has our state, nothing to do
                 end
+                -- lastReadSlots == nil means read gave no usable response; fall through to load
                 local loadMsg = RequestMessage.new()
                 loadMsg.sysex = buildLoadSysex()
                 loadMsg.onMessageReceived = function(_bytes)
-                    -- Accept any response; update lastReadSlots so repeat presses are no-ops
-                    lastReadSlots = {currentSlots[1], currentSlots[2], currentSlots[3], currentSlots[4]}
                     return {EmptyValueChangedMessage}
+                end
+                -- After load command is acknowledged, read back to confirm device is ready
+                -- and update the UI (device may still be loading; this acts as a sync point)
+                loadMsg.onDone = function()
+                    return {buildReadMessage()}
                 end
                 return {loadMsg}
             end
