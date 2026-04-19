@@ -132,6 +132,42 @@ SectionDef::FGetReceiveSysex makeParamOnlyGetter(I7Ed& ed, const SectionDef& sec
     };
 }
 
+void enqueueRequest(I7Ed& ed, const RequestMessage& req)
+{
+    if (req.multiResponse)
+    {
+        ed.pendingReceives.push_back({
+            .handler       = req.onMessageReceived,
+            .onDone        = req.onDone,
+            .multiResponse = true
+        });
+        ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
+            [&ed](Bytes received, void* userData)
+            {
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                if (userData == nullptr) return;
+                PendingReceive* pData = (PendingReceive*)userData;
+                pData->dataQueue.push_back(std::move(received));
+            }, true);
+    }
+    else
+    {
+        ed.pendingReceives.push_back({
+            .handler = req.onMessageReceived,
+            .onDone  = req.onDone
+        });
+        ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
+            [&ed](Bytes received, void* userData)
+            {
+                if (received.empty()) return;
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                if (userData == nullptr) return;
+                PendingReceive* pData = (PendingReceive*)userData;
+                pData->data.swap(received);
+            });
+    }
+}
+
 void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& getters)
 {
     if (ed.isReceiving.exchange(true))
@@ -142,52 +178,10 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
 
     for (const auto& getter : getters)
     {
-        if (!getter)
+        if (!getter) continue;
+        for (const RequestMessage& req : getter())
         {
-            continue;
-        }
-        std::vector<RequestMessage> reqs = getter();
-        for (const RequestMessage& req : reqs)
-        {
-            if (req.multiResponse)
-            {
-                ed.pendingReceives.push_back({
-                    .handler = req.onMessageReceived,
-                    .multiResponse = true
-                });
-                ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
-                    [&ed](Bytes received, void* userData)
-                    {
-                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                        if (userData == nullptr)
-                        {
-                            return;
-                        }
-                        PendingReceive* pData = (PendingReceive*)userData;
-                        pData->dataQueue.push_back(std::move(received));
-                    }, true);
-            }
-            else
-            {
-                ed.pendingReceives.push_back({
-                    .handler = req.onMessageReceived
-                });
-                ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
-                    [&ed](Bytes received, void* userData)
-                    {
-                        if (received.empty())
-                        {
-                            return;
-                        }
-                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                        if (userData == nullptr)
-                        {
-                            return;
-                        }
-                        PendingReceive* pData = (PendingReceive*)userData;
-                        pData->data.swap(received);
-                    });
-            }
+            enqueueRequest(ed, req);
         }
     }
     ed.receiveTotalCount = (int)ed.pendingReceives.size();

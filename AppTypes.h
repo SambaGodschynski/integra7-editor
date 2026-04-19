@@ -29,6 +29,7 @@ struct Args
 struct PendingReceive
 {
     RequestMessage::FOnMessageReceived handler;
+    RequestMessage::FOnDone onDone;
     Bytes data;
     std::deque<Bytes> dataQueue;
     bool multiResponse = false;

@@ -91,8 +91,10 @@ struct ValueChangedMessage
 struct RequestMessage
 {
     typedef std::function<std::vector<ValueChangedMessage>(std::vector<unsigned char>)> FOnMessageReceived;
+    typedef std::function<std::vector<RequestMessage>()> FOnDone;
     Bytes sysex;
     FOnMessageReceived onMessageReceived;
+    FOnDone onDone;  // called after response is processed; returned requests are queued next
     bool multiResponse = false;
 };
 

@@ -13,6 +13,7 @@ std::vector<RequestMessage> buildParamRequests(
     I7Ed& ed, const std::vector<ParameterDef*>& params);
 SectionDef::FGetReceiveSysex makeParamOnlyGetter(I7Ed& ed, const SectionDef& sec);
 
+void enqueueRequest(I7Ed& ed, const RequestMessage& req);
 void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& getters);
 
 std::vector<std::string> getTonePrefixes(const std::string& partPrefix, int msb);

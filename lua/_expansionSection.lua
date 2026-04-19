@@ -47,6 +47,17 @@ local LOAD_EXP_DONE = 0x0F003002  -- DT1 response address when load is complete
 -- Lua-side mirror of the currently pending slot values (before Load)
 local currentSlots = {0, 0, 0, 0}
 
+-- Last state received from the device; nil = not yet fetched
+local lastReadSlots = nil
+
+local function slotsChangedFromDevice()
+    if lastReadSlots == nil then return false end
+    for i = 1, 4 do
+        if currentSlots[i] ~= lastReadSlots[i] then return true end
+    end
+    return false
+end
+
 -- Parse the 4-byte address from a raw SysEx DT1 response (Lua 1-based table):
 -- F0 41 dev 00 00 64 12 aa bb cc dd data... checksum F7
 local function parseAddr(bytes)
@@ -64,6 +75,7 @@ end
 
 -- Build a single RequestMessage to read all 4 slots via 0x0F000010.
 -- JS uses size=0 for this special address; device always responds with 4 bytes.
+-- Updates currentSlots, lastReadSlots, and the UI (used by getReceiveValueSysex).
 local function buildReadMessage()
     local rqmsg = RequestMessage.new()
     rqmsg.sysex = Create_Sysex_Rq1_Message(READ_EXP_ADDR, 0)
@@ -71,17 +83,36 @@ local function buildReadMessage()
         if parseAddr(bytes) ~= READ_EXP_ADDR then
             return {EmptyValueChangedMessage}
         end
-        -- Payload: 4 bytes at indices 12-15
         local result = {}
+        lastReadSlots = {0, 0, 0, 0}
         for i = 1, 4, 1 do
             local romId = bytes[11 + i]
             currentSlots[i] = romId
+            lastReadSlots[i] = romId
             local msg = ValueChangedMessage.new()
             msg.id      = SlotParamIds[i]
             msg.i7Value = romId
             table.insert(result, msg)
         end
         return result
+    end
+    return rqmsg
+end
+
+-- Silent read: updates only lastReadSlots without changing currentSlots or the UI.
+-- Used by getAction to check device state before deciding whether to load.
+local function buildSilentReadMessage()
+    local rqmsg = RequestMessage.new()
+    rqmsg.sysex = Create_Sysex_Rq1_Message(READ_EXP_ADDR, 0)
+    rqmsg.onMessageReceived = function(bytes)
+        if parseAddr(bytes) ~= READ_EXP_ADDR then
+            return {EmptyValueChangedMessage}
+        end
+        lastReadSlots = {}
+        for i = 1, 4 do
+            lastReadSlots[i] = bytes[11 + i]
+        end
+        return {EmptyValueChangedMessage}
     end
     return rqmsg
 end
@@ -113,18 +144,23 @@ function CreateExpansionSection(main)
         id     = "EXP_LOAD_ACTION",
         name   = get("Load Expansions"),
         getAction = function()
-            -- Step 1: Load command (RQ1 to 0x0F003000 with slots packed as size)
-            local loadMsg = RequestMessage.new()
-            loadMsg.sysex = buildLoadSysex()
-            loadMsg.onMessageReceived = function(bytes)
-                if parseAddr(bytes) ~= LOAD_EXP_DONE then
+            -- Step 1: silently read device state
+            local readMsg = buildSilentReadMessage()
+            -- Step 2 (onDone): compare and conditionally load
+            readMsg.onDone = function()
+                if not slotsChangedFromDevice() then
+                    return {}  -- device already has our state, nothing to do
+                end
+                local loadMsg = RequestMessage.new()
+                loadMsg.sysex = buildLoadSysex()
+                loadMsg.onMessageReceived = function(_bytes)
+                    -- Accept any response; update lastReadSlots so repeat presses are no-ops
+                    lastReadSlots = {currentSlots[1], currentSlots[2], currentSlots[3], currentSlots[4]}
                     return {EmptyValueChangedMessage}
                 end
-                return {EmptyValueChangedMessage}
+                return {loadMsg}
             end
-            -- Step 2: Read back the active slots via 0x0F000010
-            local msgs = {loadMsg, buildReadMessage()}
-            return msgs
+            return {readMsg}
         end,
     }
     table.insert(params, loadAction)

@@ -93,6 +93,7 @@ int main(int argc, const char** args)
     ed.lua.new_usertype<RequestMessage>("RequestMessage",
         "sysex", &RequestMessage::sysex,
         "onMessageReceived", &RequestMessage::onMessageReceived,
+        "onDone", &RequestMessage::onDone,
         "multiResponse", &RequestMessage::multiResponse);
     ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
         "id",      &ValueChangedMessage::id,
@@ -593,7 +594,16 @@ int main(int argc, const char** args)
                     }
                     if (done)
                     {
+                        auto onDone = it->onDone;
                         it = ed.pendingReceives.erase(it);
+                        if (onDone)
+                        {
+                            for (const auto& req : onDone())
+                            {
+                                enqueueRequest(ed, req);
+                                ++ed.receiveTotalCount;
+                            }
+                        }
                     }
                     else
                     {
@@ -611,7 +621,16 @@ int main(int argc, const char** args)
                     {
                         if (!msg.id.empty()) { valueChanged(ed, msg); }
                     }
+                    auto onDone = it->onDone;
                     it = ed.pendingReceives.erase(it);
+                    if (onDone)
+                    {
+                        for (const auto& req : onDone())
+                        {
+                            enqueueRequest(ed, req);
+                            ++ed.receiveTotalCount;
+                        }
+                    }
                 }
             }
             if (ed.pendingReceives.empty())
