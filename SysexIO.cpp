@@ -190,6 +190,7 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
             }
         }
     }
+    ed.receiveTotalCount = (int)ed.pendingReceives.size();
 }
 
 std::vector<std::string> getTonePrefixes(const std::string& partPrefix, int msb)

@@ -64,6 +64,7 @@ struct I7Ed
     // async receive
     std::atomic<bool> isReceiving{false};
     std::chrono::steady_clock::time_point receiveStartTime;
+    int receiveTotalCount = 0;
     std::list<PendingReceive> pendingReceives;
     std::mutex pendingMutex;
     NotificationQueue notifications;

@@ -649,26 +649,42 @@ int main(int argc, const char** args)
             if (onFrame) { (*onFrame)(); }
         }
 
-        // ── Indeterminate receive progress bar ────────────────────────────────
+        // ── Receive progress bar ──────────────────────────────────────────────
         if (ed.isReceiving.load())
         {
-            const float elapsed = std::chrono::duration<float>(
-                std::chrono::steady_clock::now() - ed.receiveStartTime).count();
-            constexpr float kBarH   = 3.f;
-            constexpr float kSegLen = 0.25f;
-            constexpr float kPeriod = 1.5f;
-            const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
-            const float lFrac = std::clamp(pos,           0.0f, 1.0f);
-            const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
-            const float W     = fw;
+            constexpr float kBarH = 3.f;
+            const float W  = fw;
             const float bx = scrollOfs.x, by = scrollOfs.y;
             auto* dl = ImGui::GetBackgroundDrawList();
-            dl->AddRectFilled({bx,            by},
-                              {W + bx,        kBarH + by},
+
+            const int total     = ed.receiveTotalCount;
+            const int remaining = (int)ed.pendingReceives.size();
+
+            dl->AddRectFilled({bx, by}, {W + bx, kBarH + by},
                               IM_COL32(80, 10, 10, 200));
-            dl->AddRectFilled({lFrac * W + bx, by},
-                              {rFrac * W + bx, kBarH + by},
-                              IM_COL32(220, 30, 30, 255));
+
+            if (total > 0)
+            {
+                // Determinate: fill proportional to completed requests
+                const float progress = (float)(total - remaining) / (float)total;
+                dl->AddRectFilled({bx, by},
+                                  {progress * W + bx, kBarH + by},
+                                  IM_COL32(220, 30, 30, 255));
+            }
+            else
+            {
+                // Indeterminate animation (count unknown)
+                const float elapsed = std::chrono::duration<float>(
+                    std::chrono::steady_clock::now() - ed.receiveStartTime).count();
+                constexpr float kSegLen = 0.25f;
+                constexpr float kPeriod = 1.5f;
+                const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
+                const float lFrac = std::clamp(pos,           0.0f, 1.0f);
+                const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
+                dl->AddRectFilled({lFrac * W + bx, by},
+                                  {rFrac * W + bx, kBarH + by},
+                                  IM_COL32(220, 30, 30, 255));
+            }
         }
 
         ed.notifications.render(display_w, display_h, {scrollOfs.x, scrollOfs.y});
