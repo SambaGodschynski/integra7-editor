@@ -1,7 +1,6 @@
 /*
     TODO: Man in the middle mode,  midi through, handles i7 sysex
 */
-
 #include "AppTypes.h"
 #include "LuaBridge.h"
 #include "SysexIO.h"
@@ -26,10 +25,11 @@
 
 namespace
 {
-    const float HighlightSeconds = 15.0f;
-
+    constexpr float HighlightSeconds = 15.0f;
     constexpr float kDefaultWindowW = 640.0f;
     constexpr float kDefaultWindowH = 480.0f;
+    constexpr float kReceiveIndeterminateAfterSecs = 5.0f;
+    constexpr float kReceiveTimeoutSecs            = 25.0f;
 }
 
 // ── Argument parsing ─────────────────────────────────────────────────────────
@@ -685,33 +685,44 @@ int main(int argc, const char** args)
             const float bx = scrollOfs.x, by = scrollOfs.y;
             auto* dl = ImGui::GetBackgroundDrawList();
 
-            const int total     = ed.receiveTotalCount;
-            const int remaining = (int)ed.pendingReceives.size();
+            const float elapsed = std::chrono::duration<float>(
+                std::chrono::steady_clock::now() - ed.receiveStartTime).count();
 
-            dl->AddRectFilled({bx, by}, {W + bx, kBarH + by},
-                              IM_COL32(80, 10, 10, 200));
-
-            if (total > 0)
+            if (elapsed >= kReceiveTimeoutSecs)
             {
-                // Determinate: fill proportional to completed requests
-                const float progress = (float)(total - remaining) / (float)total;
-                dl->AddRectFilled({bx, by},
-                                  {progress * W + bx, kBarH + by},
-                                  IM_COL32(220, 30, 30, 255));
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                ed.pendingReceives.clear();
+                ed.isReceiving.store(false);
+                ed.notifications.push("MIDI timeout: no response after 15 s",
+                                      ImVec4(1.f, 0.4f, 0.1f, 1.f), 5.f, 3.5f);
             }
             else
             {
-                // Indeterminate animation (count unknown)
-                const float elapsed = std::chrono::duration<float>(
-                    std::chrono::steady_clock::now() - ed.receiveStartTime).count();
-                constexpr float kSegLen = 0.25f;
-                constexpr float kPeriod = 1.5f;
-                const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
-                const float lFrac = std::clamp(pos,           0.0f, 1.0f);
-                const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
-                dl->AddRectFilled({lFrac * W + bx, by},
-                                  {rFrac * W + bx, kBarH + by},
-                                  IM_COL32(220, 30, 30, 255));
+                const int total     = ed.receiveTotalCount;
+                const int remaining = (int)ed.pendingReceives.size();
+                const bool useDeterminate = total > 0 && elapsed < kReceiveIndeterminateAfterSecs;
+
+                dl->AddRectFilled({bx, by}, {W + bx, kBarH + by},
+                                  IM_COL32(80, 10, 10, 200));
+
+                if (useDeterminate)
+                {
+                    const float progress = (float)(total - remaining) / (float)total;
+                    dl->AddRectFilled({bx, by},
+                                      {progress * W + bx, kBarH + by},
+                                      IM_COL32(220, 30, 30, 255));
+                }
+                else
+                {
+                    constexpr float kSegLen = 0.25f;
+                    constexpr float kPeriod = 1.5f;
+                    const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
+                    const float lFrac = std::clamp(pos,           0.0f, 1.0f);
+                    const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
+                    dl->AddRectFilled({lFrac * W + bx, by},
+                                      {rFrac * W + bx, kBarH + by},
+                                      IM_COL32(220, 30, 30, 255));
+                }
             }
         }
 
