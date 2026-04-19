@@ -59,6 +59,7 @@ MOD_TW = {
     { desc = 'Percussion Switch', id = 'MOD_TW_PERC_SW', init = 1, min = 0, max = 1 },
     { desc = 'Percussion Harmonic', id = 'MOD_TW_PERC_HARM', init = 1, min = 0, max = 1 },
     { desc = 'Percussion Slow', id = 'MOD_TW_PERC_SLOW', init = 0, min = 0, max = 1 },
+    { desc = 'Percussion Soft', id = 'MOD_TW_PERC_SOFT', init = 0, min = 0, max = 1 },
     { desc = 'Key On Click Level', id = 'MOD_TW_ON_CLICK', init = 5, min = 0, max = 31 },
     { desc = 'Key Off Click Level', id = 'MOD_TW_OFF_CLICK', init = 5, min = 0, max = 31 },
     { desc = 'Percussion Soft Level', id = 'MOD_TW_PERC_SOFT_LEVEL', init = 3, min = 0, max = 15 },
@@ -67,7 +68,6 @@ MOD_TW = {
     { desc = 'Percussion Fast Time', id = 'MOD_TW_PERC_FAST_TIME', init = 43, min = 0, max = 127 },
     { desc = 'Percussion Recharge Time', id = 'MOD_TW_PERC_RECHARGE', init = 5, min = 0, max = 10 },
     { desc = 'Percussion Harmonic Bar Level', id = 'MOD_TW_PERC_HBAR_LEVEL', init = 64, min = 0, max = 127 },
-    { desc = 'Percussion Soft', id = 'MOD_TW_PERC_SOFT', init = 0, min = 0, max = 1 },
     { desc = 'Leakage Level', id = 'MOD_TW_LEAKAGE', init = 20, min = 0, max = 127 }
 }
 

@@ -26,6 +26,96 @@ constexpr float kVSliderTrackH     = 80.0f;
 constexpr float kVSliderHandleFactor = 0.25f;  // handle height as fraction of track height
 constexpr float kVSliderHandleAspect = 1.0f;  // handle width = height * aspect
 
+// Abbreviate a knob label word-by-word using common synth terminology.
+// Short words are kept as-is; only words >= 5 chars with known abbreviations are shortened.
+// The full name is still shown as a tooltip when the label differs from the original.
+static std::string abbrevLabel(const std::string& name)
+{
+    static const std::pair<const char*, const char*> kAbbrev[] = {
+        { "Portamento",  "Port"  },
+        { "Sensitivity", "Sens"  },
+        { "Modulation",  "Mod"   },
+        { "Percussion",  "Perc"  },
+        { "Variation",   "Var"   },
+        { "Resonance",   "Res"   },
+        { "Frequency",   "Frq"   },
+        { "Recharge",    "Rchg"  },
+        { "Velocity",    "Vel"   },
+        { "Envelope",    "Env"   },
+        { "Harmonic",    "Hrm"   },
+        { "Keyboard",    "Key"   },
+        { "Interval",    "Intv"  },
+        { "Pressure",    "Prs"   },
+        { "Leakage",     "Lkg"   },
+        { "Vibrato",     "Vib"   },
+        { "Control",     "Ctrl"  },
+        { "Release",     "Rel"   },
+        { "Sustain",     "Sus"   },
+        { "Reverb",      "Rev"   },
+        { "Filter",      "Flt"   },
+        { "Chorus",      "Cho"   },
+        { "Volume",      "Vol"   },
+        { "Offset",      "Ofs"   },
+        { "Cutoff",      "Cut"   },
+        { "Detune",      "Det"   },
+        { "Attack",      "Atk"   },
+        { "Normal",      "Nrm"   },
+        { "Assign",      "Asgn"  },
+        { "Output",      "Out"   },
+        { "Source",      "Src"   },
+        { "Number",      "Nr"    },
+        { "Switch",      "Sw"    },
+        { "Follow",      "Flw"   },
+        { "Random",      "Rnd"   },
+        { "Legato",      "Leg"   },
+        { "Coarse",      "Crs"   },
+        { "Boost",       "Bst"   },
+        { "Width",       "Wdth"  },
+        { "Shift",       "Shft"  },
+        { "Shape",       "Shp"   },
+        { "Scale",       "Scl"   },
+        { "Range",       "Rng"   },
+        { "Noise",       "Nse"   },
+        { "Click",       "Clk"   },
+        { "Pitch",       "Pit"   },
+        { "Decay",       "Dcy"   },
+        { "Depth",       "Dpt"   },
+        { "Delay",       "Dly"   },
+        { "Level",       "Lvl"   },
+        { "Phase",       "Ph"    },
+        { "Input",       "In"    },
+    };
+
+    std::string result;
+    std::string word;
+
+    auto flushWord = [&]()
+    {
+        if (word.empty()) { return; }
+        for (auto& [from, to] : kAbbrev)
+        {
+            if (word == from)
+            {
+                if (!result.empty()) { result += ' '; }
+                result += to;
+                word.clear();
+                return;
+            }
+        }
+        if (!result.empty()) { result += ' '; }
+        result += word;
+        word.clear();
+    };
+
+    for (char c : name)
+    {
+        if (c == ' ') { flushWord(); }
+        else          { word += c;   }
+    }
+    flushWord();
+    return result;
+}
+
 // Persistent search text per param ID – survives across combo open/close cycles.
 static std::unordered_map<std::string, std::string> gComboSearchText;
 
@@ -186,7 +276,8 @@ void renderSection(SectionDef& section, I7Ed& ed)
 {
     constexpr float kRowSpacing = 15.0f;
     float lastKnobWidth = 0.0f;
-    bool prevWasInline = false;
+    bool prevWasInline  = false;  // last item was a knob / inline widget
+    bool prevWasToggle  = false;  // last item was a toggle
     bool isFirst = true;
 
     for (auto param : section.params)
@@ -195,6 +286,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         {
             if (prevWasInline) { ImGui::NewLine(); }
             prevWasInline = false;
+            prevWasToggle = false;
             isFirst = true;
             continue;
         }
@@ -203,6 +295,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             if (prevWasInline) { ImGui::NewLine(); }
             ImGui::SeparatorText(param->name().c_str());
             prevWasInline = false;
+            prevWasToggle = false;
             isFirst = true;
             continue;
         }
@@ -212,18 +305,31 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         bool inlineToggles = (section.layout == "inline_toggles");
         bool isInlineSelect = param->type == PARAM_TYPE_SELECTION && param->size > 0.0f;
+        bool isBinaryRange  = (param->type == PARAM_TYPE_RANGE
+                               && param->min() == 0.0f && param->max() == 1.0f);
+        bool isToggleType   = (param->type == PARAM_TYPE_TOGGLE) || isBinaryRange;
         bool isBlock = (param->type == PARAM_TYPE_SELECTION && !isInlineSelect)
-                    || (!inlineToggles && param->type == PARAM_TYPE_TOGGLE)
+                    || (!inlineToggles && isToggleType)
                     || param->type == PARAM_TYPE_SOLO_TOGGLE
                     || param->type == PARAM_TYPE_ENVELOPE
                     || param->type == PARAM_TYPE_STEP_LFO;
+
         bool doSameLine = false;
         if (prevWasInline && !isBlock)
         {
-            float nextX = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x;
+            // knob → knob: inline if there is room
+            float nextX    = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x;
             float rightEdge = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
             doSameLine = (nextX + lastKnobWidth) <= rightEdge;
         }
+        else if (prevWasToggle && isToggleType && !inlineToggles)
+        {
+            // toggle → toggle: inline if there is room
+            float nextX    = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x;
+            float rightEdge = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
+            doSameLine = (nextX + lastKnobWidth) <= rightEdge;
+        }
+
         if (doSameLine)
         {
             ImGui::SameLine();
@@ -240,21 +346,43 @@ void renderSection(SectionDef& section, I7Ed& ed)
             {
                 param->value = param->valueOverride();
             }
-            ImGuiKnobFlags knobFlags = ImGuiKnobFlags_AlwaysClamp;
-            if (param->noTitle) { knobFlags |= ImGuiKnobFlags_NoTitle; }
-            if (param->noInput) { knobFlags |= ImGuiKnobFlags_NoInput; }
-            if (ImKnobImage::Knob(param->name().c_str(), &param->value,
-                    param->min(), param->max(), 0.0f, param->format.c_str(),
-                    ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, param->size, knobFlags))
+            if (isBinaryRange)
             {
-                valueChanged(ed, *param);
+                // Binary [0,1] range: render as toggle, grouped with other toggles
+                bool on = (param->value != 0.0f);
+                if (ImGui::Toggle(param->name().c_str(), &on))
+                {
+                    param->value = on ? 1.0f : 0.0f;
+                    valueChanged(ed, *param);
+                }
+                lastKnobWidth = ImGui::GetItemRectSize().x;
+                prevWasInline = false;
+                prevWasToggle = true;
             }
-            if (param->noTitle && ImGui::IsItemHovered())
+            else
             {
-                ImGui::SetTooltip("%s: %.0f", param->name().c_str(), param->value);
+                ImGuiKnobFlags knobFlags = ImGuiKnobFlags_AlwaysClamp;
+                if (param->noTitle) { knobFlags |= ImGuiKnobFlags_NoTitle; }
+                if (param->noInput) { knobFlags |= ImGuiKnobFlags_NoInput; }
+                std::string fullName   = param->name();
+                std::string dispName   = abbrevLabel(fullName);
+                bool        abbreviated = (dispName != fullName);
+                ImGui::PushID(param->id.c_str());
+                if (ImKnobImage::Knob(dispName.c_str(), &param->value,
+                        param->min(), param->max(), 0.0f, param->format.c_str(),
+                        ed.knobTexture, ed.knobAtlasFrames, ed.knobAtlasCols, param->size, knobFlags))
+                {
+                    valueChanged(ed, *param);
+                }
+                ImGui::PopID();
+                if (ImGui::IsItemHovered() && (param->noTitle || abbreviated))
+                {
+                    ImGui::SetTooltip("%s: %.0f", fullName.c_str(), param->value);
+                }
+                lastKnobWidth = ImGui::GetItemRectSize().x;
+                prevWasInline = true;
+                prevWasToggle = false;
             }
-            lastKnobWidth = ImGui::GetItemRectSize().x;
-            prevWasInline = true;
         }
         else if (param->type == PARAM_TYPE_VSLIDER)
         {
@@ -272,6 +400,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             lastKnobWidth = 20.0f;
             prevWasInline = true;
+            prevWasToggle = false;
         }
         else if (param->type == PARAM_TYPE_SELECTION)
         {
@@ -284,10 +413,12 @@ void renderSection(SectionDef& section, I7Ed& ed)
             {
                 lastKnobWidth = param->size;
                 prevWasInline = true;
+                prevWasToggle = false;
             }
             else
             {
                 prevWasInline = false;
+                prevWasToggle = false;
             }
         }
         else if (param->type == PARAM_TYPE_TOGGLE)
@@ -298,14 +429,16 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 param->value = toggleVal ? 1.0f : 0.0f;
                 valueChanged(ed, *param);
             }
-            if (section.layout == "inline_toggles")
+            lastKnobWidth = ImGui::GetItemRectSize().x;
+            if (inlineToggles)
             {
-                lastKnobWidth = ImGui::GetItemRectSize().x;
                 prevWasInline = true;
+                prevWasToggle = false;
             }
             else
             {
                 prevWasInline = false;
+                prevWasToggle = true;
             }
         }
         else if (param->type == PARAM_TYPE_ENVELOPE)
