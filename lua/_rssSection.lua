@@ -47,8 +47,8 @@ local function makePositionSection()
         local fp = "PRM-_PRF-_FP"..i.."-"
         table.insert(s.params, p({type="range", id=fp.."NEFP_RSS_X1POS", name=get("Part "..i.." X"),       min=get(0), max=get(127), default=64}))
         table.insert(s.params, p({type="range", id=fp.."NEFP_RSS_Y1POS", name=get("Part "..i.." Y"),       min=get(0), max=get(127), default=74}))
-        table.insert(s.params, p({type="range", id=fp.."NEFP_RSS_WIDTH",  name=get("Part "..i.." Width"),   min=get(0), max=get(32),  default=10}))
-        table.insert(s.params, p({type="range", id=fp.."NEFP_RSS_RVSEND", name=get("Part "..i.." RevSend"), min=get(0), max=get(127), default=40}))
+        table.insert(s.params, p({type="range", id=fp.."NEFP_RSS_WIDTH",  name=get("Part "..i),             min=get(0), max=get(32),  default=10}))
+        table.insert(s.params, p({type="range", id=fp.."NEFP_RSS_RVSEND", name=get("Part "..i),             min=get(0), max=get(127), default=40}))
     end
     return s
 end
