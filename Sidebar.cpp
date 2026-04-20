@@ -143,6 +143,43 @@ static void renderMidiPortCombo(
 
 void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
 {
+    // ── Global section buttons ────────────────────────────────────────────────
+    {
+        auto sectionButton = [&](const char* label, const char* key)
+        {
+            auto it = sections.find(key);
+            if (it == sections.end()) { return; }
+            SectionDef& sec = it->second;
+            float btnWidth = ImGui::CalcTextSize(label).x
+                + ImGui::GetStyle().FramePadding.x * 2.0f;
+            if (ImGui::GetContentRegionAvail().x < btnWidth + 4.0f)
+            {
+                ImGui::NewLine();
+            }
+            bool wasOpen = sec.isOpen;
+            if (wasOpen)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button,
+                    ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            }
+            if (ImGui::SmallButton(label)) { sec.isOpen = !sec.isOpen; }
+            if (wasOpen) { ImGui::PopStyleColor(); }
+            ImGui::SameLine();
+        };
+
+        sectionButton("Mixer",        "Mixer");
+        sectionButton("Presets",      "presets");
+        sectionButton("Tone Mgmt",    "Tone Management");
+        sectionButton("Studio Mgmt",  "Studio Management");
+        sectionButton("Effects",      "Studio Set Effects");
+        sectionButton("RSS",          "rss");
+        sectionButton("Expansions",   "Expansion Slots");
+        sectionButton("System",       "System");
+        ImGui::NewLine();
+    }
+    ImGui::Separator();
+
+    // ── MIDI settings ─────────────────────────────────────────────────────────
     if (ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::TextUnformatted("Device ID");
@@ -173,26 +210,6 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
         renderMidiPortCombo("##MidiOut", ed.sidebar.outPortNames,
             ed.sidebar.selectedOutPort,
             [&](int i) { ed.midi.reopenOutput(i); });
-    }
-    ImGui::Separator();
-
-    {
-        auto it = sections.find("Mixer");
-        if (it != sections.end())
-        {
-            SectionDef& mixSec = it->second;
-            bool wasOpen = mixSec.isOpen;
-            if (wasOpen)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Button,
-                    ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            }
-            if (ImGui::SmallButton("Mixer"))
-            {
-                mixSec.isOpen = !mixSec.isOpen;
-            }
-            if (wasOpen) { ImGui::PopStyleColor(); }
-        }
     }
     ImGui::Separator();
 
