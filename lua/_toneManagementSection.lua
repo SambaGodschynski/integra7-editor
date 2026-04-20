@@ -59,6 +59,7 @@ local function parseAddr(bytes)
     return (bytes[8] << 24) | (bytes[9] << 16) | (bytes[10] << 8) | bytes[11]
 end
 
+
 -- Build all batch RequestMessages for reading tone names of all types.
 -- Source: js-origin readUserToneName() size encoding:
 --   d = bankMsb<<24 | floor(index/2)<<16 | (index%2)*BATCH<<8 | tx_size

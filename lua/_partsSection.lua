@@ -12,6 +12,35 @@ local toneTypeValues = {
     { msb=87, lsb=64 },
     { msb=86, lsb=64 },
 }
+local msbToTypeIdx = {[89]=1, [95]=2, [88]=3, [87]=4, [86]=5}
+
+-- Update the NEFP_TYPE_DUMMY display param for a part based on a known MSB value.
+-- Called from preset browser (immediate) and from BuildSyncToneTypeRequest (after device read).
+function SyncToneTypeFromMsb(partNr, msb)
+    local typeIdx = msbToTypeIdx[msb]
+    if typeIdx then
+        UpdateParamDisplay("PRM-_PRF-_FP"..partNr.."-NEFP_TYPE_DUMMY", typeIdx)
+    end
+end
+
+-- Returns a RequestMessage that reads NEFP_PAT_BS_MSB from the device and syncs NEFP_TYPE_DUMMY.
+-- Used by Sidebar when a Part accordion is opened.
+function BuildSyncToneTypeRequest(partNr)
+    local msbId = "PRM-_PRF-_FP"..partNr.."-NEFP_PAT_BS_MSB"
+    local msg = CreateReceiveMessageForLeafId(msbId)
+    if msg == nil then return nil end
+    local origHandler = msg.onMessageReceived
+    msg.onMessageReceived = function(bytes)
+        local result = origHandler(bytes)
+        for _, vcm in ipairs(result) do
+            if vcm.id == msbId then
+                SyncToneTypeFromMsb(partNr, vcm.i7Value)
+            end
+        end
+        return result
+    end
+    return msg
+end
 
 local function partTypeChange(part)
     return function (value)

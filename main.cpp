@@ -1,6 +1,3 @@
-/*
-    TODO: Man in the middle mode,  midi through, handles i7 sysex
-*/
 #include "AppTypes.h"
 #include "LuaBridge.h"
 #include "SysexIO.h"
@@ -100,6 +97,15 @@ int main(int argc, const char** args)
     ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
         "id",      &ValueChangedMessage::id,
         "i7Value", &ValueChangedMessage::i7Value);
+    ed.lua["UpdateParamDisplay"] = [&ed](const std::string& id, int value)
+    {
+        auto* p = getParameterDef(ed, id);
+        if (!p) { return; }
+        p->value = (float)value;
+        const auto& opts = p->optionsFn ? p->optionsFn() : p->options;
+        auto it = opts.find(value);
+        if (it != opts.end()) { p->stringValue = it->second; }
+    };
     {
         std::string scriptDir(luaFile);
         auto slash = scriptDir.find_last_of("/\\");
@@ -808,6 +814,18 @@ int main(int argc, const char** args)
                 {
                     if (ImGui::CollapsingHeader(sub.name.c_str()))
                     {
+                        if (ImGui::IsItemActivated() && sub.onOpen)
+                        {
+                            if (!ed.isReceiving.exchange(true))
+                            {
+                                ed.receiveStartTime = std::chrono::steady_clock::now();
+                                for (const auto& req : sub.onOpen())
+                                {
+                                    enqueueRequest(ed, req);
+                                    ++ed.receiveTotalCount;
+                                }
+                            }
+                        }
                         renderSectionTree(sub, e);
                     }
                 }

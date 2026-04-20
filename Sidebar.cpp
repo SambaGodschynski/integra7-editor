@@ -2,6 +2,7 @@
 #include "Rendering.h"
 #include "SysexIO.h"
 #include "imgui.h"
+#include <sol/sol.hpp>
 #include <cstdio>
 #include <functional>
 
@@ -73,7 +74,7 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::SNS:
         {
             std::string pfx = base + "SN-S ";
-            viewButton("Common", pfx + "Common");
+            viewButton("SN-S",   pfx + "Common");
             viewButton("Tone",   pfx + "Tone");
             viewButton("MFX",    pfx + "MFX");
             break;
@@ -89,7 +90,7 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::PCMS:
         {
             std::string pfx = base + "PCM-S ";
-            viewButton("Common", pfx + "Common");
+            viewButton("PCM-S",  pfx + "Common");
             viewButton("Tone",   pfx + "Tone");
             viewButton("MFX",    pfx + "MFX");
             break;
@@ -97,8 +98,8 @@ static void renderPartButtons(SectionDef::NamedSections& sections, int partNr, T
         case ToneType::PCMD:
         {
             std::string pfx = base + "PCM-D ";
-            viewButton("Common", pfx + "Common");
-            viewButton("Pitch",  pfx + "Pitch");
+            viewButton("PCM-D",  pfx + "Common");
+            viewButton("PCM Pitch", pfx + "Pitch");
             viewButton("WMT",    pfx + "WMT");
             viewButton("CompEq", pfx + "CompEq");
             viewButton("MFX",    pfx + "MFX");
@@ -203,7 +204,26 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
         std::string headerLabel = std::string("Part ") + pn;
 
         ImGui::PushID(partIdx);
-        if (ImGui::CollapsingHeader(headerLabel.c_str()))
+        bool partOpen = ImGui::CollapsingHeader(headerLabel.c_str());
+        if (ImGui::IsItemToggledOpen())
+        {
+            sol::optional<sol::function> buildFn = ed.lua["BuildSyncToneTypeRequest"];
+            if (buildFn)
+            {
+                sol::object obj = (*buildFn)(partNr);
+                if (obj.valid() && obj.get_type() != sol::type::nil)
+                {
+                    RequestMessage req = obj.as<RequestMessage>();
+                    if (!ed.isReceiving.exchange(true))
+                    {
+                        ed.receiveStartTime = std::chrono::steady_clock::now();
+                        enqueueRequest(ed, req);
+                        ++ed.receiveTotalCount;
+                    }
+                }
+            }
+        }
+        if (partOpen)
         {
             std::string typeParamId = "PRM-_PRF-_FP"
                 + std::to_string(partNr)

@@ -58,6 +58,9 @@ local setValue = function (newKey, partNr)
     local msg = Concat(msbMessage, lsbMessage)
     msg = Concat(msg, pcMessage)
 
+    if SyncToneTypeFromMsb then
+        SyncToneTypeFromMsb(partNr, msb)
+    end
     return msg
 end
 

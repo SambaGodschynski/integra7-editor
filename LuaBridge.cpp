@@ -15,6 +15,8 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
     outSectionDef.name = require_key<std::string>(lua_table, "name");
     outSectionDef.getReceiveSysex = optional_key<SectionDef::FGetReceiveSysex>(
         lua_table, "getReceiveValueSysex", nullptr);
+    outSectionDef.onOpen = optional_key<SectionDef::FGetReceiveSysex>(
+        lua_table, "onOpen", nullptr);
 
     if (lua_table["params"] != sol::nil)
     {

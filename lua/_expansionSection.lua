@@ -127,7 +127,26 @@ function CreateExpansionSection(main)
             id      = SlotParamIds[i],
             name    = get(SlotNames[i]),
             default = 0,
-            options = ExpansionOptions,
+            options = function()
+                local result = {}
+                for id, name in pairs(ExpansionOptions) do
+                    if id == 0 or id == currentSlots[slotIndex] then
+                        result[id] = name  -- always show OFF and own current value
+                    else
+                        local usedByOther = false
+                        for j = 1, 4 do
+                            if j ~= slotIndex and currentSlots[j] == id then
+                                usedByOther = true
+                                break
+                            end
+                        end
+                        if not usedByOther then
+                            result[id] = name
+                        end
+                    end
+                end
+                return result
+            end,
             -- Only update local state; Load button triggers the actual device command.
             setValue = function(value)
                 currentSlots[slotIndex] = math.tointeger(value)

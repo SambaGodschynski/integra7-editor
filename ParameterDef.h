@@ -109,6 +109,7 @@ struct SectionDef
     std::string name;
     ParameterDef::Params params;
     FGetReceiveSysex getReceiveSysex;
+    FGetReceiveSysex onOpen;  // called once when accordion header is clicked open
     bool isOpen = false;
     // Tab-group section (tabs over per-partial sections)
     struct SectionRef
