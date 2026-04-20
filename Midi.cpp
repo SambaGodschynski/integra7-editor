@@ -92,14 +92,16 @@ void Midi::sendMessage(const Bytes& message)
     enqueue(std::move(item));
 }
 
-void Midi::sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse)
+void Midi::sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse, int gapTimeoutMs, uint32_t stopOnAddr)
 {
     QueueItem item
     {
         .rq = std::move(rq),
         .callback = std::move(callback),
         .userData = usrData,
-        .multiResponse = multiResponse
+        .multiResponse = multiResponse,
+        .gapTimeoutMs = gapTimeoutMs,
+        .stopOnAddr   = stopOnAddr
     };
     enqueue(std::move(item));
 }
@@ -255,11 +257,12 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
 
     if (item.multiResponse)
     {
-        // Collect multiple responses until a 300 ms gap (no new message).
-        const int gapTimeoutMs  = 300;
+        // Collect multiple responses until a gap (no new message) or total timeout.
+        const int gapTimeoutMs  = item.gapTimeoutMs;
         const int totalTimeoutMs = 15000;
         int gapMs   = 0;
         int totalMs = 0;
+        bool stoppedOnAddr = false;
         while (totalMs < totalTimeoutMs && gapMs < gapTimeoutMs)
         {
             midiIn.getMessage(&answer);
@@ -271,6 +274,12 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
                 }
                 onReceive();
                 item.callback(answer, item.userData);
+                if (item.stopOnAddr != 0 && answer.size() >= 11)
+                {
+                    uint32_t addr = ((uint32_t)answer[7] << 24) | ((uint32_t)answer[8] << 16)
+                                  | ((uint32_t)answer[9]  <<  8) |  (uint32_t)answer[10];
+                    if (addr == item.stopOnAddr) { stoppedOnAddr = true; break; }
+                }
                 answer.clear();
                 gapMs = 0;
             }
@@ -281,7 +290,10 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
                 std::this_thread::sleep_for(std::chrono::milliseconds(idleMillis));
             }
         }
-        item.callback(Bytes(), item.userData);
+        if (!stoppedOnAddr)
+        {
+            item.callback(Bytes(), item.userData);  // gap/total timeout: push done sentinel
+        }
         return;
     }
 

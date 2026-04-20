@@ -154,11 +154,15 @@ function CreateExpansionSection(main)
                 -- lastReadSlots == nil means read gave no usable response; fall through to load
                 local loadMsg = RequestMessage.new()
                 loadMsg.sysex = buildLoadSysex()
-                loadMsg.onMessageReceived = function(_bytes)
-                    return {EmptyValueChangedMessage}
+                loadMsg.multiResponse = true
+                loadMsg.receiveGapMs = 30000  -- fallback gap if stopOnAddr never arrives
+                loadMsg.stopOnAddr   = LOAD_EXP_DONE  -- MIDI thread exits immediately on 0x0F003002
+                loadMsg.onMessageReceived = function(bytes)
+                    if parseAddr(bytes) == LOAD_EXP_DONE then
+                        return {}  -- signals done to C++ main loop
+                    end
+                    return {EmptyValueChangedMessage}  -- 0x0F003001 in-progress ack
                 end
-                -- After load command is acknowledged, read back to confirm device is ready
-                -- and update the UI (device may still be loading; this acts as a sync point)
                 loadMsg.onDone = function()
                     return {buildReadMessage()}
                 end

@@ -148,7 +148,7 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
                 if (userData == nullptr) return;
                 PendingReceive* pData = (PendingReceive*)userData;
                 pData->dataQueue.push_back(std::move(received));
-            }, true);
+            }, true, req.receiveGapMs > 0 ? req.receiveGapMs : 300, req.stopOnAddr);
     }
     else
     {

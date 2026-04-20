@@ -95,7 +95,9 @@ struct RequestMessage
     Bytes sysex;
     FOnMessageReceived onMessageReceived;
     FOnDone onDone;  // called after response is processed; returned requests are queued next
-    bool multiResponse = false;
+    bool     multiResponse = false;
+    int      receiveGapMs = 0;      // 0 = use default (300 ms)
+    uint32_t stopOnAddr   = 0;      // exit multiResponse loop immediately when this SysEx addr arrives
 };
 
 struct SectionDef

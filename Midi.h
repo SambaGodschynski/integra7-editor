@@ -17,7 +17,9 @@ public:
         Bytes rq;
         OnReceivedCallback callback;
         void *userData = nullptr;
-        bool multiResponse = false;
+        bool     multiResponse = false;
+        int      gapTimeoutMs = 300;
+        uint32_t stopOnAddr   = 0;  // if non-zero, exit multiResponse loop when this SysEx addr is received
     };
 private:
     int inport = -1, outport = -1;
@@ -43,7 +45,7 @@ public:
     void openInput(int index);
     void openOutput(int index);
     void sendMessage(const Bytes& message);
-    void sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse = false);
+    void sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse = false, int gapTimeoutMs = 300, uint32_t stopOnAddr = 0);
     int  getInputPortCount();
     std::string getInputPortName(int index);
     int  getOutputPortCount();

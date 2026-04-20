@@ -94,7 +94,9 @@ int main(int argc, const char** args)
         "sysex", &RequestMessage::sysex,
         "onMessageReceived", &RequestMessage::onMessageReceived,
         "onDone", &RequestMessage::onDone,
-        "multiResponse", &RequestMessage::multiResponse);
+        "multiResponse", &RequestMessage::multiResponse,
+        "receiveGapMs", &RequestMessage::receiveGapMs,
+        "stopOnAddr", &RequestMessage::stopOnAddr);
     ed.lua.new_usertype<ValueChangedMessage>("ValueChangedMessage",
         "id",      &ValueChangedMessage::id,
         "i7Value", &ValueChangedMessage::i7Value);
@@ -587,6 +589,7 @@ int main(int argc, const char** args)
                     {
                         if (bytes.empty()) { done = true; break; }
                         auto msgs = it->handler(bytes);
+                        if (msgs.empty()) { done = true; break; }
                         for (const auto& msg : msgs)
                         {
                             if (!msg.id.empty()) { valueChanged(ed, msg); }
