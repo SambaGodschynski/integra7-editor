@@ -466,17 +466,19 @@ void renderSection(SectionDef& section, I7Ed& ed)
         {
             const int nLevels = (int)param->levelIds.size();
             const int nTimes  = (int)param->timeIds.size();
+            std::vector<ParameterDef*> lvlDefs(nLevels, nullptr);
+            std::vector<ParameterDef*> timDefs(nTimes,  nullptr);
             std::vector<float*> lvlPtrs(nLevels, nullptr);
             std::vector<float*> timPtrs(nTimes,  nullptr);
             for (int i = 0; i < nLevels; ++i)
             {
                 auto* p = getParameterDef(ed, param->levelIds[i]);
-                if (p) { lvlPtrs[i] = &p->value; }
+                if (p) { lvlDefs[i] = p; lvlPtrs[i] = &p->value; }
             }
             for (int i = 0; i < nTimes; ++i)
             {
                 auto* p = getParameterDef(ed, param->timeIds[i]);
-                if (p) { timPtrs[i] = &p->value; }
+                if (p) { timDefs[i] = p; timPtrs[i] = &p->value; }
             }
             bool allValid = true;
             for (auto* lp : lvlPtrs) { if (!lp) { allValid = false; break; } }
@@ -484,11 +486,9 @@ void renderSection(SectionDef& section, I7Ed& ed)
 
             if (allValid)
             {
-                auto* firstLevel = getParameterDef(ed, param->levelIds[0]);
-                auto* firstTime  = getParameterDef(ed, param->timeIds[0]);
-                const float levelMin = firstLevel->min();
-                const float levelMax = firstLevel->max();
-                const float timeMax  = firstTime->max();
+                const float levelMin = lvlDefs[0]->min();
+                const float levelMax = lvlDefs[0]->max();
+                const float timeMax  = timDefs[0]->max();
 
                 std::vector<float> oldLvl(nLevels), oldTim(nTimes);
                 for (int i = 0; i < nLevels; ++i) { oldLvl[i] = *lvlPtrs[i]; }
@@ -502,19 +502,11 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 {
                     for (int i = 0; i < nLevels; ++i)
                     {
-                        if (*lvlPtrs[i] != oldLvl[i])
-                        {
-                            auto* p = getParameterDef(ed, param->levelIds[i]);
-                            if (p) { valueChanged(ed, *p); }
-                        }
+                        if (*lvlPtrs[i] != oldLvl[i]) { valueChanged(ed, *lvlDefs[i]); }
                     }
                     for (int i = 0; i < nTimes; ++i)
                     {
-                        if (*timPtrs[i] != oldTim[i])
-                        {
-                            auto* p = getParameterDef(ed, param->timeIds[i]);
-                            if (p) { valueChanged(ed, *p); }
-                        }
+                        if (*timPtrs[i] != oldTim[i]) { valueChanged(ed, *timDefs[i]); }
                     }
                 }
             }
