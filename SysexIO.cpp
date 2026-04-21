@@ -40,9 +40,12 @@ void valueChanged(I7Ed& ed, const ParameterDef& paramDef)
 void valueChanged(I7Ed& ed, const ValueChangedMessage& vcMessage)
 {
     auto paramDef = getParameterDef(ed, vcMessage.id);
-    if (paramDef == nullptr && ed.args.verbose)
+    if (paramDef == nullptr)
     {
-        std::cout << "unknown parameter change received: " << vcMessage.id << std::endl;
+        if (ed.args.verbose)
+        {
+            std::cout << "unknown parameter change received: " << vcMessage.id << std::endl;
+        }
         return;
     }
     float guiValue = vcMessage.i7Value;

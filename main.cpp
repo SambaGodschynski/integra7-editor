@@ -139,7 +139,6 @@ int main(int argc, const char** args)
         for (int i = 0; i < nOut; ++i) { ed.sidebar.outPortNames.push_back(ed.midi.getOutputPortName(i)); }
     }
 
-    ed.midi.start();
     ed.midi.onReceive = [&ed]()
     {
         ed.midiRecvTimeNs.store(
@@ -152,6 +151,7 @@ int main(int argc, const char** args)
             std::chrono::steady_clock::now().time_since_epoch().count(),
             std::memory_order_relaxed);
     };
+    ed.midi.start();
 
     if (!glfwInit())
     {
