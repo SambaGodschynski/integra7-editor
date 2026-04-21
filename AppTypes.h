@@ -92,6 +92,7 @@ struct I7Ed
         std::string partPrefix;
         std::vector<std::string> tonePrefixes;
     } saveSysex;
+    std::unordered_map<std::string, std::string> comboSearchText;
     SidebarState sidebar;
     ImTextureID knobTexture       = 0;
     int         knobAtlasFrames  = 128;

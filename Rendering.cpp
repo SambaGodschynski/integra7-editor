@@ -118,13 +118,10 @@ static std::string abbrevLabel(const std::string& name)
     return result;
 }
 
-// Persistent search text per param ID – survives across combo open/close cycles.
-static std::unordered_map<std::string, std::string> gComboSearchText;
-
 // Replacement for ImSearch::SearchBar() that restores the last query on open.
-static void comboSearchBar(const std::string& paramId)
+static void comboSearchBar(const std::string& paramId, I7Ed& ed)
 {
-    auto& saved = gComboSearchText[paramId];
+    auto& saved = ed.comboSearchText[paramId];
 
     if (ImGui::IsWindowAppearing())
     {
@@ -153,7 +150,7 @@ void renderCombo(ParameterDef& param, I7Ed& ed)
     {
         if (ImSearch::BeginSearch())
         {
-            comboSearchBar(param.id);
+            comboSearchBar(param.id, ed);
 
             const ParameterDef::SelectionOptions resolvedOpts =
                 param.optionsFn ? param.optionsFn() : param.options;
