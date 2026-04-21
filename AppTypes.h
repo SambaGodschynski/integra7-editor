@@ -62,22 +62,28 @@ struct I7Ed
     Midi midi;
     sol::state lua;
     std::unordered_map<std::string, std::shared_ptr<ParameterDef>> parameterDefs;
-    // async receive
-    std::atomic<bool> isReceiving{false};
-    std::chrono::steady_clock::time_point receiveStartTime;
-    int receiveTotalCount = 0;
-    std::list<std::shared_ptr<PendingReceive>> pendingReceives;
-    std::mutex pendingMutex;
+
+    struct ReceiveState
+    {
+        std::atomic<bool> active{false};
+        std::chrono::steady_clock::time_point startTime;
+        int totalCount = 0;
+        std::list<std::shared_ptr<PendingReceive>> pending;
+        std::mutex mutex;
+    } receive;
+
+    struct SearchState
+    {
+        std::string highlightParamId;
+        float       highlightTimer = 0.f;
+        std::string navigateOpenerName;
+        std::string navigateTabLabel;
+        std::string navigateAccordionLabel;
+    } search;
+
     NotificationQueue notifications;
     std::atomic<int64_t> midiSendTimeNs{0};
     std::atomic<int64_t> midiRecvTimeNs{0};
-    // param search highlight
-    std::string highlightParamId;
-    float       highlightTimer = 0.f;
-    // navigate to tab/accordion on param search
-    std::string navigateOpenerName;
-    std::string navigateTabLabel;
-    std::string navigateAccordionLabel;
     // Save SysEx
     SectionDef::NamedSections* pSections = nullptr;
     struct LoadSysexState

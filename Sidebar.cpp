@@ -231,11 +231,11 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
                 if (obj.valid() && obj.get_type() != sol::type::nil)
                 {
                     RequestMessage req = obj.as<RequestMessage>();
-                    if (!ed.isReceiving.exchange(true))
+                    if (!ed.receive.active.exchange(true))
                     {
-                        ed.receiveStartTime = std::chrono::steady_clock::now();
+                        ed.receive.startTime = std::chrono::steady_clock::now();
                         enqueueRequest(ed, req);
-                        ++ed.receiveTotalCount;
+                        ++ed.receive.totalCount;
                     }
                 }
             }

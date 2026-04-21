@@ -143,11 +143,11 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
         pending->handler       = req.onMessageReceived;
         pending->onDone        = req.onDone;
         pending->multiResponse = true;
-        ed.pendingReceives.push_back(pending);
+        ed.receive.pending.push_back(pending);
         ed.midi.sendAndReceive(req.sysex, nullptr,
             [&ed, pending](Bytes received, void*)
             {
-                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                std::lock_guard<std::mutex> lock(ed.receive.mutex);
                 pending->dataQueue.push_back(std::move(received));
             }, true, req.receiveGapMs > 0 ? req.receiveGapMs : 300, req.stopOnAddr);
     }
@@ -156,12 +156,12 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
         auto pending = std::make_shared<PendingReceive>();
         pending->handler = req.onMessageReceived;
         pending->onDone  = req.onDone;
-        ed.pendingReceives.push_back(pending);
+        ed.receive.pending.push_back(pending);
         ed.midi.sendAndReceive(req.sysex, nullptr,
             [&ed, pending](Bytes received, void*)
             {
                 if (received.empty()) return;
-                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                std::lock_guard<std::mutex> lock(ed.receive.mutex);
                 pending->data.swap(received);
             });
     }
@@ -169,11 +169,11 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
 
 void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& getters)
 {
-    if (ed.isReceiving.exchange(true))
+    if (ed.receive.active.exchange(true))
     {
         return;
     }
-    ed.receiveStartTime = std::chrono::steady_clock::now();
+    ed.receive.startTime = std::chrono::steady_clock::now();
 
     for (const auto& getter : getters)
     {
@@ -183,7 +183,7 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
             enqueueRequest(ed, req);
         }
     }
-    ed.receiveTotalCount = (int)ed.pendingReceives.size();
+    ed.receive.totalCount = (int)ed.receive.pending.size();
 }
 
 int partPrefixToNumber(const std::string& partPrefix)
@@ -375,14 +375,14 @@ void loadSysexFromFile(I7Ed& ed)
 
 void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
 {
-    for (auto it = ed.pendingReceives.begin(); it != ed.pendingReceives.end();)
+    for (auto it = ed.receive.pending.begin(); it != ed.receive.pending.end();)
     {
         PendingReceive& pr = **it;
         if (pr.multiResponse)
         {
             std::deque<Bytes> toProcess;
             {
-                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                std::lock_guard<std::mutex> lock(ed.receive.mutex);
                 pr.dataQueue.swap(toProcess);
             }
             if (toProcess.empty()) { ++it; continue; }
@@ -400,13 +400,13 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
             if (done)
             {
                 auto onDone = pr.onDone;
-                it = ed.pendingReceives.erase(it);
+                it = ed.receive.pending.erase(it);
                 if (onDone)
                 {
                     for (const auto& req : onDone())
                     {
                         enqueueRequest(ed, req);
-                        ++ed.receiveTotalCount;
+                        ++ed.receive.totalCount;
                     }
                 }
             }
@@ -418,7 +418,7 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
         else
         {
             {
-                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                std::lock_guard<std::mutex> lock(ed.receive.mutex);
                 if (pr.data.empty()) { ++it; continue; }
             }
             auto msgs = pr.handler(pr.data);
@@ -427,20 +427,20 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
                 if (!msg.id.empty()) { valueChanged(ed, msg); }
             }
             auto onDone = pr.onDone;
-            it = ed.pendingReceives.erase(it);
+            it = ed.receive.pending.erase(it);
             if (onDone)
             {
                 for (const auto& req : onDone())
                 {
                     enqueueRequest(ed, req);
-                    ++ed.receiveTotalCount;
+                    ++ed.receive.totalCount;
                 }
             }
         }
     }
-    if (ed.pendingReceives.empty())
+    if (ed.receive.pending.empty())
     {
-        ed.isReceiving.store(false);
+        ed.receive.active.store(false);
         if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadMsb)
         {
             const std::string msbId = ed.saveSysex.partPrefix.empty()

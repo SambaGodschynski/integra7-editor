@@ -303,7 +303,7 @@ int main(int argc, const char** args)
     });
     ed.lua.set_function("IsReceiving", [&ed]() -> bool
     {
-        return ed.isReceiving.load();
+        return ed.receive.active.load();
     });
     ed.lua.set_function("SendDirectMessage", [&ed](sol::table bytes)
     {
@@ -401,9 +401,9 @@ int main(int argc, const char** args)
         }
 
         ImGui::NewFrame();
-        if (ed.highlightTimer > 0.f)
+        if (ed.search.highlightTimer > 0.f)
         {
-            ed.highlightTimer -= ImGui::GetIO().DeltaTime;
+            ed.search.highlightTimer -= ImGui::GetIO().DeltaTime;
         }
 
         // ── Sidebar resize logic (no draws here) ─────────────────────────────
@@ -646,7 +646,7 @@ int main(int argc, const char** args)
             constexpr int64_t kLedFadeNs = 200'000'000LL;
             const bool ledsActive = (nowNs - ed.midiSendTimeNs.load(std::memory_order_relaxed)) < kLedFadeNs
                                  || (nowNs - ed.midiRecvTimeNs.load(std::memory_order_relaxed)) < kLedFadeNs;
-            if (!imguiActive && !ledsActive && !ed.isReceiving.load())
+            if (!imguiActive && !ledsActive && !ed.receive.active.load())
             {
                 glfwWaitEventsTimeout(1.0 / 30.0);
             }

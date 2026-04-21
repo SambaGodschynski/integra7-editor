@@ -234,8 +234,8 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
         }
     }
 
-    const bool isNavigateTarget = (section.name == ed.navigateOpenerName
-                                   && !ed.navigateTabLabel.empty());
+    const bool isNavigateTarget = (section.name == ed.search.navigateOpenerName
+                                   && !ed.search.navigateTabLabel.empty());
 
     if (ImGui::BeginTabBar("##tabs"))
     {
@@ -243,7 +243,7 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
         {
             const auto& tab = section.tabs[ti];
             ImGuiTabItemFlags tabFlags = 0;
-            if (isNavigateTarget && tab.label == ed.navigateTabLabel)
+            if (isNavigateTarget && tab.label == ed.search.navigateTabLabel)
             {
                 tabFlags = ImGuiTabItemFlags_SetSelected;
             }
@@ -259,7 +259,7 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
                         if (!ref.accordionLabel.empty())
                         {
                             if (isNavigateTarget
-                                && ref.accordionLabel == ed.navigateAccordionLabel)
+                                && ref.accordionLabel == ed.search.navigateAccordionLabel)
                             {
                                 ImGui::SetNextItemOpen(true, ImGuiCond_Always);
                             }
@@ -283,9 +283,9 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
     }
     if (isNavigateTarget)
     {
-        ed.navigateOpenerName.clear();
-        ed.navigateTabLabel.clear();
-        ed.navigateAccordionLabel.clear();
+        ed.search.navigateOpenerName.clear();
+        ed.search.navigateTabLabel.clear();
+        ed.search.navigateAccordionLabel.clear();
     }
     ImGui::End();
 }
@@ -637,11 +637,11 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
 
         // Yellow highlight for the parameter found via "?" search
-        if (!ed.highlightParamId.empty()
-            && param->id == ed.highlightParamId
-            && ed.highlightTimer > 0.f)
+        if (!ed.search.highlightParamId.empty()
+            && param->id == ed.search.highlightParamId
+            && ed.search.highlightTimer > 0.f)
         {
-            const float alpha = std::min(1.f, ed.highlightTimer);
+            const float alpha = std::min(1.f, ed.search.highlightTimer);
             constexpr float pad = 4.f;
             const ImVec2 r0 = ImGui::GetItemRectMin();
             const ImVec2 r1 = ImGui::GetItemRectMax();
@@ -1281,25 +1281,25 @@ static void renderSectionTree(SectionDef& sec, I7Ed& ed)
     {
         if (sec.accordion)
         {
-            if (!ed.navigateAccordionLabel.empty()
-                && sub.name == ed.navigateAccordionLabel
-                && sec.name == ed.navigateOpenerName)
+            if (!ed.search.navigateAccordionLabel.empty()
+                && sub.name == ed.search.navigateAccordionLabel
+                && sec.name == ed.search.navigateOpenerName)
             {
                 ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-                ed.navigateOpenerName.clear();
-                ed.navigateAccordionLabel.clear();
+                ed.search.navigateOpenerName.clear();
+                ed.search.navigateAccordionLabel.clear();
             }
             if (ImGui::CollapsingHeader(sub.name.c_str()))
             {
                 if (ImGui::IsItemActivated() && sub.onOpen)
                 {
-                    if (!ed.isReceiving.exchange(true))
+                    if (!ed.receive.active.exchange(true))
                     {
-                        ed.receiveStartTime = std::chrono::steady_clock::now();
+                        ed.receive.startTime = std::chrono::steady_clock::now();
                         for (const auto& req : sub.onOpen())
                         {
                             enqueueRequest(ed, req);
-                            ++ed.receiveTotalCount;
+                            ++ed.receive.totalCount;
                         }
                     }
                 }
@@ -1321,30 +1321,30 @@ namespace
 
 void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs)
 {
-    if (!ed.isReceiving.load()) { return; }
+    if (!ed.receive.active.load()) { return; }
 
     constexpr float kBarH = 3.f;
     const float bx = scrollOfs.x, by = scrollOfs.y;
     auto* dl = ImGui::GetBackgroundDrawList();
 
     const float elapsed = std::chrono::duration<float>(
-        std::chrono::steady_clock::now() - ed.receiveStartTime).count();
+        std::chrono::steady_clock::now() - ed.receive.startTime).count();
 
     if (elapsed >= kReceiveTimeoutSecs)
     {
         ed.midi.cancelPending();
         {
-            std::lock_guard<std::mutex> lock(ed.pendingMutex);
-            ed.pendingReceives.clear();
+            std::lock_guard<std::mutex> lock(ed.receive.mutex);
+            ed.receive.pending.clear();
         }
-        ed.isReceiving.store(false);
+        ed.receive.active.store(false);
         ed.notifications.push("MIDI timeout: no response after 15 s",
                               ImVec4(1.f, 0.4f, 0.1f, 1.f), 5.f, 3.5f);
         return;
     }
 
-    const int total     = ed.receiveTotalCount;
-    const int remaining = (int)ed.pendingReceives.size();
+    const int total     = ed.receive.totalCount;
+    const int remaining = (int)ed.receive.pending.size();
     const bool useDeterminate = total > 0 && elapsed < kReceiveIndeterminateAfterSecs;
 
     dl->AddRectFilled({bx, by}, {canvasW + bx, kBarH + by},

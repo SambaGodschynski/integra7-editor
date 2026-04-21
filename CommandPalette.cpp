@@ -63,11 +63,11 @@ void setupCommandPalette(SectionDef::NamedSections& sections, I7Ed& ed)
             cmd.InitialCallback = [opener, paramId, tabLabel, accordionLabel, &ed]()
             {
                 opener->isOpen = true;
-                ed.highlightParamId       = paramId;
-                ed.highlightTimer         = HighlightSeconds;
-                ed.navigateOpenerName     = opener->name;
-                ed.navigateTabLabel       = tabLabel;
-                ed.navigateAccordionLabel = accordionLabel;
+                ed.search.highlightParamId       = paramId;
+                ed.search.highlightTimer         = HighlightSeconds;
+                ed.search.navigateOpenerName     = opener->name;
+                ed.search.navigateTabLabel       = tabLabel;
+                ed.search.navigateAccordionLabel = accordionLabel;
             };
             ImCmd::AddCommand(std::move(cmd));
         }
