@@ -332,25 +332,32 @@ int main(int argc, const char** args)
 
     // Parameter search: "? ParamName (Section)" commands
     {
-        std::unordered_map<std::string, SectionDef*> hiddenToParent;
+        struct NavInfo
+        {
+            SectionDef* opener;
+            std::string tabLabel;
+            std::string accordionLabel;
+        };
+        std::unordered_map<std::string, NavInfo> sectionNavInfo;
         for (auto& [tKey, tSec] : sections)
         {
             if (tSec.tabs.empty()) { continue; }
             if (!tSec.tabCommonKey.empty())
             {
-                hiddenToParent[tSec.tabCommonKey] = &sections.at(tKey);
+                sectionNavInfo[tSec.tabCommonKey] = { &sections.at(tKey), "", "" };
             }
             for (const auto& tab : tSec.tabs)
             {
                 for (const auto& ref : tab.sectionKeys)
                 {
-                    hiddenToParent[ref.key] = &sections.at(tKey);
+                    sectionNavInfo[ref.key] = { &sections.at(tKey), tab.label, ref.accordionLabel };
                 }
             }
         }
 
         std::set<std::string> seen;
-        auto addParamCmds = [&](const SectionDef& sec, SectionDef* opener)
+        auto addParamCmds = [&](const SectionDef& sec, SectionDef* opener,
+                                const std::string& tabLabel, const std::string& accordionLabel)
         {
             for (auto* param : sec.params)
             {
@@ -362,11 +369,14 @@ int main(int argc, const char** args)
                 ImCmd::Command cmd;
                 cmd.Name = std::move(cmdName);
                 const std::string paramId = param->id;
-                cmd.InitialCallback = [opener, paramId, &ed]()
+                cmd.InitialCallback = [opener, paramId, tabLabel, accordionLabel, &ed]()
                 {
                     opener->isOpen = true;
-                    ed.highlightParamId = paramId;
-                    ed.highlightTimer   = HighlightSeconds;
+                    ed.highlightParamId       = paramId;
+                    ed.highlightTimer         = HighlightSeconds;
+                    ed.navigateOpenerName     = opener->name;
+                    ed.navigateTabLabel       = tabLabel;
+                    ed.navigateAccordionLabel = accordionLabel;
                 };
                 ImCmd::AddCommand(std::move(cmd));
             }
@@ -374,16 +384,23 @@ int main(int argc, const char** args)
 
         for (auto& [key, section] : sections)
         {
+            std::string tabLabel, accordionLabel;
             SectionDef* opener = &section;
             if (section.hideFromPalette)
             {
-                auto it = hiddenToParent.find(key);
-                if (it != hiddenToParent.end()) { opener = it->second; }
+                auto it = sectionNavInfo.find(key);
+                if (it != sectionNavInfo.end())
+                {
+                    opener         = it->second.opener;
+                    tabLabel       = it->second.tabLabel;
+                    accordionLabel = it->second.accordionLabel;
+                }
             }
-            addParamCmds(section, opener);
+            addParamCmds(section, opener, tabLabel, accordionLabel);
             for (auto& sub : section.subSections)
             {
-                addParamCmds(sub, opener);
+                const std::string subAccordion = section.accordion ? sub.name : accordionLabel;
+                addParamCmds(sub, opener, tabLabel, subAccordion);
             }
         }
     }
@@ -812,6 +829,14 @@ int main(int argc, const char** args)
             {
                 if (sec.accordion)
                 {
+                    if (!e.navigateAccordionLabel.empty()
+                        && sub.name == e.navigateAccordionLabel
+                        && sec.name == e.navigateOpenerName)
+                    {
+                        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                        e.navigateOpenerName.clear();
+                        e.navigateAccordionLabel.clear();
+                    }
                     if (ImGui::CollapsingHeader(sub.name.c_str()))
                     {
                         if (ImGui::IsItemActivated() && sub.onOpen)

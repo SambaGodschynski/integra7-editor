@@ -74,6 +74,10 @@ struct I7Ed
     // param search highlight
     std::string highlightParamId;
     float       highlightTimer = 0.f;
+    // navigate to tab/accordion on param search
+    std::string navigateOpenerName;
+    std::string navigateTabLabel;
+    std::string navigateAccordionLabel;
     // Save SysEx
     SectionDef::NamedSections* pSections = nullptr;
     struct LoadSysexState

@@ -235,12 +235,20 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
         }
     }
 
+    const bool isNavigateTarget = (section.name == ed.navigateOpenerName
+                                   && !ed.navigateTabLabel.empty());
+
     if (ImGui::BeginTabBar("##tabs"))
     {
         for (int ti = 0; ti < (int)section.tabs.size(); ++ti)
         {
             const auto& tab = section.tabs[ti];
-            if (ImGui::BeginTabItem(tab.label.c_str()))
+            ImGuiTabItemFlags tabFlags = 0;
+            if (isNavigateTarget && tab.label == ed.navigateTabLabel)
+            {
+                tabFlags = ImGuiTabItemFlags_SetSelected;
+            }
+            if (ImGui::BeginTabItem(tab.label.c_str(), nullptr, tabFlags))
             {
                 ImGui::PushID(ti);
                 for (const auto& ref : tab.sectionKeys)
@@ -251,6 +259,11 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
                         bool visible = true;
                         if (!ref.accordionLabel.empty())
                         {
+                            if (isNavigateTarget
+                                && ref.accordionLabel == ed.navigateAccordionLabel)
+                            {
+                                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                            }
                             visible = ImGui::CollapsingHeader(ref.accordionLabel.c_str());
                         }
                         if (visible)
@@ -268,6 +281,12 @@ void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& section
             }
         }
         ImGui::EndTabBar();
+    }
+    if (isNavigateTarget)
+    {
+        ed.navigateOpenerName.clear();
+        ed.navigateTabLabel.clear();
+        ed.navigateAccordionLabel.clear();
     }
     ImGui::End();
 }
