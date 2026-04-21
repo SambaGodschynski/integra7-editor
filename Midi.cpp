@@ -154,6 +154,11 @@ void Midi::reopenOutput(int index)
     pendingOutPort.store(index);
 }
 
+void Midi::cancelPending()
+{
+    cancelRequested.store(true);
+}
+
 void Midi::runThread()
 {
     RtMidiIn  midiIn;
@@ -218,6 +223,11 @@ void Midi::runThread()
                     std::lock_guard<Lock> _lock(lock);
                     queue.pop();
                 }
+                if (cancelRequested.exchange(false))
+                {
+                    std::lock_guard<Lock> _lock(lock);
+                    while (!queue.empty()) { queue.pop(); }
+                }
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(ThreadIdleMillis));
@@ -263,7 +273,7 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
         int gapMs   = 0;
         int totalMs = 0;
         bool stoppedOnAddr = false;
-        while (totalMs < totalTimeoutMs && gapMs < gapTimeoutMs)
+        while (totalMs < totalTimeoutMs && gapMs < gapTimeoutMs && !cancelRequested.load())
         {
             midiIn.getMessage(&answer);
             if (!answer.empty())
@@ -299,7 +309,7 @@ void Midi::handle(const Midi::QueueItem &item, RtMidiIn &midiIn, RtMidiOut &midi
 
     const int timeOutSeconds = 5;
     int maxTries = (int(1000 / (double)idleMillis) * timeOutSeconds);
-    while (maxTries-- > 0)
+    while (maxTries-- > 0 && !cancelRequested.load())
     {
         midiIn.getMessage(&answer);
         if (!answer.empty())

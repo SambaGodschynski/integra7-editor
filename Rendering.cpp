@@ -1335,8 +1335,11 @@ void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs)
 
     if (elapsed >= kReceiveTimeoutSecs)
     {
-        std::lock_guard<std::mutex> lock(ed.pendingMutex);
-        ed.pendingReceives.clear();
+        ed.midi.cancelPending();
+        {
+            std::lock_guard<std::mutex> lock(ed.pendingMutex);
+            ed.pendingReceives.clear();
+        }
         ed.isReceiving.store(false);
         ed.notifications.push("MIDI timeout: no response after 15 s",
                               ImVec4(1.f, 0.4f, 0.1f, 1.f), 5.f, 3.5f);

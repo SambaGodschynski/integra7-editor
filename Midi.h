@@ -26,6 +26,7 @@ private:
     bool running;
     std::atomic<int> pendingInPort{-2};   // -2 = no-op sentinel
     std::atomic<int> pendingOutPort{-2};
+    std::atomic<bool> cancelRequested{false};
     typedef std::mutex Lock;
     typedef std::queue<QueueItem> Queue;
     std::thread *thread = nullptr;
@@ -52,4 +53,5 @@ public:
     std::string getOutputPortName(int index);
     void reopenInput(int index);    // -1 = close
     void reopenOutput(int index);   // -1 = close
+    void cancelPending();
 };
