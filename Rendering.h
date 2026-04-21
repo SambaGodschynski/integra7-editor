@@ -13,4 +13,6 @@ void renderMixer(SectionDef& section, I7Ed& ed);
 void renderDrawbars(SectionDef& section, I7Ed& ed);
 void renderTabbedSection(SectionDef& section, SectionDef::NamedSections& sections,
                          I7Ed& ed, ImVec2& canvasMax);
+void renderAllSections(SectionDef::NamedSections& sections, I7Ed& ed, ImVec2& canvasMax);
 void drawReceiveButton(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& getters);
+void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs);

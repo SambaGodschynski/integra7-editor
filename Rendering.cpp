@@ -1,6 +1,8 @@
 #include "Rendering.h"
 #include "SysexIO.h"
 #include "imgui.h"
+#include <chrono>
+#include <mutex>
 #include "imgui-knobs.h"
 #include "imgui_knob_image.h"
 #include "imgui_vslider_image.h"
@@ -1255,5 +1257,154 @@ void renderDrawbars(SectionDef& section, I7Ed& ed)
     if (!remainder.params.empty())
     {
         renderSection(remainder, ed);
+    }
+}
+
+static void renderSectionTree(SectionDef& sec, I7Ed& ed);
+
+static void renderSectionTree(SectionDef& sec, I7Ed& ed)
+{
+    if (sec.layout == "eq3band")
+    {
+        renderEq3Band(sec, ed);
+    }
+    else if (sec.layout == "keyboard")
+    {
+        renderKeyboard(sec, ed);
+    }
+    else if (sec.layout == "rss_xy")
+    {
+        renderRssXY(sec, ed);
+    }
+    else if (sec.layout == "mixer")
+    {
+        renderMixer(sec, ed);
+    }
+    else if (sec.layout == "drawbars")
+    {
+        renderDrawbars(sec, ed);
+    }
+    else
+    {
+        renderSection(sec, ed);
+    }
+    for (auto& sub : sec.subSections)
+    {
+        if (sec.accordion)
+        {
+            if (!ed.navigateAccordionLabel.empty()
+                && sub.name == ed.navigateAccordionLabel
+                && sec.name == ed.navigateOpenerName)
+            {
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                ed.navigateOpenerName.clear();
+                ed.navigateAccordionLabel.clear();
+            }
+            if (ImGui::CollapsingHeader(sub.name.c_str()))
+            {
+                if (ImGui::IsItemActivated() && sub.onOpen)
+                {
+                    if (!ed.isReceiving.exchange(true))
+                    {
+                        ed.receiveStartTime = std::chrono::steady_clock::now();
+                        for (const auto& req : sub.onOpen())
+                        {
+                            enqueueRequest(ed, req);
+                            ++ed.receiveTotalCount;
+                        }
+                    }
+                }
+                renderSectionTree(sub, ed);
+            }
+        }
+        else
+        {
+            renderSectionTree(sub, ed);
+        }
+    }
+}
+
+namespace
+{
+    constexpr float kReceiveTimeoutSecs            = 25.0f;
+    constexpr float kReceiveIndeterminateAfterSecs = 5.0f;
+}
+
+void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs)
+{
+    if (!ed.isReceiving.load()) { return; }
+
+    constexpr float kBarH = 3.f;
+    const float bx = scrollOfs.x, by = scrollOfs.y;
+    auto* dl = ImGui::GetBackgroundDrawList();
+
+    const float elapsed = std::chrono::duration<float>(
+        std::chrono::steady_clock::now() - ed.receiveStartTime).count();
+
+    if (elapsed >= kReceiveTimeoutSecs)
+    {
+        std::lock_guard<std::mutex> lock(ed.pendingMutex);
+        ed.pendingReceives.clear();
+        ed.isReceiving.store(false);
+        ed.notifications.push("MIDI timeout: no response after 15 s",
+                              ImVec4(1.f, 0.4f, 0.1f, 1.f), 5.f, 3.5f);
+        return;
+    }
+
+    const int total     = ed.receiveTotalCount;
+    const int remaining = (int)ed.pendingReceives.size();
+    const bool useDeterminate = total > 0 && elapsed < kReceiveIndeterminateAfterSecs;
+
+    dl->AddRectFilled({bx, by}, {canvasW + bx, kBarH + by},
+                      IM_COL32(80, 10, 10, 200));
+
+    if (useDeterminate)
+    {
+        const float progress = (float)(total - remaining) / (float)total;
+        dl->AddRectFilled({bx, by},
+                          {progress * canvasW + bx, kBarH + by},
+                          IM_COL32(220, 30, 30, 255));
+    }
+    else
+    {
+        constexpr float kSegLen = 0.25f;
+        constexpr float kPeriod = 1.5f;
+        const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
+        const float lFrac = std::clamp(pos,           0.0f, 1.0f);
+        const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
+        dl->AddRectFilled({lFrac * canvasW + bx, by},
+                          {rFrac * canvasW + bx, kBarH + by},
+                          IM_COL32(220, 30, 30, 255));
+    }
+}
+
+void renderAllSections(SectionDef::NamedSections& sections, I7Ed& ed, ImVec2& canvasMax)
+{
+    for (auto& sectionPair : sections)
+    {
+        auto& section = sectionPair.second;
+        if (!section.isOpen) { continue; }
+        if (!section.tabs.empty())
+        {
+            renderTabbedSection(section, sections, ed, canvasMax);
+        }
+        else
+        {
+            ImGui::SetNextWindowSize(ImVec2(kDefaultWindowW, kDefaultWindowH), ImGuiCond_FirstUseEver);
+            if (ImGui::Begin(section.name.c_str(), &section.isOpen))
+            {
+                {
+                    ImVec2 wp = ImGui::GetWindowPos(), ws = ImGui::GetWindowSize();
+                    canvasMax.x = std::max(canvasMax.x, wp.x + ws.x);
+                    canvasMax.y = std::max(canvasMax.y, wp.y + ws.y);
+                }
+                if (section.getReceiveSysex)
+                {
+                    drawReceiveButton(ed, {section.getReceiveSysex});
+                }
+                renderSectionTree(section, ed);
+            }
+            ImGui::End();
+        }
     }
 }

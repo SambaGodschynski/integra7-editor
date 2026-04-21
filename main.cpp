@@ -4,6 +4,7 @@
 #include "Rendering.h"
 #include "Sidebar.h"
 #include "Settings.h"
+#include "CommandPalette.h"
 #include "imgui_knob_image.h"
 
 #include "imgui.h"
@@ -20,14 +21,6 @@
 #include <set>
 #include <algorithm>
 
-namespace
-{
-    constexpr float HighlightSeconds = 15.0f;
-    constexpr float kDefaultWindowW = 640.0f;
-    constexpr float kDefaultWindowH = 480.0f;
-    constexpr float kReceiveIndeterminateAfterSecs = 5.0f;
-    constexpr float kReceiveTimeoutSecs            = 25.0f;
-}
 
 // ── Argument parsing ─────────────────────────────────────────────────────────
 
@@ -317,93 +310,7 @@ int main(int argc, const char** args)
 
     // ── Command palette setup ─────────────────────────────────────────────────
     bool show_command_palette = false;
-
-    for (auto& section : sections)
-    {
-        if (section.second.hideFromPalette) { continue; }
-        ImCmd::Command cmd;
-        cmd.Name = std::string("open ") + section.second.name;
-        cmd.InitialCallback = [&section]()
-        {
-            section.second.isOpen = true;
-        };
-        ImCmd::AddCommand(std::move(cmd));
-    }
-
-    // Parameter search: "? ParamName (Section)" commands
-    {
-        struct NavInfo
-        {
-            SectionDef* opener;
-            std::string tabLabel;
-            std::string accordionLabel;
-        };
-        std::unordered_map<std::string, NavInfo> sectionNavInfo;
-        for (auto& [tKey, tSec] : sections)
-        {
-            if (tSec.tabs.empty()) { continue; }
-            if (!tSec.tabCommonKey.empty())
-            {
-                sectionNavInfo[tSec.tabCommonKey] = { &sections.at(tKey), "", "" };
-            }
-            for (const auto& tab : tSec.tabs)
-            {
-                for (const auto& ref : tab.sectionKeys)
-                {
-                    sectionNavInfo[ref.key] = { &sections.at(tKey), tab.label, ref.accordionLabel };
-                }
-            }
-        }
-
-        std::set<std::string> seen;
-        auto addParamCmds = [&](const SectionDef& sec, SectionDef* opener,
-                                const std::string& tabLabel, const std::string& accordionLabel)
-        {
-            for (auto* param : sec.params)
-            {
-                if (!param) { continue; }
-                const std::string pname = param->name();
-                if (pname == HIDDEN_PARAM_NAME) { continue; }
-                std::string cmdName = "? " + pname + " (" + opener->name + ")";
-                if (!seen.insert(cmdName).second) { continue; }
-                ImCmd::Command cmd;
-                cmd.Name = std::move(cmdName);
-                const std::string paramId = param->id;
-                cmd.InitialCallback = [opener, paramId, tabLabel, accordionLabel, &ed]()
-                {
-                    opener->isOpen = true;
-                    ed.highlightParamId       = paramId;
-                    ed.highlightTimer         = HighlightSeconds;
-                    ed.navigateOpenerName     = opener->name;
-                    ed.navigateTabLabel       = tabLabel;
-                    ed.navigateAccordionLabel = accordionLabel;
-                };
-                ImCmd::AddCommand(std::move(cmd));
-            }
-        };
-
-        for (auto& [key, section] : sections)
-        {
-            std::string tabLabel, accordionLabel;
-            SectionDef* opener = &section;
-            if (section.hideFromPalette)
-            {
-                auto it = sectionNavInfo.find(key);
-                if (it != sectionNavInfo.end())
-                {
-                    opener         = it->second.opener;
-                    tabLabel       = it->second.tabLabel;
-                    accordionLabel = it->second.accordionLabel;
-                }
-            }
-            addParamCmds(section, opener, tabLabel, accordionLabel);
-            for (auto& sub : section.subSections)
-            {
-                const std::string subAccordion = section.accordion ? sub.name : accordionLabel;
-                addParamCmds(sub, opener, tabLabel, subAccordion);
-            }
-        }
-    }
+    setupCommandPalette(sections, ed);
 
     // ── Scrollable canvas state ───────────────────────────────────────────────
     ImVec2 scrollOfs  = {0.0f, 0.0f};
@@ -596,106 +503,7 @@ int main(int argc, const char** args)
         }
 
         // ── Process pending MIDI receives ─────────────────────────────────────
-        {
-            for (auto it = ed.pendingReceives.begin(); it != ed.pendingReceives.end();)
-            {
-                if (it->multiResponse)
-                {
-                    std::deque<Bytes> toProcess;
-                    {
-                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                        it->dataQueue.swap(toProcess);
-                    }
-                    if (toProcess.empty()) { ++it; continue; }
-                    bool done = false;
-                    for (auto& bytes : toProcess)
-                    {
-                        if (bytes.empty()) { done = true; break; }
-                        auto msgs = it->handler(bytes);
-                        if (msgs.empty()) { done = true; break; }
-                        for (const auto& msg : msgs)
-                        {
-                            if (!msg.id.empty()) { valueChanged(ed, msg); }
-                        }
-                    }
-                    if (done)
-                    {
-                        auto onDone = it->onDone;
-                        it = ed.pendingReceives.erase(it);
-                        if (onDone)
-                        {
-                            for (const auto& req : onDone())
-                            {
-                                enqueueRequest(ed, req);
-                                ++ed.receiveTotalCount;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        ++it;
-                    }
-                }
-                else
-                {
-                    {
-                        std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                        if (it->data.empty()) { ++it; continue; }
-                    }
-                    auto msgs = it->handler(it->data);
-                    for (const auto& msg : msgs)
-                    {
-                        if (!msg.id.empty()) { valueChanged(ed, msg); }
-                    }
-                    auto onDone = it->onDone;
-                    it = ed.pendingReceives.erase(it);
-                    if (onDone)
-                    {
-                        for (const auto& req : onDone())
-                        {
-                            enqueueRequest(ed, req);
-                            ++ed.receiveTotalCount;
-                        }
-                    }
-                }
-            }
-            if (ed.pendingReceives.empty())
-            {
-                ed.isReceiving.store(false);
-                if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadMsb)
-                {
-                    const std::string msbId = ed.saveSysex.partPrefix.empty()
-                        ? ""
-                        : [&]() -> std::string
-                        {
-                            int n = std::stoi(ed.saveSysex.partPrefix.substr(5, 2));
-                            return "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
-                        }();
-                    auto* msbParam = getParameterDef(ed, msbId);
-                    int msb = msbParam ? (int)msbParam->value : -1;
-                    ed.saveSysex.tonePrefixes = getTonePrefixes(ed.saveSysex.partPrefix, msb);
-                    std::vector<SectionDef::FGetReceiveSysex> getters;
-                    for (auto& [key, sec] : sections)
-                    {
-                        for (const auto& pfx : ed.saveSysex.tonePrefixes)
-                        {
-                            if (key.size() >= pfx.size() && key.substr(0, pfx.size()) == pfx)
-                            {
-                                getters.push_back(makeParamOnlyGetter(ed, sec));
-                                break;
-                            }
-                        }
-                    }
-                    ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::ReadTone;
-                    triggerReceive(ed, getters);
-                }
-                else if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadTone)
-                {
-                    ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::Idle;
-                    saveSysexToFile(ed);
-                }
-            }
-        }
+        processPendingReceives(ed, sections);
 
         // ── Lua test frame step ───────────────────────────────────────────────
         {
@@ -704,53 +512,7 @@ int main(int argc, const char** args)
         }
 
         // ── Receive progress bar ──────────────────────────────────────────────
-        if (ed.isReceiving.load())
-        {
-            constexpr float kBarH = 3.f;
-            const float W  = fw;
-            const float bx = scrollOfs.x, by = scrollOfs.y;
-            auto* dl = ImGui::GetBackgroundDrawList();
-
-            const float elapsed = std::chrono::duration<float>(
-                std::chrono::steady_clock::now() - ed.receiveStartTime).count();
-
-            if (elapsed >= kReceiveTimeoutSecs)
-            {
-                std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                ed.pendingReceives.clear();
-                ed.isReceiving.store(false);
-                ed.notifications.push("MIDI timeout: no response after 15 s",
-                                      ImVec4(1.f, 0.4f, 0.1f, 1.f), 5.f, 3.5f);
-            }
-            else
-            {
-                const int total     = ed.receiveTotalCount;
-                const int remaining = (int)ed.pendingReceives.size();
-                const bool useDeterminate = total > 0 && elapsed < kReceiveIndeterminateAfterSecs;
-
-                dl->AddRectFilled({bx, by}, {W + bx, kBarH + by},
-                                  IM_COL32(80, 10, 10, 200));
-
-                if (useDeterminate)
-                {
-                    const float progress = (float)(total - remaining) / (float)total;
-                    dl->AddRectFilled({bx, by},
-                                      {progress * W + bx, kBarH + by},
-                                      IM_COL32(220, 30, 30, 255));
-                }
-                else
-                {
-                    constexpr float kSegLen = 0.25f;
-                    constexpr float kPeriod = 1.5f;
-                    const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
-                    const float lFrac = std::clamp(pos,           0.0f, 1.0f);
-                    const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
-                    dl->AddRectFilled({lFrac * W + bx, by},
-                                      {rFrac * W + bx, kBarH + by},
-                                      IM_COL32(220, 30, 30, 255));
-                }
-            }
-        }
+        drawReceiveProgressBar(ed, fw, scrollOfs);
 
         ed.notifications.render(display_w, display_h, {scrollOfs.x, scrollOfs.y});
 
@@ -798,96 +560,7 @@ int main(int argc, const char** args)
         }
 
         // ── Render open sections ──────────────────────────────────────────────
-        std::function<void(SectionDef&, I7Ed&)> renderSectionTree =
-            [&](SectionDef& sec, I7Ed& e)
-        {
-            if (sec.layout == "eq3band")
-            {
-                renderEq3Band(sec, e);
-            }
-            else if (sec.layout == "keyboard")
-            {
-                renderKeyboard(sec, e);
-            }
-            else if (sec.layout == "rss_xy")
-            {
-                renderRssXY(sec, e);
-            }
-            else if (sec.layout == "mixer")
-            {
-                renderMixer(sec, e);
-            }
-            else if (sec.layout == "drawbars")
-            {
-                renderDrawbars(sec, e);
-            }
-            else
-            {
-                renderSection(sec, e);
-            }
-            for (auto& sub : sec.subSections)
-            {
-                if (sec.accordion)
-                {
-                    if (!e.navigateAccordionLabel.empty()
-                        && sub.name == e.navigateAccordionLabel
-                        && sec.name == e.navigateOpenerName)
-                    {
-                        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-                        e.navigateOpenerName.clear();
-                        e.navigateAccordionLabel.clear();
-                    }
-                    if (ImGui::CollapsingHeader(sub.name.c_str()))
-                    {
-                        if (ImGui::IsItemActivated() && sub.onOpen)
-                        {
-                            if (!ed.isReceiving.exchange(true))
-                            {
-                                ed.receiveStartTime = std::chrono::steady_clock::now();
-                                for (const auto& req : sub.onOpen())
-                                {
-                                    enqueueRequest(ed, req);
-                                    ++ed.receiveTotalCount;
-                                }
-                            }
-                        }
-                        renderSectionTree(sub, e);
-                    }
-                }
-                else
-                {
-                    renderSectionTree(sub, e);
-                }
-            }
-        };
-
-        for (auto& sectionPair : sections)
-        {
-            auto& section = sectionPair.second;
-            if (!section.isOpen) { continue; }
-            if (!section.tabs.empty())
-            {
-                renderTabbedSection(section, sections, ed, canvasMax);
-            }
-            else
-            {
-                ImGui::SetNextWindowSize(ImVec2(kDefaultWindowW, kDefaultWindowH), ImGuiCond_FirstUseEver);
-                if (ImGui::Begin(section.name.c_str(), &section.isOpen))
-                {
-                    {
-                        ImVec2 wp = ImGui::GetWindowPos(), ws = ImGui::GetWindowSize();
-                        canvasMax.x = std::max(canvasMax.x, wp.x + ws.x);
-                        canvasMax.y = std::max(canvasMax.y, wp.y + ws.y);
-                    }
-                    if (section.getReceiveSysex)
-                    {
-                        drawReceiveButton(ed, {section.getReceiveSysex});
-                    }
-                    renderSectionTree(section, ed);
-                }
-                ImGui::End();
-            }
-        }
+        renderAllSections(sections, ed, canvasMax);
 
         // ── Mouse-wheel scroll ────────────────────────────────────────────────
         if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))

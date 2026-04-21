@@ -20,3 +20,5 @@ std::vector<std::string> getTonePrefixes(const std::string& partPrefix, int msb)
 
 void saveSysexToFile(I7Ed& ed);
 void loadSysexFromFile(I7Ed& ed);
+
+void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections);

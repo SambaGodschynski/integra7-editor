@@ -366,3 +366,105 @@ void loadSysexFromFile(I7Ed& ed)
     std::string msg = "Loaded " + std::to_string(count) + " params from " + ed.loadSysex.filepath;
     ed.notifications.push(msg, ImVec4(0.2f, 1.f, 0.4f, 1.f), 5.f, 3.5f);
 }
+
+void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
+{
+    for (auto it = ed.pendingReceives.begin(); it != ed.pendingReceives.end();)
+    {
+        if (it->multiResponse)
+        {
+            std::deque<Bytes> toProcess;
+            {
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                it->dataQueue.swap(toProcess);
+            }
+            if (toProcess.empty()) { ++it; continue; }
+            bool done = false;
+            for (auto& bytes : toProcess)
+            {
+                if (bytes.empty()) { done = true; break; }
+                auto msgs = it->handler(bytes);
+                if (msgs.empty()) { done = true; break; }
+                for (const auto& msg : msgs)
+                {
+                    if (!msg.id.empty()) { valueChanged(ed, msg); }
+                }
+            }
+            if (done)
+            {
+                auto onDone = it->onDone;
+                it = ed.pendingReceives.erase(it);
+                if (onDone)
+                {
+                    for (const auto& req : onDone())
+                    {
+                        enqueueRequest(ed, req);
+                        ++ed.receiveTotalCount;
+                    }
+                }
+            }
+            else
+            {
+                ++it;
+            }
+        }
+        else
+        {
+            {
+                std::lock_guard<std::mutex> lock(ed.pendingMutex);
+                if (it->data.empty()) { ++it; continue; }
+            }
+            auto msgs = it->handler(it->data);
+            for (const auto& msg : msgs)
+            {
+                if (!msg.id.empty()) { valueChanged(ed, msg); }
+            }
+            auto onDone = it->onDone;
+            it = ed.pendingReceives.erase(it);
+            if (onDone)
+            {
+                for (const auto& req : onDone())
+                {
+                    enqueueRequest(ed, req);
+                    ++ed.receiveTotalCount;
+                }
+            }
+        }
+    }
+    if (ed.pendingReceives.empty())
+    {
+        ed.isReceiving.store(false);
+        if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadMsb)
+        {
+            const std::string msbId = ed.saveSysex.partPrefix.empty()
+                ? ""
+                : [&]() -> std::string
+                {
+                    int n = std::stoi(ed.saveSysex.partPrefix.substr(5, 2));
+                    return "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
+                }();
+            auto* msbParam = getParameterDef(ed, msbId);
+            int msb = msbParam ? (int)msbParam->value : -1;
+            ed.saveSysex.tonePrefixes = getTonePrefixes(ed.saveSysex.partPrefix, msb);
+            std::vector<SectionDef::FGetReceiveSysex> getters;
+            for (auto& [key, sec] : sections)
+            {
+                for (const auto& pfx : ed.saveSysex.tonePrefixes)
+                {
+                    if (key.size() >= pfx.size() && key.substr(0, pfx.size()) == pfx)
+                    {
+                        getters.push_back(makeParamOnlyGetter(ed, sec));
+                        break;
+                    }
+                }
+            }
+            ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::ReadTone;
+            triggerReceive(ed, getters);
+        }
+        else if (ed.saveSysex.phase == I7Ed::SaveSysexState::Phase::ReadTone)
+        {
+            ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::Idle;
+            saveSysexToFile(ed);
+        }
+    }
+}
