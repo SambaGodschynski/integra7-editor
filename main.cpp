@@ -15,7 +15,7 @@
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui_midi_leds.h"
 #include "imgui_notifications.h"
-#include "ImGuiFileDialog.h"
+#include "SysexFileDialog.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <set>
@@ -546,38 +546,7 @@ int main(int argc, const char** args)
         }
 
         // ── File dialogs ──────────────────────────────────────────────────────
-        if (ImGuiFileDialog::Instance()->Display("LoadSysexDlg",
-                ImGuiWindowFlags_NoCollapse, ImVec2(600, 400)))
-        {
-            if (ImGuiFileDialog::Instance()->IsOk())
-            {
-                ed.loadSysex.filepath = ImGuiFileDialog::Instance()->GetFilePathName();
-                loadSysexFromFile(ed);
-            }
-            ImGuiFileDialog::Instance()->Close();
-        }
-
-        if (ImGuiFileDialog::Instance()->Display("SaveSysexDlg",
-                ImGuiWindowFlags_NoCollapse, ImVec2(600, 400)))
-        {
-            if (ImGuiFileDialog::Instance()->IsOk())
-            {
-                ed.saveSysex.filepath = ImGuiFileDialog::Instance()->GetFilePathName();
-                int n = partPrefixToNumber(ed.saveSysex.partPrefix);
-                std::string msbId = "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
-                SectionDef::FGetReceiveSysex msbGetter = [&ed, msbId]()
-                    -> std::vector<RequestMessage>
-                {
-                    sol::function fn = ed.lua["CreateReceiveMessageForLeafId"];
-                    sol::object obj = fn(msbId);
-                    if (!obj.valid() || obj.get_type() == sol::type::nil) { return {}; }
-                    return {obj.as<RequestMessage>()};
-                };
-                ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::ReadMsb;
-                triggerReceive(ed, {msbGetter});
-            }
-            ImGuiFileDialog::Instance()->Close();
-        }
+        renderSysexFileDialogs(ed, sections);
 
         // ── Render open sections ──────────────────────────────────────────────
         renderAllSections(sections, ed, canvasMax);

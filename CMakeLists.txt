@@ -101,6 +101,7 @@ add_executable(i7ed
     Sidebar.cpp
     Settings.cpp
     CommandPalette.cpp
+    SysexFileDialog.cpp
     imgui_knob_image.cpp
 )
 target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)

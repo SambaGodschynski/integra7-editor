@@ -12,7 +12,7 @@
 #include "imgui_step_lfo.h"
 #include "imgui_range_slider.h"
 #include "imsearch.h"
-#include "ImGuiFileDialog.h"
+#include "SysexFileDialog.h"
 #include <iostream>
 #include <algorithm>
 #include <unordered_map>
@@ -592,14 +592,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         {
             if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
-                ed.saveSysex.partPrefix = param->partPrefix;
-                IGFD::FileDialogConfig cfg;
-                cfg.path      = ".";
-                cfg.fileName  = "patch.syx";
-                cfg.countSelectionMax = 1;
-                cfg.flags     = ImGuiFileDialogFlags_ConfirmOverwrite;
-                ImGuiFileDialog::Instance()->OpenDialog(
-                    "SaveSysexDlg", "Save SysEx File", ".syx", cfg);
+                openSaveSysexDialog(param->partPrefix, ed);
             }
             prevWasInline = false;
         }
@@ -607,12 +600,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         {
             if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
-                IGFD::FileDialogConfig cfg;
-                cfg.path      = ".";
-                cfg.countSelectionMax = 1;
-                cfg.flags     = 0;
-                ImGuiFileDialog::Instance()->OpenDialog(
-                    "LoadSysexDlg", "Load SysEx File", ".syx", cfg);
+                openLoadSysexDialog();
             }
             prevWasInline = false;
         }
