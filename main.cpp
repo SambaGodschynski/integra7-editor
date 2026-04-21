@@ -103,12 +103,27 @@ int main(int argc, const char** args)
         std::string scriptDir(luaFile);
         auto slash = scriptDir.find_last_of("/\\");
         scriptDir = (slash != std::string::npos) ? scriptDir.substr(0, slash) : ".";
-        ed.lua.script("package.path = \"" + scriptDir + "/?.lua;\" .. package.path");
+        auto r = ed.lua.safe_script(
+            "package.path = \"" + scriptDir + "/?.lua;\" .. package.path",
+            sol::script_pass_on_error);
+        if (!r.valid())
+        {
+            std::cerr << "Lua error: " << sol::error(r).what() << std::endl;
+            return -1;
+        }
     }
-    ed.lua.script_file(luaFile);
+    {
+        auto r = ed.lua.safe_script_file(luaFile, sol::script_pass_on_error);
+        if (!r.valid())
+        {
+            std::cerr << "Lua error in " << luaFile << ": "
+                      << sol::error(r).what() << std::endl;
+            return -1;
+        }
+    }
 
     {
-        sol::optional<sol::function> initFn = ed.lua["Init"];
+        sol::protected_function initFn = ed.lua["Init"];
         if (initFn)
         {
             sol::table luaArgs = ed.lua.create_table();
@@ -116,7 +131,12 @@ int main(int argc, const char** args)
             {
                 luaArgs[i] = std::string(args[i]);
             }
-            (*initFn)(luaArgs);
+            auto r = initFn(luaArgs);
+            if (!r.valid())
+            {
+                std::cerr << "Lua Init() error: " << sol::error(r).what() << std::endl;
+                return -1;
+            }
         }
     }
 
