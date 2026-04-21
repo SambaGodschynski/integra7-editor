@@ -40,9 +40,9 @@ void valueChanged(I7Ed& ed, const ParameterDef& paramDef)
 void valueChanged(I7Ed& ed, const ValueChangedMessage& vcMessage)
 {
     auto paramDef = getParameterDef(ed, vcMessage.id);
-    if (paramDef == nullptr)
+    if (paramDef == nullptr && ed.args.verbose)
     {
-        std::cerr << "unknown parameter change received: " << vcMessage.id << std::endl;
+        std::cout << "unknown parameter change received: " << vcMessage.id << std::endl;
         return;
     }
     float guiValue = vcMessage.i7Value;
@@ -136,34 +136,30 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
 {
     if (req.multiResponse)
     {
-        ed.pendingReceives.push_back({
-            .handler       = req.onMessageReceived,
-            .onDone        = req.onDone,
-            .multiResponse = true
-        });
-        ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
-            [&ed](Bytes received, void* userData)
+        auto pending = std::make_shared<PendingReceive>();
+        pending->handler       = req.onMessageReceived;
+        pending->onDone        = req.onDone;
+        pending->multiResponse = true;
+        ed.pendingReceives.push_back(pending);
+        ed.midi.sendAndReceive(req.sysex, nullptr,
+            [&ed, pending](Bytes received, void*)
             {
                 std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                if (userData == nullptr) return;
-                PendingReceive* pData = (PendingReceive*)userData;
-                pData->dataQueue.push_back(std::move(received));
+                pending->dataQueue.push_back(std::move(received));
             }, true, req.receiveGapMs > 0 ? req.receiveGapMs : 300, req.stopOnAddr);
     }
     else
     {
-        ed.pendingReceives.push_back({
-            .handler = req.onMessageReceived,
-            .onDone  = req.onDone
-        });
-        ed.midi.sendAndReceive(req.sysex, &ed.pendingReceives.back(),
-            [&ed](Bytes received, void* userData)
+        auto pending = std::make_shared<PendingReceive>();
+        pending->handler = req.onMessageReceived;
+        pending->onDone  = req.onDone;
+        ed.pendingReceives.push_back(pending);
+        ed.midi.sendAndReceive(req.sysex, nullptr,
+            [&ed, pending](Bytes received, void*)
             {
                 if (received.empty()) return;
                 std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                if (userData == nullptr) return;
-                PendingReceive* pData = (PendingReceive*)userData;
-                pData->data.swap(received);
+                pending->data.swap(received);
             });
     }
 }
@@ -371,19 +367,20 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
 {
     for (auto it = ed.pendingReceives.begin(); it != ed.pendingReceives.end();)
     {
-        if (it->multiResponse)
+        PendingReceive& pr = **it;
+        if (pr.multiResponse)
         {
             std::deque<Bytes> toProcess;
             {
                 std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                it->dataQueue.swap(toProcess);
+                pr.dataQueue.swap(toProcess);
             }
             if (toProcess.empty()) { ++it; continue; }
             bool done = false;
             for (auto& bytes : toProcess)
             {
                 if (bytes.empty()) { done = true; break; }
-                auto msgs = it->handler(bytes);
+                auto msgs = pr.handler(bytes);
                 if (msgs.empty()) { done = true; break; }
                 for (const auto& msg : msgs)
                 {
@@ -392,7 +389,7 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
             }
             if (done)
             {
-                auto onDone = it->onDone;
+                auto onDone = pr.onDone;
                 it = ed.pendingReceives.erase(it);
                 if (onDone)
                 {
@@ -412,14 +409,14 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
         {
             {
                 std::lock_guard<std::mutex> lock(ed.pendingMutex);
-                if (it->data.empty()) { ++it; continue; }
+                if (pr.data.empty()) { ++it; continue; }
             }
-            auto msgs = it->handler(it->data);
+            auto msgs = pr.handler(pr.data);
             for (const auto& msg : msgs)
             {
                 if (!msg.id.empty()) { valueChanged(ed, msg); }
             }
-            auto onDone = it->onDone;
+            auto onDone = pr.onDone;
             it = ed.pendingReceives.erase(it);
             if (onDone)
             {
