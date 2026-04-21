@@ -543,7 +543,7 @@ int main(int argc, const char** args)
             if (ImGuiFileDialog::Instance()->IsOk())
             {
                 ed.saveSysex.filepath = ImGuiFileDialog::Instance()->GetFilePathName();
-                int n = std::stoi(ed.saveSysex.partPrefix.substr(5, 2));
+                int n = partPrefixToNumber(ed.saveSysex.partPrefix);
                 std::string msbId = "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
                 SectionDef::FGetReceiveSysex msbGetter = [&ed, msbId]()
                     -> std::vector<RequestMessage>

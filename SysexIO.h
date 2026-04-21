@@ -17,6 +17,7 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req);
 void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& getters);
 
 std::vector<std::string> getTonePrefixes(const std::string& partPrefix, int msb);
+int partPrefixToNumber(const std::string& partPrefix);
 
 void saveSysexToFile(I7Ed& ed);
 void loadSysexFromFile(I7Ed& ed);

@@ -186,6 +186,13 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
     ed.receiveTotalCount = (int)ed.pendingReceives.size();
 }
 
+int partPrefixToNumber(const std::string& partPrefix)
+{
+    if (partPrefix.size() < 7) { return -1; }
+    try { return std::stoi(partPrefix.substr(5, 2)); }
+    catch (...) { return -1; }
+}
+
 std::vector<std::string> getTonePrefixes(const std::string& partPrefix, int msb)
 {
     switch (msb)
@@ -440,7 +447,7 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
                 ? ""
                 : [&]() -> std::string
                 {
-                    int n = std::stoi(ed.saveSysex.partPrefix.substr(5, 2));
+                    int n = partPrefixToNumber(ed.saveSysex.partPrefix);
                     return "PRM-_PRF-_FP" + std::to_string(n) + "-NEFP_PAT_BS_MSB";
                 }();
             auto* msbParam = getParameterDef(ed, msbId);
