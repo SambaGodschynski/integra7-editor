@@ -36,7 +36,7 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                 if (paramName.get_type() == sol::type::function)
                 {
                     sol::function fn = paramName.as<sol::function>();
-                    param->name = [fn]() mutable { return fn.call<std::string>(); };
+                    param->name = [fn]() { return fn.call<std::string>(); };
                 }
                 else
                 {
