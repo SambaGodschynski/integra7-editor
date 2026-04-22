@@ -70,6 +70,7 @@ Args parseArguments(int argc, const char** argv)
 
 int main(int argc, const char** args)
 {
+    int returnCode = 0;
     I7Ed ed;
     ed.args = parseArguments(argc, args);
     ed.midi.verbose = ed.args.verbose;
@@ -251,7 +252,8 @@ int main(int argc, const char** args)
             if (idx < 0)
             {
                 std::cerr << "MIDI input port not found: " << ed.args.midiInName << std::endl;
-                exit(-1);
+                returnCode = -1;
+                goto cleanup;
             }
             ed.sidebar.selectedInPort = idx;
             ed.midi.reopenInput(idx);
@@ -262,13 +264,15 @@ int main(int argc, const char** args)
             if (idx < 0)
             {
                 std::cerr << "MIDI output port not found: " << ed.args.midiOutName << std::endl;
-                exit(-1);
+                returnCode = -1;
+                goto cleanup;
             }
             ed.sidebar.selectedOutPort = idx;
             ed.midi.reopenOutput(idx);
         }
     }
 
+    {
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
@@ -624,11 +628,14 @@ int main(int argc, const char** args)
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    } // end main session block
+
+cleanup:
     ImCmd::RemoveAllCaches();
     ImCmd::DestroyContext();
     ImSearch::DestroyContext();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
-    return 0;
+    return returnCode;
 }
