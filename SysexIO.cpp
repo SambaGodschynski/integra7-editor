@@ -417,11 +417,13 @@ void processPendingReceives(I7Ed& ed, SectionDef::NamedSections& sections)
         }
         else
         {
+            Bytes data;
             {
                 std::lock_guard<std::mutex> lock(ed.receive.mutex);
                 if (pr.data.empty()) { ++it; continue; }
+                data.swap(pr.data);
             }
-            auto msgs = pr.handler(pr.data);
+            auto msgs = pr.handler(data);
             for (const auto& msg : msgs)
             {
                 if (!msg.id.empty()) { valueChanged(ed, msg); }
