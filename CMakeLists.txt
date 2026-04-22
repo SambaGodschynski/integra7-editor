@@ -73,7 +73,6 @@ set(LUA_SOURCES
     ${LUA_DIR}/lgc.c
     ${LUA_DIR}/loadlib.c
     ${LUA_DIR}/lstring.c
-    ${LUA_DIR}/lua.c
 )
 add_library(lua STATIC ${LUA_SOURCES})
 
