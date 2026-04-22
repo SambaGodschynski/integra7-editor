@@ -101,7 +101,7 @@ function CreateReceiveMessageForBranch(branch_node_id)
         local changeMessage = ValueChangedMessage.new()
         local function onRec(received_msg)
             local response = getResponseData(received_msg)
-            if #response == nil or response.addr ~= leaf.addr then
+            if response == nil or response.addr ~= leaf.addr then
                 return {EmptyValueChangedMessage}
             end
             local handledMessages = notifyHandlers(leaf, response)
