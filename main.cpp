@@ -403,7 +403,7 @@ int main(int argc, const char** args)
         ImGui::NewFrame();
         if (ed.search.highlightTimer > 0.f)
         {
-            ed.search.highlightTimer -= ImGui::GetIO().DeltaTime;
+            ed.search.highlightTimer = std::max(0.f, ed.search.highlightTimer - ImGui::GetIO().DeltaTime);
         }
 
         // ── Sidebar resize logic (no draws here) ─────────────────────────────
