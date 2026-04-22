@@ -618,7 +618,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else if (param->type != PARAM_TYPE_NEWLINE)
+        else
         {
             std::cerr << "unknown param type: '" << param->type << "'" << std::endl;
             prevWasInline = false;
