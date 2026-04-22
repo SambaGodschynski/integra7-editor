@@ -642,22 +642,34 @@ void renderSection(SectionDef& section, I7Ed& ed)
 
 void renderEq3Band(SectionDef& section, I7Ed& ed)
 {
-    // Expected param order: SW, LowGain, MidGain, HighGain, LowFreq, MidFreq, MidQ, HighFreq
-    std::vector<ParameterDef*> ps(section.params.begin(), section.params.end());
-    if (ps.size() < 8)
+    // Collect params by type — order within each group must match the Lua definition:
+    //   toggle  (1): SW
+    //   vslider (3): LowGain, MidGain, HighGain
+    //   range   (4): LowFreq, MidFreq, MidQ, HighFreq
+    ParameterDef* swParam = nullptr;
+    std::vector<ParameterDef*> gains;
+    std::vector<ParameterDef*> knobs;
+
+    for (auto* p : section.params)
+    {
+        if      (p->type == PARAM_TYPE_TOGGLE  && !swParam)          { swParam = p; }
+        else if (p->type == PARAM_TYPE_VSLIDER && gains.size() < 3)  { gains.push_back(p); }
+        else if (p->type == PARAM_TYPE_RANGE   && knobs.size() < 4)  { knobs.push_back(p); }
+    }
+
+    if (!swParam || gains.size() < 3 || knobs.size() < 4)
     {
         renderSection(section, ed);
         return;
     }
 
-    auto* swParam  = ps[0];
-    auto* lowGain  = ps[1];
-    auto* midGain  = ps[2];
-    auto* highGain = ps[3];
-    auto* lowFreq  = ps[4];
-    auto* midFreq  = ps[5];
-    auto* midQ     = ps[6];
-    auto* highFreq = ps[7];
+    auto* lowGain  = gains[0];
+    auto* midGain  = gains[1];
+    auto* highGain = gains[2];
+    auto* lowFreq  = knobs[0];
+    auto* midFreq  = knobs[1];
+    auto* midQ     = knobs[2];
+    auto* highFreq = knobs[3];
 
     // EQ on/off toggle
     bool sw = swParam->value != 0;

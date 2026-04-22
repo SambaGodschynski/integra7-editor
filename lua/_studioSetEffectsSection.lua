@@ -59,7 +59,8 @@ function CreateStudioSetEffectsSections(main)
         p({type="select", name=get("Reverb Output Assign"), id=fv.."NEFV_REV_OUT_ASGN",     default=0, options=ReverbOutputAssign}),
     }
 
-    -- param order must match renderEq3Band: SW, LowGain, MidGain, HighGain, LowFreq, MidFreq, MidQ, HighFreq
+    -- renderEq3Band picks params by type (toggle=SW, vslider×3=gains, range×4=freqs+Q).
+    -- Order within each type group must be: LowGain, MidGain, HighGain / LowFreq, MidFreq, MidQ, HighFreq
     local masterEqParams = {
         p({type="toggle",  name=get("Master EQ Switch"), id=fc.."NEFC_MASTER_EQ_SW",     default=0}),
         p({type="vslider", name=get("Low Gain"),         id=fmeq.."NEFMEQ_EQ_LOWGAIN",  default=0, min=get(-15), max=get(15), toI7Value=i7eqgain, toGuiValue=guieqgain}),
