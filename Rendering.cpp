@@ -1138,6 +1138,9 @@ void renderDrawbars(SectionDef& section, I7Ed& ed)
     constexpr float kImgNativeH    = 256.0f;
     constexpr float kHandleNativeH = 45.0f;   // handle height at bottom of image (native px)
     constexpr float kGap           =  6.0f;
+    // Visual offset (display pixels) to fine-tune handle alignment on snapped steps.
+    // Positive = shift handle down, negative = shift up.
+    constexpr float kSnapOffset    =  7.0f;
 
     // Fallback to normal rendering when no drawbar params are active (non-TW-Organ instrument)
     bool hasDrawbars = false;
@@ -1203,7 +1206,7 @@ void renderDrawbars(SectionDef& section, I7Ed& ed)
         std::string lbl = "##db_" + param->id;
         if (ImDrawbar::Drawbar(lbl.c_str(), &param->value,
                 param->min(), param->max(),
-                tex, kImgW, kSlotH, kImgNativeH, kHandleNativeH))
+                tex, kImgW, kSlotH, kImgNativeH, kHandleNativeH, kSnapOffset))
         {
             valueChanged(ed, *param);
         }

@@ -21,6 +21,8 @@ namespace ImDrawbar
 // img_handle_h   : height of the handle element in native pixels (~45)
 //
 // Returns true if value changed.
+// snap_offset: visual pixel offset added to the handle position (display pixels).
+// Use to fine-tune alignment when the handle image does not land exactly on integer steps.
 inline bool Drawbar(
     const char* label,
     float*      p_value,
@@ -30,7 +32,8 @@ inline bool Drawbar(
     float       img_w,
     float       slot_h,
     float       img_native_h,
-    float       img_handle_native_h)
+    float       img_handle_native_h,
+    float       snap_offset = 0.0f)
 {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) { return false; }
@@ -60,20 +63,29 @@ inline bool Drawbar(
         const float dy = ImGui::GetIO().MouseDelta.y;
         if (dy != 0.0f)
         {
+            const float prev_step = roundf(*p_value);
             *p_value += dy * (v_max - v_min) / travel;
             *p_value  = ImClamp(*p_value, v_min, v_max);
-            value_changed = true;
+            const float new_step = roundf(*p_value);
+            if (new_step != prev_step)
+            {
+                // Snap the stored value so the next drag starts from a clean integer.
+                *p_value     = new_step;
+                value_changed = true;
+            }
         }
     }
 
+    // Snap to nearest integer for display so receive-induced float values don't drift visually.
+    const float snapped = ImClamp(roundf(*p_value), v_min, v_max);
     const float t = (v_max > v_min)
-        ? ImClamp((*p_value - v_min) / (v_max - v_min), 0.0f, 1.0f)
+        ? ImClamp((snapped - v_min) / (v_max - v_min), 0.0f, 1.0f)
         : 0.0f;
 
     // Image top position:
     //   t=0 → image is pulled UP so only handle (bottom of image) appears at slot top
     //   t=1 → image slides down so handle is near slot bottom, shaft visible
-    const float img_top = pos.y - (img_disp_h - hdl_disp_h) + t * travel;
+    const float img_top = pos.y - (img_disp_h - hdl_disp_h) + t * travel + snap_offset;
     const float img_bot = img_top + img_disp_h;
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
