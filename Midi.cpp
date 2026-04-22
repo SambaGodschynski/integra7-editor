@@ -215,14 +215,16 @@ void Midi::runThread()
             }
         }
         {
-            while(!queue.empty())
+            while (true)
             {
-                const QueueItem &item = queue.front();
-                handle(item, midiIn, midiOut);
+                QueueItem item;
                 {
                     std::lock_guard<Lock> _lock(lock);
+                    if (queue.empty()) { break; }
+                    item = std::move(queue.front());
                     queue.pop();
                 }
+                handle(item, midiIn, midiOut);
                 if (cancelRequested.exchange(false))
                 {
                     std::lock_guard<Lock> _lock(lock);
