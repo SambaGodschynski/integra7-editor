@@ -889,7 +889,7 @@ void renderRssXY(SectionDef& section, I7Ed& ed)
     dl->AddCircleFilled(ImVec2(cx, cy), 3.0f, IM_COL32(220, 220, 220, 220));
 
     // Drag state (one instance is fine – only one RSS view exists)
-    static int  sDragging = -1;
+    int& sDragging = ed.rss.dragging;
     ImVec2 mouse = ImGui::GetIO().MousePos;
     bool   lDown = ImGui::GetIO().MouseDown[0];
     bool   lClick= ImGui::GetIO().MouseClicked[0];

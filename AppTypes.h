@@ -99,6 +99,7 @@ struct I7Ed
         std::vector<std::string> tonePrefixes;
     } saveSysex;
     std::unordered_map<std::string, std::string> comboSearchText;
+    struct RssState { int dragging = -1; } rss;
     SidebarState sidebar;
     ImTextureID knobTexture       = 0;
     int         knobAtlasFrames  = 128;
