@@ -41,8 +41,8 @@ local function getResponseData(msg)
     response.requestType = msg[ipp()];
     response.addr = (msg[ipp()] << 24) + (msg[ipp()] << 16) + (msg[ipp()] << 8) + msg[ipp()];
     response.payload = {}
-    local playload_length = #msg - 1 - 1 -- -f7 -checksum
-    table.move(msg, ipp(), playload_length, 1, response.payload)
+    local payload_length = #msg - 1 - 1 -- -f7 -checksum
+    table.move(msg, ipp(), payload_length, 1, response.payload)
     return response
 end
 
