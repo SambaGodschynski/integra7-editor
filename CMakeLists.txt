@@ -76,6 +76,8 @@ set(LUA_SOURCES
 add_library(lua STATIC ${LUA_SOURCES})
 
 include_directories(
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/widgets
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${SOL_DIR}/include
@@ -91,16 +93,16 @@ include_directories(
 add_subdirectory(${RTMIDI_DIR})
 
 add_executable(i7ed
-    main.cpp
-    Midi.cpp
-    LuaBridge.cpp
-    SysexIO.cpp
-    Rendering.cpp
-    Sidebar.cpp
-    Settings.cpp
-    CommandPalette.cpp
-    SysexFileDialog.cpp
-    imgui_knob_image.cpp
+    src/main.cpp
+    src/Midi.cpp
+    src/LuaBridge.cpp
+    src/SysexIO.cpp
+    src/Rendering.cpp
+    src/Sidebar.cpp
+    src/Settings.cpp
+    src/CommandPalette.cpp
+    src/SysexFileDialog.cpp
+    src/widgets/imgui_knob_image.cpp
 )
 target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
 
