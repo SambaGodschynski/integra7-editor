@@ -23,7 +23,7 @@ public:
     };
 private:
     int inport = -1, outport = -1;
-    bool running;
+    std::atomic<bool> running{false};
     std::atomic<int> pendingInPort{-2};   // -2 = no-op sentinel
     std::atomic<int> pendingOutPort{-2};
     std::atomic<bool> cancelRequested{false};
