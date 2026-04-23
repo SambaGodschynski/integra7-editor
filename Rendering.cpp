@@ -512,20 +512,20 @@ void renderSection(SectionDef& section, I7Ed& ed)
         else if (param->type == PARAM_TYPE_STEP_LFO)
         {
             const int nSteps = (int)param->stepIds.size();
+            std::vector<ParameterDef*> stepDefs(nSteps, nullptr);
             std::vector<float*> stepPtrs(nSteps, nullptr);
             for (int i = 0; i < nSteps; ++i)
             {
                 auto* p = getParameterDef(ed, param->stepIds[i]);
-                if (p) { stepPtrs[i] = &p->value; }
+                if (p) { stepDefs[i] = p; stepPtrs[i] = &p->value; }
             }
             bool allValid = true;
             for (auto* sp : stepPtrs) { if (!sp) { allValid = false; break; } }
 
             if (allValid)
             {
-                auto* firstStep = getParameterDef(ed, param->stepIds[0]);
-                const float valMin = firstStep->min();
-                const float valMax = firstStep->max();
+                const float valMin = stepDefs[0]->min();
+                const float valMax = stepDefs[0]->max();
 
                 float stepType = 0.f;
                 auto* typeParam = getParameterDef(ed, param->stepTypeId);
@@ -540,11 +540,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 {
                     for (int i = 0; i < nSteps; ++i)
                     {
-                        if (*stepPtrs[i] != oldVals[i])
-                        {
-                            auto* p = getParameterDef(ed, param->stepIds[i]);
-                            if (p) { valueChanged(ed, *p); }
-                        }
+                        if (*stepPtrs[i] != oldVals[i]) { valueChanged(ed, *stepDefs[i]); }
                     }
                 }
             }
