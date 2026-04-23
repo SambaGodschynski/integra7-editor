@@ -45,7 +45,7 @@ public:
     void printOutputs(std::ostream &os);
     void openInput(int index);
     void openOutput(int index);
-    void sendMessage(const Bytes& message);
+    void sendMessage(Bytes message);
     void sendAndReceive(Bytes rq, void *usrData, OnReceivedCallback callback, bool multiResponse = false, int gapTimeoutMs = 300, uint32_t stopOnAddr = 0);
     int  getInputPortCount();
     std::string getInputPortName(int index);

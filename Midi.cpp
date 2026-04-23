@@ -83,7 +83,7 @@ void Midi::start()
     }
 }
 
-void Midi::sendMessage(const Bytes& message)
+void Midi::sendMessage(Bytes message)
 {
     QueueItem item
     {
