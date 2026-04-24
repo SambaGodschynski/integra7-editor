@@ -136,7 +136,7 @@ set(CPACK_PACKAGE_NAME               "i7ed")
 set(CPACK_PACKAGE_VENDOR             "integra7-editor")
 set(CPACK_PACKAGE_VERSION            "0.1.0")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Roland Integra-7 patch editor")
-set(CPACK_RESOURCE_FILE_LICENSE      "${CMAKE_SOURCE_DIR}/LICENSE")
+set(CPACK_WIX_LICENSE_RTF            "${CMAKE_SOURCE_DIR}/LICENSE.rtf")
 
 # Linux DEB
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "samba.godschynski@gmail.com")
