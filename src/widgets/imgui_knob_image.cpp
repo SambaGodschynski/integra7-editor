@@ -5,6 +5,10 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 
+#ifndef GL_CLAMP_TO_EDGE
+#  define GL_CLAMP_TO_EDGE 0x812F
+#endif
+
 ImTextureID LoadKnobTexture(const char* path)
 {
     int w = 0, h = 0;
