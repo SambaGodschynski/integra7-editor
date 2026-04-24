@@ -24,6 +24,7 @@
 
 #if defined(_WIN32)
 #  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
 #  include <windows.h>
 #elif defined(__APPLE__)
 #  include <mach-o/dyld.h>
@@ -165,7 +166,7 @@ int main(int argc, const char** args)
         if (!r.valid())
         {
             std::cerr << "Lua error in " << luaFile << ": "
-                      << sol::error(r).what() << std::endl;
+                      << r.get<sol::error>().what() << std::endl;
             return -1;
         }
     }
@@ -182,7 +183,7 @@ int main(int argc, const char** args)
             auto r = initFn(luaArgs);
             if (!r.valid())
             {
-                std::cerr << "Lua Init() error: " << sol::error(r).what() << std::endl;
+                std::cerr << "Lua Init() error: " << r.get<sol::error>().what() << std::endl;
                 return -1;
             }
         }
