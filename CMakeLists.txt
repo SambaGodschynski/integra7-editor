@@ -6,6 +6,20 @@ cmake_policy(SET CMP0072 NEW)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 
+# On macOS, link GLFW statically so the app bundle is self-contained
+if(APPLE)
+    find_library(GLFW_STATIC_LIB libglfw3.a
+        HINTS /opt/homebrew/lib /usr/local/lib)
+    if(GLFW_STATIC_LIB)
+        set(GLFW_LINK ${GLFW_STATIC_LIB}
+            "-framework Cocoa" "-framework IOKit" "-framework CoreFoundation")
+    else()
+        set(GLFW_LINK glfw)
+    endif()
+else()
+    set(GLFW_LINK glfw)
+endif()
+
 set(SUBMOD "${CMAKE_SOURCE_DIR}/submodules")
 set(IMGUI_DIR "${SUBMOD}/imgui")
 set(IMGUI_FILE_DIALOG_DIR "${SUBMOD}/ImGuiFileDialog")
@@ -37,7 +51,7 @@ set(IMGUI_SOURCES
 )
 
 add_library(imgui STATIC ${IMGUI_SOURCES})
-target_link_libraries(imgui PRIVATE glfw OpenGL::GL)
+target_link_libraries(imgui PRIVATE ${GLFW_LINK} OpenGL::GL)
 
 set(LUA_SOURCES
     ${LUA_DIR}/lapi.c
@@ -105,7 +119,7 @@ add_executable(i7ed
     src/SysexFileDialog.cpp
     src/widgets/imgui_knob_image.cpp
 )
-target_link_libraries(i7ed PRIVATE glfw OpenGL::GL imgui lua rtmidi)
+target_link_libraries(i7ed PRIVATE ${GLFW_LINK} OpenGL::GL imgui lua rtmidi)
 
 option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
 if(ENABLE_ASAN)
@@ -140,11 +154,6 @@ if(APPLE)
             DESTINATION i7ed.app/Contents/Resources/lua)
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/images/"
             DESTINATION i7ed.app/Contents/Resources/assets/images)
-    # Copy and fix up dylib dependencies into the bundle
-    install(CODE "
-        include(BundleUtilities)
-        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/i7ed.app\" \"\" \"/usr/local/lib;/opt/homebrew/lib\")
-    " COMPONENT Runtime)
 else()
     install(TARGETS i7ed RUNTIME DESTINATION bin)
     install(DIRECTORY "${LUA_SRC}/" DESTINATION share/i7ed/lua)
