@@ -51,6 +51,14 @@ function CreateSnsCommonSections(main)
                 name   = "Part " .. string.format("%02d", partNr) .. " SN-S Partial " .. i .. " Ctrl",
                 params = swParams,
                 layout = "inline_toggles",
+                getReceiveValueSysex = function()
+                    local msgs = {}
+                    local sw  = CreateReceiveMessageForLeafId(idC("TONE" .. i .. "_SW"))
+                    local sel = CreateReceiveMessageForLeafId(idC("TONE" .. i .. "_SEL"))
+                    if sw  then table.insert(msgs, sw)  end
+                    if sel then table.insert(msgs, sel) end
+                    return msgs
+                end,
             }
         end
 

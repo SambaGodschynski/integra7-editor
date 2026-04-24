@@ -67,6 +67,7 @@ struct I7Ed
     {
         std::atomic<bool> active{false};
         std::chrono::steady_clock::time_point startTime;
+        std::atomic<int64_t> lastActivityNs{0};
         int totalCount = 0;
         std::list<std::shared_ptr<PendingReceive>> pending;
         std::mutex mutex;

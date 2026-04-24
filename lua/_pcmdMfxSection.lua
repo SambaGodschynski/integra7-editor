@@ -170,6 +170,12 @@ function CreateMfxPcmdSections(main)
             p.name = function() return mfxName(partNr, mfxNr) end
             p.min  = function() return mfxMin(partNr, mfxNr) end
             p.max  = function() return mfxMax(partNr, mfxNr) end
+            if mfxNr < 16 then
+                p.type = function()
+                    if mfxNumberPartMap[partNr] == 4 then return "vslider" end
+                    return "range"
+                end
+            end
             table.insert(subMfx.params, p)
         end
 

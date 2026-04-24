@@ -38,7 +38,7 @@ struct ParameterDef
     std::string id;
     FStringGetter name;
     std::string format = "%.0f";
-    std::string type;
+    FStringGetter type;
     FToI7Value toI7Value;
     FToGuiValue toGuiValue;
     SelectionOptions options;

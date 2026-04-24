@@ -5,6 +5,7 @@
 #include <fstream>
 #include <algorithm>
 #include <unordered_map>
+#include <set>
 
 void sendMessage(I7Ed& ed, const Bytes& message)
 {
@@ -101,19 +102,19 @@ std::vector<RequestMessage> buildParamRequests(
         {
             continue;
         }
-        if (param->type == PARAM_TYPE_RANGE
-         || param->type == PARAM_TYPE_SELECTION
-         || param->type == PARAM_TYPE_TOGGLE
-         || param->type == PARAM_TYPE_VSLIDER)
+        if (param->type() == PARAM_TYPE_RANGE
+         || param->type() == PARAM_TYPE_SELECTION
+         || param->type() == PARAM_TYPE_TOGGLE
+         || param->type() == PARAM_TYPE_VSLIDER)
         {
             tryAdd(param->id);
         }
-        else if (param->type == PARAM_TYPE_ENVELOPE)
+        else if (param->type() == PARAM_TYPE_ENVELOPE)
         {
             for (const auto& id : param->levelIds) { tryAdd(id); }
             for (const auto& id : param->timeIds)  { tryAdd(id); }
         }
-        else if (param->type == PARAM_TYPE_STEP_LFO)
+        else if (param->type() == PARAM_TYPE_STEP_LFO)
         {
             if (!param->stepTypeId.empty()) { tryAdd(param->stepTypeId); }
             for (const auto& id : param->stepIds) { tryAdd(id); }
@@ -148,6 +149,9 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
             [&ed, pending](Bytes received, void*)
             {
                 std::lock_guard<std::mutex> lock(ed.receive.mutex);
+                ed.receive.lastActivityNs.store(
+                    std::chrono::steady_clock::now().time_since_epoch().count(),
+                    std::memory_order_relaxed);
                 pending->dataQueue.push_back(std::move(received));
             }, true, req.receiveGapMs > 0 ? req.receiveGapMs : 300, req.stopOnAddr);
     }
@@ -162,6 +166,9 @@ void enqueueRequest(I7Ed& ed, const RequestMessage& req)
             {
                 if (received.empty()) return;
                 std::lock_guard<std::mutex> lock(ed.receive.mutex);
+                ed.receive.lastActivityNs.store(
+                    std::chrono::steady_clock::now().time_since_epoch().count(),
+                    std::memory_order_relaxed);
                 pending->data.swap(received);
             });
     }
@@ -174,13 +181,20 @@ void triggerReceive(I7Ed& ed, const std::vector<SectionDef::FGetReceiveSysex>& g
         return;
     }
     ed.receive.startTime = std::chrono::steady_clock::now();
+    ed.receive.lastActivityNs.store(
+        ed.receive.startTime.time_since_epoch().count(),
+        std::memory_order_relaxed);
 
+    std::set<Bytes> enqueued;
     for (const auto& getter : getters)
     {
         if (!getter) continue;
         for (const RequestMessage& req : getter())
         {
-            enqueueRequest(ed, req);
+            if (enqueued.insert(req.sysex).second)
+            {
+                enqueueRequest(ed, req);
+            }
         }
     }
     ed.receive.totalCount = (int)ed.receive.pending.size();
@@ -249,18 +263,18 @@ void saveSysexToFile(I7Ed& ed)
         for (const auto* param : sec.params)
         {
             if (!param) { continue; }
-            if (param->type == PARAM_TYPE_RANGE
-             || param->type == PARAM_TYPE_SELECTION
-             || param->type == PARAM_TYPE_TOGGLE)
+            if (param->type() == PARAM_TYPE_RANGE
+             || param->type() == PARAM_TYPE_SELECTION
+             || param->type() == PARAM_TYPE_TOGGLE)
             {
                 writeParam(param->id);
             }
-            else if (param->type == PARAM_TYPE_ENVELOPE)
+            else if (param->type() == PARAM_TYPE_ENVELOPE)
             {
                 for (const auto& id : param->levelIds) { writeParam(id); }
                 for (const auto& id : param->timeIds)  { writeParam(id); }
             }
-            else if (param->type == PARAM_TYPE_STEP_LFO)
+            else if (param->type() == PARAM_TYPE_STEP_LFO)
             {
                 if (!param->stepTypeId.empty()) { writeParam(param->stepTypeId); }
                 for (const auto& id : param->stepIds) { writeParam(id); }

@@ -44,10 +44,23 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                     param->name = [resolvedName]() { return resolvedName; };
                 }
             }
-            param->id   = paramId.as<std::string>();
-            param->type = require_key<std::string>(luaParam, "type");
+            param->id = paramId.as<std::string>();
+            {
+                sol::object paramType = luaParam["type"];
+                if (paramType.get_type() == sol::type::function)
+                {
+                    sol::function fn = paramType.as<sol::function>();
+                    param->type = [fn]() { return fn.call<std::string>(); };
+                }
+                else
+                {
+                    std::string resolvedType = paramType.as<std::string>();
+                    param->type = [resolvedType]() { return resolvedType; };
+                }
+            }
 
-            if (param->type == PARAM_TYPE_ENVELOPE)
+            const std::string initType = param->type();
+            if (initType == PARAM_TYPE_ENVELOPE)
             {
                 param->setValue = optional_key<ParameterDef::FSetValue>(luaParam, "setValue", nullptr);
                 sol::optional<sol::table> levelIdsTable = luaParam["levelIds"];
@@ -68,7 +81,7 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                 }
                 param->sustainSegment = optional_key<bool>(luaParam, "sustainSegment", false);
             }
-            else if (param->type == PARAM_TYPE_STEP_LFO)
+            else if (initType == PARAM_TYPE_STEP_LFO)
             {
                 param->setValue = optional_key<ParameterDef::FSetValue>(luaParam, "setValue", nullptr);
                 param->stepTypeId = optional_key<std::string>(luaParam, "stepTypeId", "");
@@ -81,25 +94,25 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                     }
                 }
             }
-            else if (param->type == PARAM_TYPE_ACTION)
+            else if (initType == PARAM_TYPE_ACTION)
             {
                 param->getAction = require_key<ParameterDef::FGetAction>(luaParam, "getAction");
             }
-            else if (param->type == PARAM_TYPE_SAVE_SYSEX
-                  || param->type == PARAM_TYPE_LOAD_SYSEX)
+            else if (initType == PARAM_TYPE_SAVE_SYSEX
+                  || initType == PARAM_TYPE_LOAD_SYSEX)
             {
                 param->partPrefix = optional_key<std::string>(luaParam, "partPrefix", "");
             }
-            else if (param->type == PARAM_TYPE_SOLO_TOGGLE)
+            else if (initType == PARAM_TYPE_SOLO_TOGGLE)
             {
                 param->linkedParamId = require_key<std::string>(luaParam, "linkedParamId");
                 param->linkedValue   = optional_key<float>(luaParam, "linkedValue", 0.0f);
             }
-            else if (param->type == PARAM_TYPE_NEWLINE)
+            else if (initType == PARAM_TYPE_NEWLINE)
             {
                 // no fields needed
             }
-            else if (param->type == PARAM_TYPE_INPUTTEXT)
+            else if (initType == PARAM_TYPE_INPUTTEXT)
             {
                 param->setStringValue = require_key<ParameterDef::FSetStringValue>(luaParam, "setStringValue");
                 param->stringValueGetter = optional_key<ParameterDef::FStringGetter>(luaParam, "stringValueGetter", nullptr);

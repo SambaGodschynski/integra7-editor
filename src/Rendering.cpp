@@ -300,7 +300,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
 
     for (auto param : section.params)
     {
-        if (param->type == PARAM_TYPE_NEWLINE)
+        if (param->type() == PARAM_TYPE_NEWLINE)
         {
             if (prevWasInline) { ImGui::NewLine(); }
             prevWasInline = false;
@@ -308,7 +308,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             isFirst = true;
             continue;
         }
-        if (param->type == PARAM_TYPE_SEPARATOR)
+        if (param->type() == PARAM_TYPE_SEPARATOR)
         {
             if (prevWasInline) { ImGui::NewLine(); }
             ImGui::SeparatorText(param->name().c_str());
@@ -322,15 +322,15 @@ void renderSection(SectionDef& section, I7Ed& ed)
             continue;
         }
         bool inlineToggles = (section.layout == "inline_toggles");
-        bool isInlineSelect = param->type == PARAM_TYPE_SELECTION && param->size > 0.0f;
-        bool isBinaryRange  = (param->type == PARAM_TYPE_RANGE
+        bool isInlineSelect = param->type() == PARAM_TYPE_SELECTION && param->size > 0.0f;
+        bool isBinaryRange  = (param->type() == PARAM_TYPE_RANGE
                                && param->min() == 0.0f && param->max() == 1.0f);
-        bool isToggleType   = (param->type == PARAM_TYPE_TOGGLE) || isBinaryRange;
-        bool isBlock = (param->type == PARAM_TYPE_SELECTION && !isInlineSelect)
+        bool isToggleType   = (param->type() == PARAM_TYPE_TOGGLE) || isBinaryRange;
+        bool isBlock = (param->type() == PARAM_TYPE_SELECTION && !isInlineSelect)
                     || (!inlineToggles && isToggleType)
-                    || param->type == PARAM_TYPE_SOLO_TOGGLE
-                    || param->type == PARAM_TYPE_ENVELOPE
-                    || param->type == PARAM_TYPE_STEP_LFO;
+                    || param->type() == PARAM_TYPE_SOLO_TOGGLE
+                    || param->type() == PARAM_TYPE_ENVELOPE
+                    || param->type() == PARAM_TYPE_STEP_LFO;
 
         bool doSameLine = false;
         if (prevWasInline && !isBlock)
@@ -358,7 +358,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         isFirst = false;
 
-        if (param->type == PARAM_TYPE_RANGE)
+        if (param->type() == PARAM_TYPE_RANGE)
         {
             if (param->valueOverride)
             {
@@ -402,7 +402,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 prevWasToggle = false;
             }
         }
-        else if (param->type == PARAM_TYPE_VSLIDER)
+        else if (param->type() == PARAM_TYPE_VSLIDER)
         {
             std::string vsLabel = "##" + param->id;
             if (ImVSliderImage::VSlider(vsLabel.c_str(), ImVec2(kVSliderTrackW, kVSliderTrackH), &param->value,
@@ -420,7 +420,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             prevWasInline = true;
             prevWasToggle = false;
         }
-        else if (param->type == PARAM_TYPE_SELECTION)
+        else if (param->type() == PARAM_TYPE_SELECTION)
         {
             if (isInlineSelect)
             {
@@ -439,7 +439,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 prevWasToggle = false;
             }
         }
-        else if (param->type == PARAM_TYPE_TOGGLE)
+        else if (param->type() == PARAM_TYPE_TOGGLE)
         {
             bool toggleVal = param->value != 0;
             if (ImGui::Toggle(param->name().c_str(), &toggleVal))
@@ -459,7 +459,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
                 prevWasToggle = true;
             }
         }
-        else if (param->type == PARAM_TYPE_ENVELOPE)
+        else if (param->type() == PARAM_TYPE_ENVELOPE)
         {
             const int nLevels = (int)param->levelIds.size();
             const int nTimes  = (int)param->timeIds.size();
@@ -509,7 +509,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else if (param->type == PARAM_TYPE_STEP_LFO)
+        else if (param->type() == PARAM_TYPE_STEP_LFO)
         {
             const int nSteps = (int)param->stepIds.size();
             std::vector<ParameterDef*> stepDefs(nSteps, nullptr);
@@ -546,7 +546,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else if (param->type == PARAM_TYPE_ACTION)
+        else if (param->type() == PARAM_TYPE_ACTION)
         {
             if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
@@ -554,7 +554,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else if (param->type == PARAM_TYPE_INPUTTEXT)
+        else if (param->type() == PARAM_TYPE_INPUTTEXT)
         {
             char buf[17] = {};
             strncpy(buf, param->stringValue.c_str(), 16);
@@ -584,7 +584,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             ImGui::TextUnformatted(param->name().c_str());
             prevWasInline = false;
         }
-        else if (param->type == PARAM_TYPE_SAVE_SYSEX)
+        else if (param->type() == PARAM_TYPE_SAVE_SYSEX)
         {
             if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
@@ -592,7 +592,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else if (param->type == PARAM_TYPE_LOAD_SYSEX)
+        else if (param->type() == PARAM_TYPE_LOAD_SYSEX)
         {
             if (ImGui::Button((param->name() + "##" + param->id).c_str()))
             {
@@ -600,7 +600,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
             }
             prevWasInline = false;
         }
-        else if (param->type == PARAM_TYPE_SOLO_TOGGLE)
+        else if (param->type() == PARAM_TYPE_SOLO_TOGGLE)
         {
             auto* linked = getParameterDef(ed, param->linkedParamId);
             bool isSoloed = linked && (linked->value == param->linkedValue);
@@ -616,7 +616,7 @@ void renderSection(SectionDef& section, I7Ed& ed)
         }
         else
         {
-            std::cerr << "unknown param type: '" << param->type << "'" << std::endl;
+            std::cerr << "unknown param type: '" << param->type() << "'" << std::endl;
             prevWasInline = false;
         }
 
@@ -648,9 +648,9 @@ void renderEq3Band(SectionDef& section, I7Ed& ed)
 
     for (auto* p : section.params)
     {
-        if      (p->type == PARAM_TYPE_TOGGLE  && !swParam)          { swParam = p; }
-        else if (p->type == PARAM_TYPE_VSLIDER && gains.size() < 3)  { gains.push_back(p); }
-        else if (p->type == PARAM_TYPE_RANGE   && knobs.size() < 4)  { knobs.push_back(p); }
+        if      (p->type() == PARAM_TYPE_TOGGLE  && !swParam)          { swParam = p; }
+        else if (p->type() == PARAM_TYPE_VSLIDER && gains.size() < 3)  { gains.push_back(p); }
+        else if (p->type() == PARAM_TYPE_RANGE   && knobs.size() < 4)  { knobs.push_back(p); }
     }
 
     if (!swParam || gains.size() < 3 || knobs.size() < 4)
@@ -1171,7 +1171,7 @@ void renderDrawbars(SectionDef& section, I7Ed& ed)
     {
         if (param->drawbarColor) { continue; }
         if (param->name() == HIDDEN_PARAM_NAME) { continue; }
-        if (param->type == PARAM_TYPE_SELECTION)
+        if (param->type() == PARAM_TYPE_SELECTION)
         {
             renderCombo(*param, ed);
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.0f);
@@ -1239,7 +1239,7 @@ void renderDrawbars(SectionDef& section, I7Ed& ed)
     for (auto* param : section.params)
     {
         if (param->drawbarColor) { continue; }
-        if (param->type == PARAM_TYPE_SELECTION) { continue; }
+        if (param->type() == PARAM_TYPE_SELECTION) { continue; }
         remainder.params.push_back(param);
     }
     if (!remainder.params.empty())
@@ -1295,6 +1295,9 @@ static void renderSectionTree(SectionDef& sec, I7Ed& ed)
                     if (!ed.receive.active.exchange(true))
                     {
                         ed.receive.startTime = std::chrono::steady_clock::now();
+                        ed.receive.lastActivityNs.store(
+                            ed.receive.startTime.time_since_epoch().count(),
+                            std::memory_order_relaxed);
                         for (const auto& req : sub.onOpen())
                         {
                             enqueueRequest(ed, req);
@@ -1323,13 +1326,14 @@ void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs)
     if (!ed.receive.active.load()) { return; }
 
     constexpr float kBarH = 3.f;
-    const float bx = scrollOfs.x, by = scrollOfs.y;
-    auto* dl = ImGui::GetBackgroundDrawList();
+    auto* dl = ImGui::GetForegroundDrawList();
 
-    const float elapsed = std::chrono::duration<float>(
-        std::chrono::steady_clock::now() - ed.receive.startTime).count();
+    const auto now = std::chrono::steady_clock::now();
+    const float elapsed = std::chrono::duration<float>(now - ed.receive.startTime).count();
+    const int64_t lastNs = ed.receive.lastActivityNs.load(std::memory_order_relaxed);
+    const float idleElapsed = (float)(now.time_since_epoch().count() - lastNs) * 1e-9f;
 
-    if (elapsed >= kReceiveTimeoutSecs)
+    if (idleElapsed >= kReceiveTimeoutSecs)
     {
         ed.midi.cancelPending();
         {
@@ -1344,16 +1348,16 @@ void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs)
 
     const int total     = ed.receive.totalCount;
     const int remaining = (int)ed.receive.pending.size();
-    const bool useDeterminate = total > 0 && elapsed < kReceiveIndeterminateAfterSecs;
+    const bool useDeterminate = total > 0 && idleElapsed < kReceiveIndeterminateAfterSecs;
 
-    dl->AddRectFilled({bx, by}, {canvasW + bx, kBarH + by},
+    dl->AddRectFilled({0.f, 0.f}, {canvasW, kBarH},
                       IM_COL32(80, 10, 10, 200));
 
     if (useDeterminate)
     {
         const float progress = (float)(total - remaining) / (float)total;
-        dl->AddRectFilled({bx, by},
-                          {progress * canvasW + bx, kBarH + by},
+        dl->AddRectFilled({0.f, 0.f},
+                          {progress * canvasW, kBarH},
                           IM_COL32(220, 30, 30, 255));
     }
     else
@@ -1363,8 +1367,8 @@ void drawReceiveProgressBar(I7Ed& ed, float canvasW, ImVec2 scrollOfs)
         const float pos   = std::fmod(elapsed / kPeriod, 1.0f + kSegLen) - kSegLen;
         const float lFrac = std::clamp(pos,           0.0f, 1.0f);
         const float rFrac = std::clamp(pos + kSegLen, 0.0f, 1.0f);
-        dl->AddRectFilled({lFrac * canvasW + bx, by},
-                          {rFrac * canvasW + bx, kBarH + by},
+        dl->AddRectFilled({lFrac * canvasW, 0.f},
+                          {rFrac * canvasW, kBarH},
                           IM_COL32(220, 30, 30, 255));
     }
 }

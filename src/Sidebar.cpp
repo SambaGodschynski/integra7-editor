@@ -234,6 +234,9 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
                     if (!ed.receive.active.exchange(true))
                     {
                         ed.receive.startTime = std::chrono::steady_clock::now();
+                        ed.receive.lastActivityNs.store(
+                            ed.receive.startTime.time_since_epoch().count(),
+                            std::memory_order_relaxed);
                         enqueueRequest(ed, req);
                         ++ed.receive.totalCount;
                     }
