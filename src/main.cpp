@@ -63,13 +63,28 @@ static std::filesystem::path getExeDir()
 static std::filesystem::path findDataRoot()
 {
     std::filesystem::path exeDir = getExeDir();
+    std::error_code ec;
+
+    // Portable / dev build: lua/ alongside the binary
     if (std::filesystem::exists(exeDir / "lua"))
         return exeDir;
-    std::filesystem::path fhs = exeDir / ".." / "share" / "i7ed";
-    std::error_code ec;
-    auto canonical = std::filesystem::canonical(fhs, ec);
-    if (!ec && std::filesystem::exists(canonical / "lua"))
-        return canonical;
+
+#ifdef __APPLE__
+    // macOS app bundle: binary is in .app/Contents/MacOS/, data in .app/Contents/Resources/
+    {
+        auto res = std::filesystem::canonical(exeDir / ".." / "Resources", ec);
+        if (!ec && std::filesystem::exists(res / "lua"))
+            return res;
+    }
+#endif
+
+    // FHS install: binary in bin/, data in ../share/i7ed/
+    {
+        auto fhs = std::filesystem::canonical(exeDir / ".." / "share" / "i7ed", ec);
+        if (!ec && std::filesystem::exists(fhs / "lua"))
+            return fhs;
+    }
+
     return std::filesystem::current_path();
 }
 

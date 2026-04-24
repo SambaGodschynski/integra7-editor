@@ -127,27 +127,50 @@ add_custom_command(
 )
 
 # ── Install ──────────────────────────────────────────────────────────────────
-install(TARGETS i7ed RUNTIME DESTINATION bin)
-install(DIRECTORY "${LUA_SRC}/" DESTINATION share/i7ed/lua)
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/images/" DESTINATION share/i7ed/assets/images)
+if(APPLE)
+    set_target_properties(i7ed PROPERTIES
+        MACOSX_BUNDLE                TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME    "i7ed"
+        MACOSX_BUNDLE_BUNDLE_VERSION "0.1.0"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1.0"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.integra7-editor.i7ed"
+    )
+    install(TARGETS i7ed BUNDLE DESTINATION .)
+    install(DIRECTORY "${LUA_SRC}/"
+            DESTINATION i7ed.app/Contents/Resources/lua)
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/images/"
+            DESTINATION i7ed.app/Contents/Resources/assets/images)
+    # Copy and fix up dylib dependencies into the bundle
+    install(CODE "
+        include(BundleUtilities)
+        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/i7ed.app\" \"\" \"/usr/local/lib;/opt/homebrew/lib\")
+    " COMPONENT Runtime)
+else()
+    install(TARGETS i7ed RUNTIME DESTINATION bin)
+    install(DIRECTORY "${LUA_SRC}/" DESTINATION share/i7ed/lua)
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/images/" DESTINATION share/i7ed/assets/images)
+endif()
 
 # ── CPack ────────────────────────────────────────────────────────────────────
 set(CPACK_PACKAGE_NAME               "i7ed")
 set(CPACK_PACKAGE_VENDOR             "integra7-editor")
 set(CPACK_PACKAGE_VERSION            "0.1.0")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Roland Integra-7 patch editor")
-set(CPACK_WIX_LICENSE_RTF            "${CMAKE_SOURCE_DIR}/LICENSE.rtf")
 
-# Linux DEB
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "samba.godschynski@gmail.com")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS     "libglfw3, libasound2")
-set(CPACK_DEBIAN_PACKAGE_SECTION     "sound")
-
-# Linux RPM
-set(CPACK_RPM_PACKAGE_REQUIRES       "glfw, alsa-lib")
-set(CPACK_RPM_PACKAGE_LICENSE        "MIT")
-
-# Windows WiX
-set(CPACK_WIX_UPGRADE_GUID           "F3A2B1C0-D4E5-4F6A-8B9C-0D1E2F3A4B5C")
+if(APPLE)
+    set(CPACK_GENERATOR              "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME        "i7ed")
+else()
+    # Linux DEB
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "samba.godschynski@gmail.com")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS    "libglfw3, libasound2")
+    set(CPACK_DEBIAN_PACKAGE_SECTION    "sound")
+    # Linux RPM
+    set(CPACK_RPM_PACKAGE_REQUIRES      "glfw, alsa-lib")
+    set(CPACK_RPM_PACKAGE_LICENSE       "MIT")
+    # Windows WiX
+    set(CPACK_WIX_UPGRADE_GUID          "F3A2B1C0-D4E5-4F6A-8B9C-0D1E2F3A4B5C")
+    set(CPACK_WIX_LICENSE_RTF           "${CMAKE_SOURCE_DIR}/LICENSE.rtf")
+endif()
 
 include(CPack)

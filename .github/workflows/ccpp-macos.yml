@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Package
+      - name: Package DMG
         run: cd build && cpack -G DragNDrop
 
       - name: Upload DMG
