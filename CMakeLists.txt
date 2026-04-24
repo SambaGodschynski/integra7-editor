@@ -37,6 +37,7 @@ set(IMGUI_SOURCES
 )
 
 add_library(imgui STATIC ${IMGUI_SOURCES})
+target_link_libraries(imgui PRIVATE glfw OpenGL::GL)
 
 set(LUA_SOURCES
     ${LUA_DIR}/lapi.c
