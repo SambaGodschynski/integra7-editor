@@ -1,38 +1,40 @@
-name: Mac Build
+name: macOS Build
 
 on:
   push:
-    branches: 
-        - main
-        - feature/* 
-        - bugfix/*
-        - develop
-        - bugfix/*
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "bugfix/**"
   pull_request:
-    branches: [ develop ]
+    branches: ["**"]
 
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
-    - uses: actions/checkout@v2
-    - name: init
-      run: mkdir build    
-    - name: update submodules
-      run: git submodule update --init --recursive --remote
-    - name: configure
-      run: cmake -DCMAKE_BUILD_TYPE=Release ..
-      working-directory: build
-      env:
-        WM_DOWNLOAD_EXTERNALS: 1     
-    - name: build
-      run: cmake --build .
-      working-directory: build
-    - uses: actions/upload-artifact@v3
-      with:
-        name: werckmeister-VST-mac-vst2-${{ github.sha }}
-        path: build/WerckmeisterVST_artefacts/Release/VST
-    - uses: actions/upload-artifact@v3
-      with:
-        name: werckmeister-VST-mac-vst3-${{ github.sha }}
-        path: build/WerckmeisterVST_artefacts/Release/VST3 
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install cmake glfw
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: cd build && cpack -G DragNDrop
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: i7ed-macos-dmg-${{ github.sha }}
+          path: build/*.dmg

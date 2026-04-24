@@ -20,6 +20,57 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
+#include <filesystem>
+
+#if defined(_WIN32)
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#elif defined(__APPLE__)
+#  include <mach-o/dyld.h>
+#  include <limits.h>
+#else
+#  include <unistd.h>
+#  include <limits.h>
+#endif
+
+// Returns the directory that contains the running executable.
+static std::filesystem::path getExeDir()
+{
+#if defined(_WIN32)
+    wchar_t buf[MAX_PATH];
+    GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    return std::filesystem::path(buf).parent_path();
+#elif defined(__APPLE__)
+    char buf[PATH_MAX];
+    uint32_t size = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &size) == 0)
+        return std::filesystem::path(buf).parent_path();
+    return std::filesystem::current_path();
+#else
+    char buf[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (len > 0) { buf[len] = '\0'; return std::filesystem::path(buf).parent_path(); }
+    return std::filesystem::current_path();
+#endif
+}
+
+// Returns the root directory that contains lua/ and assets/.
+// Tries, in order:
+//   1. <exe_dir>/           – portable / Windows / macOS bundle
+//   2. <exe_dir>/../share/i7ed/  – FHS install (DEB/RPM: /usr/bin → /usr/share/i7ed)
+//   3. current working directory – dev build fallback
+static std::filesystem::path findDataRoot()
+{
+    std::filesystem::path exeDir = getExeDir();
+    if (std::filesystem::exists(exeDir / "lua"))
+        return exeDir;
+    std::filesystem::path fhs = exeDir / ".." / "share" / "i7ed";
+    std::error_code ec;
+    auto canonical = std::filesystem::canonical(fhs, ec);
+    if (!ec && std::filesystem::exists(canonical / "lua"))
+        return canonical;
+    return std::filesystem::current_path();
+}
 
 
 // ── Argument parsing ─────────────────────────────────────────────────────────
@@ -76,8 +127,10 @@ int main(int argc, const char** args)
     ed.midi.verbose = ed.args.verbose;
 
     // ── Early Lua init: load script and call Init(args) if defined ───────────
+    std::filesystem::path dataRoot = findDataRoot();
+    std::string defaultLuaPath = (dataRoot / "lua" / "main.lua").string();
     const char* luaFile = ed.args.mainLuaFilePath.empty()
-        ? "./lua/main.lua"
+        ? defaultLuaPath.c_str()
         : ed.args.mainLuaFilePath.c_str();
 
     ed.lua.open_libraries();
@@ -337,11 +390,14 @@ int main(int argc, const char** args)
     DragState vDrag, hDrag;
     constexpr float kSbW = 13.0f;
 
-    ed.knobTexture      = LoadKnobTexture("assets/images/knob01.png");
-    ed.sliderHandleTex  = LoadKnobTexture("assets/images/mixer_handle01.png");
-    ed.drawbarTexBk     = LoadKnobTexture("assets/images/drawbar_bk.png");
-    ed.drawbarTexWt     = LoadKnobTexture("assets/images/drawbar_wt.png");
-    ed.drawbarTexBr     = LoadKnobTexture("assets/images/drawbar_br.png");
+    auto imgPath = [&](const char* rel) {
+        return (dataRoot / rel).string();
+    };
+    ed.knobTexture      = LoadKnobTexture(imgPath("assets/images/knob01.png").c_str());
+    ed.sliderHandleTex  = LoadKnobTexture(imgPath("assets/images/mixer_handle01.png").c_str());
+    ed.drawbarTexBk     = LoadKnobTexture(imgPath("assets/images/drawbar_bk.png").c_str());
+    ed.drawbarTexWt     = LoadKnobTexture(imgPath("assets/images/drawbar_wt.png").c_str());
+    ed.drawbarTexBr     = LoadKnobTexture(imgPath("assets/images/drawbar_br.png").c_str());
 
     // ── Main loop ─────────────────────────────────────────────────────────────
     while (!glfwWindowShouldClose(window))

@@ -2,38 +2,56 @@ name: Linux Build
 
 on:
   push:
-    branches: 
-        - main
-        - feature/* 
-        - bugfix/* 
-        - develop
-        - bugfix/*
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "bugfix/**"
   pull_request:
-    branches: [ develop ]
+    branches: ["**"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: init
-      run: mkdir build
-    - name: install dependencies
-      run: sudo apt update && sudo apt install libboost-all-dev libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
-    - name: update submodules
-      run: git submodule update --init --recursive --remote    
-    - name: configure
-      run: cmake -DCMAKE_BUILD_TYPE=Release ..
-      working-directory: build
-    - name: build
-      run: cmake --build .
-      working-directory: build
-    - uses: actions/upload-artifact@v3
-      with:
-        name: werckmeister-VST-linux-vst2-${{ github.sha }}
-        path: build/WerckmeisterVST_artefacts/Release/VST
-    - uses: actions/upload-artifact@v3
-      with:
-        name: werckmeister-VST-linux-vst3-${{ github.sha }}
-        path: build/WerckmeisterVST_artefacts/Release/VST3   
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build \
+            libglfw3-dev \
+            libasound2-dev \
+            rpm
+
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DRTMIDI_API_ALSA=ON \
+            -DRTMIDI_API_JACK=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package DEB
+        run: cd build && cpack -G DEB
+
+      - name: Package RPM
+        run: cd build && cpack -G RPM
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: i7ed-linux-deb-${{ github.sha }}
+          path: build/*.deb
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: i7ed-linux-rpm-${{ github.sha }}
+          path: build/*.rpm

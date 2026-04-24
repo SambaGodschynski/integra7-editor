@@ -2,38 +2,46 @@ name: Windows Build
 
 on:
   push:
-    branches: 
-        - main
-        - feature/* 
-        - bugfix/*
-        - develop
-        - bugfix/*
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "bugfix/**"
   pull_request:
-    branches: [ develop ]
+    branches: ["**"]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: init
-      run: mkdir build    
-    - name: update submodules
-      run: git submodule update --init --recursive --remote
-    - name: configure
-      run: cmake -DCMAKE_BUILD_TYPE=Release ..
-      working-directory: build
-      env:
-        WM_DOWNLOAD_EXTERNALS: 1      
-    - name: build
-      run: cmake --build . --config Release
-      working-directory: build
-    - uses: actions/upload-artifact@v3
-      with:
-        name: werckmeister-VST-win-vst2-${{ github.sha }}
-        path: build/WerckmeisterVST_artefacts/Release/VST
-    - uses: actions/upload-artifact@v3
-      with:
-        name: werckmeister-VST-win-vst3-${{ github.sha }}
-        path: build/WerckmeisterVST_artefacts/Release/VST3       
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install GLFW via vcpkg
+        run: vcpkg install glfw3:x64-windows-static
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
+
+      - name: Configure
+        run: |
+          cmake -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Install WiX Toolset
+        run: choco install wixtoolset --no-progress
+
+      - name: Package WiX
+        run: cd build && cpack -G WIX -C Release
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: i7ed-windows-installer-${{ github.sha }}
+          path: build/*.msi

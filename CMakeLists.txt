@@ -124,3 +124,29 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/assets/images" "${CMAKE_BINARY_DIR}/assets/images"
 )
+
+# ── Install ──────────────────────────────────────────────────────────────────
+install(TARGETS i7ed RUNTIME DESTINATION bin)
+install(DIRECTORY "${LUA_SRC}/" DESTINATION share/i7ed/lua)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/images/" DESTINATION share/i7ed/assets/images)
+
+# ── CPack ────────────────────────────────────────────────────────────────────
+set(CPACK_PACKAGE_NAME               "i7ed")
+set(CPACK_PACKAGE_VENDOR             "integra7-editor")
+set(CPACK_PACKAGE_VERSION            "0.1.0")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Roland Integra-7 patch editor")
+set(CPACK_RESOURCE_FILE_LICENSE      "${CMAKE_SOURCE_DIR}/LICENSE")
+
+# Linux DEB
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "samba.godschynski@gmail.com")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS     "libglfw3, libasound2")
+set(CPACK_DEBIAN_PACKAGE_SECTION     "sound")
+
+# Linux RPM
+set(CPACK_RPM_PACKAGE_REQUIRES       "glfw, alsa-lib")
+set(CPACK_RPM_PACKAGE_LICENSE        "MIT")
+
+# Windows WiX
+set(CPACK_WIX_UPGRADE_GUID           "F3A2B1C0-D4E5-4F6A-8B9C-0D1E2F3A4B5C")
+
+include(CPack)
