@@ -50,7 +50,7 @@ void renderSysexFileDialogs(I7Ed& ed, SectionDef::NamedSections& sections)
             {
                 sol::function fn = ed.lua["CreateReceiveMessageForLeafId"];
                 sol::object obj = fn(msbId);
-                if (!obj.valid() || obj.get_type() == sol::type::nil) { return {}; }
+                if (!obj.valid() || obj.get_type() == sol::type::lua_nil) { return {}; }
                 return {obj.as<RequestMessage>()};
             };
             ed.saveSysex.phase = I7Ed::SaveSysexState::Phase::ReadMsb;

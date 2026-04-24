@@ -18,7 +18,7 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
     outSectionDef.onOpen = optional_key<SectionDef::FGetReceiveSysex>(
         lua_table, "onOpen", nullptr);
 
-    if (lua_table["params"] != sol::nil)
+    if (lua_table["params"] != sol::lua_nil)
     {
         sol::table params = lua_table["params"];
         for (auto& luaParamPair : params)
@@ -185,7 +185,7 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
         }
     }
 
-    if (lua_table["grp"] != sol::nil)
+    if (lua_table["grp"] != sol::lua_nil)
     {
         sol::table luaSubSections = lua_table["grp"];
         for (const auto& luaSubSectionObj : luaSubSections)
@@ -197,29 +197,29 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
         }
     }
 
-    if (lua_table["isOpen"] != sol::nil)
+    if (lua_table["isOpen"] != sol::lua_nil)
     {
         outSectionDef.isOpen = lua_table["isOpen"];
     }
 
-    if (lua_table["hideFromPalette"] != sol::nil)
+    if (lua_table["hideFromPalette"] != sol::lua_nil)
     {
         outSectionDef.hideFromPalette = lua_table["hideFromPalette"];
     }
 
-    if (lua_table["accordion"] != sol::nil)
+    if (lua_table["accordion"] != sol::lua_nil)
     {
         outSectionDef.accordion = lua_table["accordion"];
     }
 
-    if (lua_table["layout"] != sol::nil)
+    if (lua_table["layout"] != sol::lua_nil)
     {
         outSectionDef.layout = lua_table["layout"].get<std::string>();
     }
 
-    if (lua_table["tabs"] != sol::nil)
+    if (lua_table["tabs"] != sol::lua_nil)
     {
-        if (lua_table["tabCommonKey"] != sol::nil)
+        if (lua_table["tabCommonKey"] != sol::lua_nil)
         {
             outSectionDef.tabCommonKey = lua_table["tabCommonKey"].get<std::string>();
         }
@@ -241,7 +241,7 @@ void getSection(I7Ed& ed, sol::table& lua_table, SectionDef& outSectionDef)
                 {
                     sol::table kt = kp.second.as<sol::table>();
                     ref.key = kt["key"].get<std::string>();
-                    if (kt["accordion"] != sol::nil)
+                    if (kt["accordion"] != sol::lua_nil)
                     {
                         ref.accordionLabel = kt["accordion"].get<std::string>();
                     }

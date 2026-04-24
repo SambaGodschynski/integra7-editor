@@ -89,7 +89,7 @@ std::vector<RequestMessage> buildParamRequests(
             return;
         }
         sol::object obj = fn(id);
-        if (!obj.valid() || obj.get_type() == sol::type::nil)
+        if (!obj.valid() || obj.get_type() == sol::type::lua_nil)
         {
             return;
         }

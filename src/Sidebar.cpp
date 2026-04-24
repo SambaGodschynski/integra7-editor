@@ -228,7 +228,7 @@ void renderSidebar(I7Ed& ed, SectionDef::NamedSections& sections)
             if (buildFn)
             {
                 sol::object obj = (*buildFn)(partNr);
-                if (obj.valid() && obj.get_type() != sol::type::nil)
+                if (obj.valid() && obj.get_type() != sol::type::lua_nil)
                 {
                     RequestMessage req = obj.as<RequestMessage>();
                     if (!ed.receive.active.exchange(true))
